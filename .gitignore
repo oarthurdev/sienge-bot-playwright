@@ -1,0 +1,4 @@
+.env
+sienge-storage-state.json
+reports/
+node_modules/

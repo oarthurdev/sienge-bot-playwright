@@ -1,0 +1,419 @@
+[
+  {
+    "ts": "2026-05-22T20:02:11.846Z",
+    "level": "info",
+    "message": "Sessão existente válida.",
+    "url": "https://laurentino.sienge.com.br/sienge/8/index.html",
+    "title": "Sienge"
+  },
+  {
+    "ts": "2026-05-22T20:02:11.847Z",
+    "level": "info",
+    "message": "Após login válido, tentando ir direto para a URL da tela 1777."
+  },
+  {
+    "ts": "2026-05-22T20:02:14.353Z",
+    "level": "debug",
+    "message": "Iniciando dismissHomeOverlays.",
+    "currentUrl": "https://laurentino.sienge.com.br/sienge/8/index.html"
+  },
+  {
+    "ts": "2026-05-22T20:02:14.835Z",
+    "level": "info",
+    "message": "Fechar painel de ajuda contextual: clique realizado."
+  },
+  {
+    "ts": "2026-05-22T20:02:20.997Z",
+    "level": "info",
+    "message": "Iframe da Autorização de Pagamento localizado.",
+    "iframeSrc": "/sienge/CPG/listAutorizacaoPagamento.do",
+    "frameUrl": "https://laurentino.sienge.com.br/sienge/CPG/listAutorizacaoPagamento.do"
+  },
+  {
+    "ts": "2026-05-22T20:02:21.101Z",
+    "level": "debug",
+    "message": "Checagem do iframe da Autorização.",
+    "hasIni": 1,
+    "hasFim": 1,
+    "hasConsultar": 1,
+    "frameUrl": "https://laurentino.sienge.com.br/sienge/CPG/listAutorizacaoPagamento.do"
+  },
+  {
+    "ts": "2026-05-22T20:02:21.149Z",
+    "level": "info",
+    "message": "Redirecionamento pós-login para a tela de Autorização funcionou.",
+    "strategy": 1,
+    "url": "https://laurentino.sienge.com.br/sienge/8/index.html#/common/page/1777",
+    "title": "Sienge -  Autorização de Pagamento",
+    "bodySnippet": "1 A- Deixe seu feedback! Dê uma nota de 1 a 5 sobre a experiência da nova Home e compartilhe qualquer comentário que você tenha. Muito insatisfeito 1 2 3 4 5 Muito satisfeito Escreva seu comentário (opcional) ENVIAR Agradecemos o seu feedback! Sua opinião é muito importante para a evolução do nosso sistema. Ajuda Artigos recomendados Não encontramos recomendações no momento Outros artigos Não encontramos artigos no momento Contatos Ver parâmetros da tela 4 paramêtros Enviar feedback Parâmetros da tela Esses são os parâmetros que configuram as informações apresentadas na tela em que você está no momento. 4 Parâmetros Parâmetro 223 Na tela de autorização de pagamento o saldo da conta está vinculado ao centro de custo Parâmetro 231 Apresentar na página de autorizações de pagamentos os títulos de previsões financeiras com origem Contas a Pagar. Parâmetro 743 Configuração de alçadas na autorização de pagamento do contas a pagar. Parâmetro 744 Configuração do número de alçadas na autorização de pagamento do contas a pagar. CENTRAL DE AJUDA FALAR COM SUPORTE Base: LAURENTINO CONSTRUTORA E INCORPORADORA LTDA Código: 7453 / 1 Versão: 9.0.4-24"
+  },
+  {
+    "ts": "2026-05-22T20:02:21.150Z",
+    "level": "info",
+    "message": "Abrindo tela de Autorização de Pagamento."
+  },
+  {
+    "ts": "2026-05-22T20:02:21.168Z",
+    "level": "debug",
+    "message": "Snapshot: início de openAuthorizationPage",
+    "url": "https://laurentino.sienge.com.br/sienge/8/index.html#/common/page/1777",
+    "title": "Sienge -  Autorização de Pagamento",
+    "bodySnippet": "1 A- Deixe seu feedback! Dê uma nota de 1 a 5 sobre a experiência da nova Home e compartilhe qualquer comentário que você tenha. Muito insatisfeito 1 2 3 4 5 Muito satisfeito Escreva seu comentário (opcional) ENVIAR Agradecemos o seu feedback! Sua opinião é muito importante para a evolução do nosso sistema. Ajuda Artigos recomendados Não encontramos recomendações no momento Outros artigos Não encontramos artigos no momento Contatos Ver parâmetros da tela 4 paramêtros Enviar feedback Parâmetros da tela Esses são os parâmetros que configuram as informações apresentadas na tela em que você está no momento. 4 Parâmetros Parâmetro 223 Na tela de autorização de pagamento o saldo da conta está vinculado ao centro de custo Parâmetro 231 Apresentar na página de autorizações de pagamentos os títulos de previsões financeiras com origem Contas a Pagar. Parâmetro 743 Configuração de alçadas na autorização de pagamento do contas a pagar. Parâmetro 744 Configuração do número de alçadas na autorização de pagamento do contas a pagar. CENTRAL DE AJUDA FALAR COM SUPORTE Base: LAURENTINO CONSTRUTORA E INCORPORADORA LTDA Código: 7453 / 1 Versão: 9.0.4-24"
+  },
+  {
+    "ts": "2026-05-22T20:02:21.169Z",
+    "level": "debug",
+    "message": "Frames disponíveis: início de openAuthorizationPage",
+    "frames": [
+      {
+        "index": 0,
+        "url": "https://laurentino.sienge.com.br/sienge/8/index.html#/common/page/1777",
+        "name": ""
+      },
+      {
+        "index": 1,
+        "url": "https://push.getbeamer.com/embeddedPush?product=KuBffaXi27291&language=EN",
+        "name": "beamerPush"
+      },
+      {
+        "index": 2,
+        "url": "https://novidades.sienge.com.br/utilities?app_id=KuBffaXi27291",
+        "name": "beamerUtilities"
+      },
+      {
+        "index": 3,
+        "url": "https://softplan-718902997348439957-9fa0e77bd45070017177850.freshchat.com/home",
+        "name": "fc_widget"
+      },
+      {
+        "index": 4,
+        "url": "https://laurentino.sienge.com.br/sienge/CPG/listAutorizacaoPagamento.do",
+        "name": "iFramePage"
+      },
+      {
+        "index": 5,
+        "url": "about:blank",
+        "name": "siengeIFrame"
+      }
+    ],
+    "currentUrl": "https://laurentino.sienge.com.br/sienge/8/index.html#/common/page/1777"
+  },
+  {
+    "ts": "2026-05-22T20:02:21.225Z",
+    "level": "info",
+    "message": "Iframe da Autorização de Pagamento localizado.",
+    "iframeSrc": "/sienge/CPG/listAutorizacaoPagamento.do",
+    "frameUrl": "https://laurentino.sienge.com.br/sienge/CPG/listAutorizacaoPagamento.do"
+  },
+  {
+    "ts": "2026-05-22T20:02:21.277Z",
+    "level": "debug",
+    "message": "Checagem do iframe da Autorização.",
+    "hasIni": 1,
+    "hasFim": 1,
+    "hasConsultar": 1,
+    "frameUrl": "https://laurentino.sienge.com.br/sienge/CPG/listAutorizacaoPagamento.do"
+  },
+  {
+    "ts": "2026-05-22T20:02:21.279Z",
+    "level": "info",
+    "message": "A superfície real da Autorização já está carregada.",
+    "surface": "https://laurentino.sienge.com.br/sienge/CPG/listAutorizacaoPagamento.do"
+  },
+  {
+    "ts": "2026-05-22T20:02:21.287Z",
+    "level": "info",
+    "message": "Configurando período 01/01/2026 até 31/12/2040."
+  },
+  {
+    "ts": "2026-05-22T20:02:21.339Z",
+    "level": "debug",
+    "message": "Snapshot: início de configureFilters",
+    "url": "https://laurentino.sienge.com.br/sienge/8/index.html#/common/page/1777",
+    "title": "Sienge -  Autorização de Pagamento",
+    "bodySnippet": "1 A- Deixe seu feedback! Dê uma nota de 1 a 5 sobre a experiência da nova Home e compartilhe qualquer comentário que você tenha. Muito insatisfeito 1 2 3 4 5 Muito satisfeito Escreva seu comentário (opcional) ENVIAR Agradecemos o seu feedback! Sua opinião é muito importante para a evolução do nosso sistema. Ajuda Artigos recomendados Não encontramos recomendações no momento Outros artigos Não encontramos artigos no momento Contatos Ver parâmetros da tela 4 paramêtros Enviar feedback Parâmetros da tela Esses são os parâmetros que configuram as informações apresentadas na tela em que você está no momento. 4 Parâmetros Parâmetro 223 Na tela de autorização de pagamento o saldo da conta está vinculado ao centro de custo Parâmetro 231 Apresentar na página de autorizações de pagamentos os títulos de previsões financeiras com origem Contas a Pagar. Parâmetro 743 Configuração de alçadas na autorização de pagamento do contas a pagar. Parâmetro 744 Configuração do número de alçadas na autorização de pagamento do contas a pagar. CENTRAL DE AJUDA FALAR COM SUPORTE Base: LAURENTINO CONSTRUTORA E INCORPORADORA LTDA Código: 7453 / 1 Versão: 9.0.4-24"
+  },
+  {
+    "ts": "2026-05-22T20:02:21.357Z",
+    "level": "info",
+    "message": "Campos de período localizados no iframe da Autorização.",
+    "surface": "https://laurentino.sienge.com.br/sienge/CPG/listAutorizacaoPagamento.do"
+  },
+  {
+    "ts": "2026-05-22T20:02:23.026Z",
+    "level": "info",
+    "message": "Radio Somente não autorizados: clique realizado.",
+    "surface": "https://laurentino.sienge.com.br/sienge/CPG/listAutorizacaoPagamento.do"
+  },
+  {
+    "ts": "2026-05-22T20:02:23.247Z",
+    "level": "info",
+    "message": "Botão Consultar: clique realizado.",
+    "surface": "https://laurentino.sienge.com.br/sienge/CPG/listAutorizacaoPagamento.do"
+  },
+  {
+    "ts": "2026-05-22T20:02:26.265Z",
+    "level": "info",
+    "message": "Consulta executada.",
+    "screenshot": "/root/projects/sienge-autorizar-parcelas/screenshots/1779480145752-after-consultar.png",
+    "html": null,
+    "url": "https://laurentino.sienge.com.br/sienge/8/index.html#/common/page/1777",
+    "title": "Sienge -  Autorização de Pagamento",
+    "bodySnippet": "1 A- Deixe seu feedback! Dê uma nota de 1 a 5 sobre a experiência da nova Home e compartilhe qualquer comentário que você tenha. Muito insatisfeito 1 2 3 4 5 Muito satisfeito Escreva seu comentário (opcional) ENVIAR Agradecemos o seu feedback! Sua opinião é muito importante para a evolução do nosso sistema. Ajuda Artigos recomendados Não encontramos recomendações no momento Outros artigos Não encontramos artigos no momento Contatos Ver parâmetros da tela 4 paramêtros Enviar feedback Parâmetros da tela Esses são os parâmetros que configuram as informações apresentadas na tela em que você está no momento. 4 Parâmetros Parâmetro 223 Na tela de autorização de pagamento o saldo da conta está vinculado ao centro de custo Parâmetro 231 Apresentar na página de autorizações de pagamentos os títulos de previsões financeiras com origem Contas a Pagar. Parâmetro 743 Configuração de alçadas na autorização de pagamento do contas a pagar. Parâmetro 744 Configuração do número de alçadas na autorização de pagamento do contas a pagar. CENTRAL DE AJUDA FALAR COM SUPORTE Base: LAURENTINO CONSTRUTORA E INCORPORADORA LTDA Código: 7453 / 1 Versão: 9.0.4-24"
+  },
+  {
+    "ts": "2026-05-22T20:02:26.404Z",
+    "level": "info",
+    "message": "Consulta realizada, mas não há parcelas pendentes para autorizar nesta execução.",
+    "reason": "message",
+    "detail": "Não há registros para os parâmetros informados.",
+    "surface": "https://laurentino.sienge.com.br/sienge/CPG/listAutorizacaoPagamento.do?consultar=true",
+    "currentUrl": "https://laurentino.sienge.com.br/sienge/8/index.html#/common/page/1777"
+  },
+  {
+    "ts": "2026-05-22T20:02:26.769Z",
+    "level": "info",
+    "message": "Execução concluída sem parcelas pendentes para autorizar.",
+    "screenshot": "/root/projects/sienge-autorizar-parcelas/screenshots/1779480146412-final-no-results.png",
+    "url": "https://laurentino.sienge.com.br/sienge/8/index.html#/common/page/1777",
+    "title": "Sienge -  Autorização de Pagamento",
+    "bodySnippet": "1 A- Deixe seu feedback! Dê uma nota de 1 a 5 sobre a experiência da nova Home e compartilhe qualquer comentário que você tenha. Muito insatisfeito 1 2 3 4 5 Muito satisfeito Escreva seu comentário (opcional) ENVIAR Agradecemos o seu feedback! Sua opinião é muito importante para a evolução do nosso sistema. Ajuda Artigos recomendados Não encontramos recomendações no momento Outros artigos Não encontramos artigos no momento Contatos Ver parâmetros da tela 4 paramêtros Enviar feedback Parâmetros da tela Esses são os parâmetros que configuram as informações apresentadas na tela em que você está no momento. 4 Parâmetros Parâmetro 223 Na tela de autorização de pagamento o saldo da conta está vinculado ao centro de custo Parâmetro 231 Apresentar na página de autorizações de pagamentos os títulos de previsões financeiras com origem Contas a Pagar. Parâmetro 743 Configuração de alçadas na autorização de pagamento do contas a pagar. Parâmetro 744 Configuração do número de alçadas na autorização de pagamento do contas a pagar. CENTRAL DE AJUDA FALAR COM SUPORTE Base: LAURENTINO CONSTRUTORA E INCORPORADORA LTDA Código: 7453 / 1 Versão: 9.0.4-24"
+  },
+  {
+    "ts": "2026-05-22T20:02:27.764Z",
+    "level": "info",
+    "message": "Estado da sessão salvo com sucesso.",
+    "statePath": "/root/projects/sienge-autorizar-parcelas/sienge-storage-state.json"
+  },
+  {
+    "ts": "2026-05-22T20:02:28.454Z",
+    "level": "info",
+    "message": "Estado da sessão salvo com sucesso.",
+    "statePath": "/root/projects/sienge-autorizar-parcelas/sienge-storage-state.json"
+  },
+  {
+    "ts": "2026-05-22T20:02:29.023Z",
+    "level": "info",
+    "message": "Execução finalizada."
+  },
+  {
+    "ts": "2026-05-22T20:02:29.025Z",
+    "level": "info",
+    "message": "Aguardando próximo ciclo do PM2.",
+    "waitMs": 36349
+  },
+  {
+    "ts": "2026-05-22T20:03:06.458Z",
+    "level": "info",
+    "message": "Início da execução do robô.",
+    "baseUrl": "https://laurentino.sienge.com.br",
+    "headless": true,
+    "mode": "authorize",
+    "targetPage": "https://laurentino.sienge.com.br/sienge/8/index.html#/common/page/1777",
+    "reportPage": "https://laurentino.sienge.com.br/sienge/CRC/filterContasRecebidas.do",
+    "logPath": "/root/projects/sienge-autorizar-parcelas/sienge-authorize-log.json"
+  },
+  {
+    "ts": "2026-05-22T20:03:12.263Z",
+    "level": "info",
+    "message": "Sessão existente válida.",
+    "url": "https://laurentino.sienge.com.br/sienge/8/index.html",
+    "title": "Sienge Plataforma"
+  },
+  {
+    "ts": "2026-05-22T20:03:12.266Z",
+    "level": "info",
+    "message": "Após login válido, tentando ir direto para a URL da tela 1777."
+  },
+  {
+    "ts": "2026-05-22T20:03:14.774Z",
+    "level": "debug",
+    "message": "Iniciando dismissHomeOverlays.",
+    "currentUrl": "https://laurentino.sienge.com.br/sienge/8/index.html"
+  },
+  {
+    "ts": "2026-05-22T20:03:15.654Z",
+    "level": "info",
+    "message": "Fechar painel de ajuda contextual: clique realizado."
+  },
+  {
+    "ts": "2026-05-22T20:03:21.494Z",
+    "level": "info",
+    "message": "Iframe da Autorização de Pagamento localizado.",
+    "iframeSrc": "/sienge/CPG/listAutorizacaoPagamento.do",
+    "frameUrl": "https://laurentino.sienge.com.br/sienge/CPG/listAutorizacaoPagamento.do"
+  },
+  {
+    "ts": "2026-05-22T20:03:21.551Z",
+    "level": "debug",
+    "message": "Checagem do iframe da Autorização.",
+    "hasIni": 1,
+    "hasFim": 1,
+    "hasConsultar": 1,
+    "frameUrl": "https://laurentino.sienge.com.br/sienge/CPG/listAutorizacaoPagamento.do"
+  },
+  {
+    "ts": "2026-05-22T20:03:21.859Z",
+    "level": "info",
+    "message": "Redirecionamento pós-login para a tela de Autorização funcionou.",
+    "strategy": 1,
+    "url": "https://laurentino.sienge.com.br/sienge/8/index.html#/common/page/1777",
+    "title": "Sienge -  Autorização de Pagamento",
+    "bodySnippet": "1 A- Deixe seu feedback! Dê uma nota de 1 a 5 sobre a experiência da nova Home e compartilhe qualquer comentário que você tenha. Muito insatisfeito 1 2 3 4 5 Muito satisfeito Escreva seu comentário (opcional) ENVIAR Agradecemos o seu feedback! Sua opinião é muito importante para a evolução do nosso sistema. Ajuda Artigos recomendados Não encontramos recomendações no momento Outros artigos Não encontramos artigos no momento Contatos Ver parâmetros da tela 4 paramêtros Enviar feedback Parâmetros da tela Esses são os parâmetros que configuram as informações apresentadas na tela em que você está no momento. 4 Parâmetros Parâmetro 223 Na tela de autorização de pagamento o saldo da conta está vinculado ao centro de custo Parâmetro 231 Apresentar na página de autorizações de pagamentos os títulos de previsões financeiras com origem Contas a Pagar. Parâmetro 743 Configuração de alçadas na autorização de pagamento do contas a pagar. Parâmetro 744 Configuração do número de alçadas na autorização de pagamento do contas a pagar. CENTRAL DE AJUDA FALAR COM SUPORTE Base: LAURENTINO CONSTRUTORA E INCORPORADORA LTDA Código: 7453 / 1 Versão: 9.0.4-24 Página inicial"
+  },
+  {
+    "ts": "2026-05-22T20:03:21.861Z",
+    "level": "info",
+    "message": "Abrindo tela de Autorização de Pagamento."
+  },
+  {
+    "ts": "2026-05-22T20:03:21.882Z",
+    "level": "debug",
+    "message": "Snapshot: início de openAuthorizationPage",
+    "url": "https://laurentino.sienge.com.br/sienge/8/index.html#/common/page/1777",
+    "title": "Sienge -  Autorização de Pagamento",
+    "bodySnippet": "1 A- Deixe seu feedback! Dê uma nota de 1 a 5 sobre a experiência da nova Home e compartilhe qualquer comentário que você tenha. Muito insatisfeito 1 2 3 4 5 Muito satisfeito Escreva seu comentário (opcional) ENVIAR Agradecemos o seu feedback! Sua opinião é muito importante para a evolução do nosso sistema. Ajuda Artigos recomendados Não encontramos recomendações no momento Outros artigos Não encontramos artigos no momento Contatos Ver parâmetros da tela 4 paramêtros Enviar feedback Parâmetros da tela Esses são os parâmetros que configuram as informações apresentadas na tela em que você está no momento. 4 Parâmetros Parâmetro 223 Na tela de autorização de pagamento o saldo da conta está vinculado ao centro de custo Parâmetro 231 Apresentar na página de autorizações de pagamentos os títulos de previsões financeiras com origem Contas a Pagar. Parâmetro 743 Configuração de alçadas na autorização de pagamento do contas a pagar. Parâmetro 744 Configuração do número de alçadas na autorização de pagamento do contas a pagar. CENTRAL DE AJUDA FALAR COM SUPORTE Base: LAURENTINO CONSTRUTORA E INCORPORADORA LTDA Código: 7453 / 1 Versão: 9.0.4-24 Página inicial"
+  },
+  {
+    "ts": "2026-05-22T20:03:21.884Z",
+    "level": "debug",
+    "message": "Frames disponíveis: início de openAuthorizationPage",
+    "frames": [
+      {
+        "index": 0,
+        "url": "https://laurentino.sienge.com.br/sienge/8/index.html#/common/page/1777",
+        "name": ""
+      },
+      {
+        "index": 1,
+        "url": "https://push.getbeamer.com/embeddedPush?product=KuBffaXi27291&language=EN",
+        "name": "beamerPush"
+      },
+      {
+        "index": 2,
+        "url": "https://novidades.sienge.com.br/utilities?app_id=KuBffaXi27291",
+        "name": "beamerUtilities"
+      },
+      {
+        "index": 3,
+        "url": "https://softplan-718902997348439957-9fa0e77bd45070017177850.freshchat.com/home",
+        "name": "fc_widget"
+      },
+      {
+        "index": 4,
+        "url": "https://laurentino.sienge.com.br/sienge/CPG/listAutorizacaoPagamento.do",
+        "name": "iFramePage"
+      },
+      {
+        "index": 5,
+        "url": "about:blank",
+        "name": "siengeIFrame"
+      }
+    ],
+    "currentUrl": "https://laurentino.sienge.com.br/sienge/8/index.html#/common/page/1777"
+  },
+  {
+    "ts": "2026-05-22T20:03:21.956Z",
+    "level": "info",
+    "message": "Iframe da Autorização de Pagamento localizado.",
+    "iframeSrc": "/sienge/CPG/listAutorizacaoPagamento.do",
+    "frameUrl": "https://laurentino.sienge.com.br/sienge/CPG/listAutorizacaoPagamento.do"
+  },
+  {
+    "ts": "2026-05-22T20:03:21.963Z",
+    "level": "debug",
+    "message": "Checagem do iframe da Autorização.",
+    "hasIni": 1,
+    "hasFim": 1,
+    "hasConsultar": 1,
+    "frameUrl": "https://laurentino.sienge.com.br/sienge/CPG/listAutorizacaoPagamento.do"
+  },
+  {
+    "ts": "2026-05-22T20:03:21.964Z",
+    "level": "info",
+    "message": "A superfície real da Autorização já está carregada.",
+    "surface": "https://laurentino.sienge.com.br/sienge/CPG/listAutorizacaoPagamento.do"
+  },
+  {
+    "ts": "2026-05-22T20:03:21.965Z",
+    "level": "info",
+    "message": "Configurando período 01/01/2026 até 31/12/2040."
+  },
+  {
+    "ts": "2026-05-22T20:03:21.971Z",
+    "level": "debug",
+    "message": "Snapshot: início de configureFilters",
+    "url": "https://laurentino.sienge.com.br/sienge/8/index.html#/common/page/1777",
+    "title": "Sienge -  Autorização de Pagamento",
+    "bodySnippet": "1 A- Deixe seu feedback! Dê uma nota de 1 a 5 sobre a experiência da nova Home e compartilhe qualquer comentário que você tenha. Muito insatisfeito 1 2 3 4 5 Muito satisfeito Escreva seu comentário (opcional) ENVIAR Agradecemos o seu feedback! Sua opinião é muito importante para a evolução do nosso sistema. Ajuda Artigos recomendados Não encontramos recomendações no momento Outros artigos Não encontramos artigos no momento Contatos Ver parâmetros da tela 4 paramêtros Enviar feedback Parâmetros da tela Esses são os parâmetros que configuram as informações apresentadas na tela em que você está no momento. 4 Parâmetros Parâmetro 223 Na tela de autorização de pagamento o saldo da conta está vinculado ao centro de custo Parâmetro 231 Apresentar na página de autorizações de pagamentos os títulos de previsões financeiras com origem Contas a Pagar. Parâmetro 743 Configuração de alçadas na autorização de pagamento do contas a pagar. Parâmetro 744 Configuração do número de alçadas na autorização de pagamento do contas a pagar. CENTRAL DE AJUDA FALAR COM SUPORTE Base: LAURENTINO CONSTRUTORA E INCORPORADORA LTDA Código: 7453 / 1 Versão: 9.0.4-24 Página inicial"
+  },
+  {
+    "ts": "2026-05-22T20:03:21.978Z",
+    "level": "info",
+    "message": "Campos de período localizados no iframe da Autorização.",
+    "surface": "https://laurentino.sienge.com.br/sienge/CPG/listAutorizacaoPagamento.do"
+  },
+  {
+    "ts": "2026-05-22T20:03:23.345Z",
+    "level": "info",
+    "message": "Radio Somente não autorizados: clique realizado.",
+    "surface": "https://laurentino.sienge.com.br/sienge/CPG/listAutorizacaoPagamento.do"
+  },
+  {
+    "ts": "2026-05-22T20:03:23.503Z",
+    "level": "info",
+    "message": "Botão Consultar: clique realizado.",
+    "surface": "https://laurentino.sienge.com.br/sienge/CPG/listAutorizacaoPagamento.do"
+  },
+  {
+    "ts": "2026-05-22T20:03:26.436Z",
+    "level": "info",
+    "message": "Consulta executada.",
+    "screenshot": "/root/projects/sienge-autorizar-parcelas/screenshots/1779480206012-after-consultar.png",
+    "html": null,
+    "url": "https://laurentino.sienge.com.br/sienge/8/index.html#/common/page/1777",
+    "title": "Sienge -  Autorização de Pagamento",
+    "bodySnippet": "1 A- Deixe seu feedback! Dê uma nota de 1 a 5 sobre a experiência da nova Home e compartilhe qualquer comentário que você tenha. Muito insatisfeito 1 2 3 4 5 Muito satisfeito Escreva seu comentário (opcional) ENVIAR Agradecemos o seu feedback! Sua opinião é muito importante para a evolução do nosso sistema. Ajuda Artigos recomendados Não encontramos recomendações no momento Outros artigos Não encontramos artigos no momento Contatos Ver parâmetros da tela 4 paramêtros Enviar feedback Parâmetros da tela Esses são os parâmetros que configuram as informações apresentadas na tela em que você está no momento. 4 Parâmetros Parâmetro 223 Na tela de autorização de pagamento o saldo da conta está vinculado ao centro de custo Parâmetro 231 Apresentar na página de autorizações de pagamentos os títulos de previsões financeiras com origem Contas a Pagar. Parâmetro 743 Configuração de alçadas na autorização de pagamento do contas a pagar. Parâmetro 744 Configuração do número de alçadas na autorização de pagamento do contas a pagar. CENTRAL DE AJUDA FALAR COM SUPORTE Base: LAURENTINO CONSTRUTORA E INCORPORADORA LTDA Código: 7453 / 1 Versão: 9.0.4-24"
+  },
+  {
+    "ts": "2026-05-22T20:03:26.497Z",
+    "level": "info",
+    "message": "Consulta realizada, mas não há parcelas pendentes para autorizar nesta execução.",
+    "reason": "message",
+    "detail": "Não há registros para os parâmetros informados.",
+    "surface": "https://laurentino.sienge.com.br/sienge/CPG/listAutorizacaoPagamento.do?consultar=true",
+    "currentUrl": "https://laurentino.sienge.com.br/sienge/8/index.html#/common/page/1777"
+  },
+  {
+    "ts": "2026-05-22T20:03:26.945Z",
+    "level": "info",
+    "message": "Execução concluída sem parcelas pendentes para autorizar.",
+    "screenshot": "/root/projects/sienge-autorizar-parcelas/screenshots/1779480206505-final-no-results.png",
+    "url": "https://laurentino.sienge.com.br/sienge/8/index.html#/common/page/1777",
+    "title": "Sienge -  Autorização de Pagamento",
+    "bodySnippet": "1 A- Deixe seu feedback! Dê uma nota de 1 a 5 sobre a experiência da nova Home e compartilhe qualquer comentário que você tenha. Muito insatisfeito 1 2 3 4 5 Muito satisfeito Escreva seu comentário (opcional) ENVIAR Agradecemos o seu feedback! Sua opinião é muito importante para a evolução do nosso sistema. Ajuda Artigos recomendados Não encontramos recomendações no momento Outros artigos Não encontramos artigos no momento Contatos Ver parâmetros da tela 4 paramêtros Enviar feedback Parâmetros da tela Esses são os parâmetros que configuram as informações apresentadas na tela em que você está no momento. 4 Parâmetros Parâmetro 223 Na tela de autorização de pagamento o saldo da conta está vinculado ao centro de custo Parâmetro 231 Apresentar na página de autorizações de pagamentos os títulos de previsões financeiras com origem Contas a Pagar. Parâmetro 743 Configuração de alçadas na autorização de pagamento do contas a pagar. Parâmetro 744 Configuração do número de alçadas na autorização de pagamento do contas a pagar. CENTRAL DE AJUDA FALAR COM SUPORTE Base: LAURENTINO CONSTRUTORA E INCORPORADORA LTDA Código: 7453 / 1 Versão: 9.0.4-24"
+  },
+  {
+    "ts": "2026-05-22T20:03:27.652Z",
+    "level": "info",
+    "message": "Estado da sessão salvo com sucesso.",
+    "statePath": "/root/projects/sienge-autorizar-parcelas/sienge-storage-state.json"
+  },
+  {
+    "ts": "2026-05-22T20:03:28.219Z",
+    "level": "info",
+    "message": "Estado da sessão salvo com sucesso.",
+    "statePath": "/root/projects/sienge-autorizar-parcelas/sienge-storage-state.json"
+  },
+  {
+    "ts": "2026-05-22T20:03:28.670Z",
+    "level": "info",
+    "message": "Execução finalizada."
+  },
+  {
+    "ts": "2026-05-22T20:03:28.672Z",
+    "level": "info",
+    "message": "Aguardando próximo ciclo do PM2.",
+    "waitMs": 36704
+  }
+]
