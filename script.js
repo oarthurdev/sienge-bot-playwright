@@ -4409,8 +4409,8 @@ async function fetchWithRetry(page, url, options = {}, maxRetries = 3) {
       if (response && response.ok()) {
         return response;
       }
-      if (response && i < maxRetries - 1) {
-        logEvent({ level: 'warning', message: `fetchWithRetry: response not OK, retrying`, attempt: i + 1, url, status: response.status() });
+      if ((!response || !response.ok()) && i < maxRetries - 1) {
+        logEvent({ level: 'warning', message: `fetchWithRetry: response not OK, retrying`, attempt: i + 1, url, status: response ? response.status() : 'no-response' });
         await sleepMs(2000);
         continue;
       }
