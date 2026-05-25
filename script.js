@@ -1489,37 +1489,83 @@ async function waitForContextResponse(context, predicate, timeout = 60000) {
 async function saveReportFromContext(
   context,
   reportUrl,
-  filePath
+  filePath,
+  maxRetries = 4
 ) {
 
   await ensureDir(path.dirname(filePath));
 
-  const response = await context.request.get(
-    reportUrl,
-    {
-      timeout: 120000,
-    }
-  );
-
-  if (!response.ok()) {
-
-    throw new Error(
-      `Falha ao baixar relatório: HTTP ${response.status()}`
+  const shouldRetryError = (error) => {
+    if (!error) return false;
+    const message = String(error.message || '').toLowerCase();
+    return (
+      message.includes('socket hang up') ||
+      message.includes('connection reset') ||
+      message.includes('econnreset') ||
+      message.includes('etimedout') ||
+      message.includes('timeout') ||
+      message.includes('503') ||
+      message.includes('502') ||
+      message.includes('504')
     );
+  };
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const response = await context.request.get(
+        reportUrl,
+        {
+          timeout: 120000,
+        }
+      );
+
+      if (!response.ok()) {
+        const status = response.status();
+        if (attempt < maxRetries - 1 && [500, 502, 503, 504].includes(status)) {
+          logEvent({
+            level: 'warning',
+            message: `saveReportFromContext: HTTP ${status} temporário. Tentando novamente.`,
+            attempt: attempt + 1,
+            reportUrl,
+          });
+          await sleepMs(2000);
+          continue;
+        }
+
+        throw new Error(
+          `Falha ao baixar relatório: HTTP ${status}`
+        );
+      }
+
+      const body = await response.body();
+
+      if (fs.existsSync(filePath)) {
+        await fs.promises.unlink(filePath).catch(() => {});
+      }
+
+      await fs.promises.writeFile(
+        filePath,
+        body
+      );
+
+      return filePath;
+    } catch (error) {
+      if (attempt < maxRetries - 1 && shouldRetryError(error)) {
+        logEvent({
+          level: 'warning',
+          message: `saveReportFromContext: tentativa ${attempt + 1}/${maxRetries} falhou por erro temporário. Retry.`,
+          reportUrl,
+          detail: String(error.message || error),
+        });
+        await sleepMs(2000);
+        continue;
+      }
+
+      throw error;
+    }
   }
 
-  const body = await response.body();
-
-  if (fs.existsSync(filePath)) {
-    await fs.promises.unlink(filePath).catch(() => {});
-  }
-
-  await fs.promises.writeFile(
-    filePath,
-    body
-  );
-
-  return filePath;
+  throw new Error(`Falha ao baixar relatório após ${maxRetries} tentativas: ${reportUrl}`);
 }
 
 async function waitLegacyAjax(page, timeout = 15000) {
