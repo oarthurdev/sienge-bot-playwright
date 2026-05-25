@@ -56,8 +56,8 @@ const REPORT_DEFINITIONS = [
   {
     sheetName: 'Receita Parcelas Mensal',
     pdfName: 'Receita Parcelas Mensal',
-    planoFinanceiro: ['*'],
-    planoFinanceiroExcecao: ['Receita de Estoque de Terrenos'],
+    planoFinanceiro: ['Receita de Incorporação de Imóveis', 'Receita de Bens/Imóveis Adquiridos de Terceiros', 'Descontos Concedidos (Unidades Imobiliárias)', 'xxxxxReceita de Aluguel (Locação)', 'Permuta Externa', 'Receita de Cliente Desconhecido', 'Receita de Administração (Taxa Administrativa)', 'Receita Empreitada Só Mão de Obra', 'Receita de Projeto', 'Receita de Locação (Aluguel)', 'Entrada de Financiamento para Construção', 'Entrada de Capital de Giro', 'Receita de Aplicações Financeiras', 'Receita de Empréstimos', 'Aporte Capital de Sócio', 'Descontos Obtidos', 'Receita de Venda de Imobilizado', 'Receita Aluguel PCS 35', 'Estoque de Material', 'Receita Energia Solar Locatários', 'Venda de Passivos', '(-) Anulação de Custos', '(-) Anulação de Custos Mão de Obra', '(-) Retenção Caução/Sinal', '(-) Retenção de INSS', '(-) Retenção de ISS', '(-) Retenção de PIS', '(-) Retenção de CSLL', '(-) Retenção de COFINS', '(-) Retenção de IR', '(-) Retenção (PIS/COFINS/CSLL -  4,65%)', '(-) Retenção de Permuta', '(-) Transf. Materiais Estoque Laurentino P/ Finan', '(-) Transf. Materiais Estoque Laurentino P/ Bom J.', '(-) Transf. Mat. Estoque P/ Obras da Laurentino', '(-) Reembolso de Despesas Gerais (Obra)', '(-) Divisão de muro', '(-) Retenção Contribuição Sindical (Escritório)', '(-) Reembolso de Despesas Administrativas', '(-) Restituição IPTU Imóveis Alugados (Escritório)', '(-) Reembolso de Despesas Financeiras', '(-) Reembolso de Despesas Tributárias', '(-) Abatimento de Adiantamento', '(-) Restituição Condomínio', '(-) Restituição água'],
+    planoFinanceiroExcecao: [''],
     contasCorrente: ['*'],
     documentos: ['CONTRATO'],
     documentosExcecao: [''],
@@ -74,8 +74,8 @@ const REPORT_DEFINITIONS = [
   {
     sheetName: 'Receita Reforços',
     pdfName: 'Receita Reforços',
-    planoFinanceiro: ['*'],
-    planoFinanceiroExcecao: ['Receita de Estoque de Terrenos'],
+    planoFinanceiro: ['Receita de Incorporação de Imóveis', 'Receita de Bens/Imóveis Adquiridos de Terceiros', 'Descontos Concedidos (Unidades Imobiliárias)', 'xxxxxReceita de Aluguel (Locação)', 'Permuta Externa', 'Receita de Cliente Desconhecido', 'Receita de Administração (Taxa Administrativa)', 'Receita Empreitada Só Mão de Obra', 'Receita de Projeto', 'Receita de Locação (Aluguel)', 'Entrada de Financiamento para Construção', 'Entrada de Capital de Giro', 'Receita de Aplicações Financeiras', 'Receita de Empréstimos', 'Aporte Capital de Sócio', 'Descontos Obtidos', 'Receita de Venda de Imobilizado', 'Receita Aluguel PCS 35', 'Estoque de Material', 'Receita Energia Solar Locatários', 'Venda de Passivos', '(-) Anulação de Custos', '(-) Anulação de Custos Mão de Obra', '(-) Retenção Caução/Sinal', '(-) Retenção de INSS', '(-) Retenção de ISS', '(-) Retenção de PIS', '(-) Retenção de CSLL', '(-) Retenção de COFINS', '(-) Retenção de IR', '(-) Retenção (PIS/COFINS/CSLL -  4,65%)', '(-) Retenção de Permuta', '(-) Transf. Materiais Estoque Laurentino P/ Finan', '(-) Transf. Materiais Estoque Laurentino P/ Bom J.', '(-) Transf. Mat. Estoque P/ Obras da Laurentino', '(-) Reembolso de Despesas Gerais (Obra)', '(-) Divisão de muro', '(-) Retenção Contribuição Sindical (Escritório)', '(-) Reembolso de Despesas Administrativas', '(-) Restituição IPTU Imóveis Alugados (Escritório)', '(-) Reembolso de Despesas Financeiras', '(-) Reembolso de Despesas Tributárias', '(-) Abatimento de Adiantamento', '(-) Restituição Condomínio', '(-) Restituição água'],
+    planoFinanceiroExcecao: [''],
     documentos: ['CONTRATO'],
     condicoesPagamento: [
       'Parcelas Semestrais',
@@ -98,8 +98,8 @@ const REPORT_DEFINITIONS = [
   {
     sheetName: 'Receita Aluguel',
     pdfName: 'Receita Aluguel',
-    planoFinanceiro: ['*'],
-    planoFinanceiroExcecao: ['Receita de Estoque de Terrenos'],
+    planoFinanceiro: ['Receita de Incorporação de Imóveis', 'Receita de Bens/Imóveis Adquiridos de Terceiros', 'Descontos Concedidos (Unidades Imobiliárias)', 'xxxxxReceita de Aluguel (Locação)', 'Permuta Externa', 'Receita de Cliente Desconhecido', 'Receita de Administração (Taxa Administrativa)', 'Receita Empreitada Só Mão de Obra', 'Receita de Projeto', 'Receita de Locação (Aluguel)', 'Entrada de Financiamento para Construção', 'Entrada de Capital de Giro', 'Receita de Aplicações Financeiras', 'Receita de Empréstimos', 'Aporte Capital de Sócio', 'Descontos Obtidos', 'Receita de Venda de Imobilizado', 'Receita Aluguel PCS 35', 'Estoque de Material', 'Receita Energia Solar Locatários', 'Venda de Passivos', '(-) Anulação de Custos', '(-) Anulação de Custos Mão de Obra', '(-) Retenção Caução/Sinal', '(-) Retenção de INSS', '(-) Retenção de ISS', '(-) Retenção de PIS', '(-) Retenção de CSLL', '(-) Retenção de COFINS', '(-) Retenção de IR', '(-) Retenção (PIS/COFINS/CSLL -  4,65%)', '(-) Retenção de Permuta', '(-) Transf. Materiais Estoque Laurentino P/ Finan', '(-) Transf. Materiais Estoque Laurentino P/ Bom J.', '(-) Transf. Mat. Estoque P/ Obras da Laurentino', '(-) Reembolso de Despesas Gerais (Obra)', '(-) Divisão de muro', '(-) Retenção Contribuição Sindical (Escritório)', '(-) Reembolso de Despesas Administrativas', '(-) Restituição IPTU Imóveis Alugados (Escritório)', '(-) Reembolso de Despesas Financeiras', '(-) Reembolso de Despesas Tributárias', '(-) Abatimento de Adiantamento', '(-) Restituição Condomínio', '(-) Restituição água'],
+    planoFinanceiroExcecao: [],
     documentos: ['*'],
     condicoesPagamento: [
       'Novo Parcelas Mensais Aluguel',
@@ -116,8 +116,8 @@ const REPORT_DEFINITIONS = [
   {
     sheetName: 'Ato + PE',
     pdfName: 'Ato + PE',
-    planoFinanceiro: ['*'],
-    planoFinanceiroExcecao: ['Receita de Estoque de Terrenos'],
+    planoFinanceiro: ['Receita de Incorporação de Imóveis', 'Receita de Bens/Imóveis Adquiridos de Terceiros', 'Descontos Concedidos (Unidades Imobiliárias)', 'xxxxxReceita de Aluguel (Locação)', 'Permuta Externa', 'Receita de Cliente Desconhecido', 'Receita de Administração (Taxa Administrativa)', 'Receita Empreitada Só Mão de Obra', 'Receita de Projeto', 'Receita de Locação (Aluguel)', 'Entrada de Financiamento para Construção', 'Entrada de Capital de Giro', 'Receita de Aplicações Financeiras', 'Receita de Empréstimos', 'Aporte Capital de Sócio', 'Descontos Obtidos', 'Receita de Venda de Imobilizado', 'Receita Aluguel PCS 35', 'Estoque de Material', 'Receita Energia Solar Locatários', 'Venda de Passivos', '(-) Anulação de Custos', '(-) Anulação de Custos Mão de Obra', '(-) Retenção Caução/Sinal', '(-) Retenção de INSS', '(-) Retenção de ISS', '(-) Retenção de PIS', '(-) Retenção de CSLL', '(-) Retenção de COFINS', '(-) Retenção de IR', '(-) Retenção (PIS/COFINS/CSLL -  4,65%)', '(-) Retenção de Permuta', '(-) Transf. Materiais Estoque Laurentino P/ Finan', '(-) Transf. Materiais Estoque Laurentino P/ Bom J.', '(-) Transf. Mat. Estoque P/ Obras da Laurentino', '(-) Reembolso de Despesas Gerais (Obra)', '(-) Divisão de muro', '(-) Retenção Contribuição Sindical (Escritório)', '(-) Reembolso de Despesas Administrativas', '(-) Restituição IPTU Imóveis Alugados (Escritório)', '(-) Reembolso de Despesas Financeiras', '(-) Reembolso de Despesas Tributárias', '(-) Abatimento de Adiantamento', '(-) Restituição Condomínio', '(-) Restituição água'],
+    planoFinanceiroExcecao: [''],
     documentos: ['CONTRATO'],
     condicoesPagamento: [
       'Parcela na Escritura', 
@@ -136,8 +136,8 @@ const REPORT_DEFINITIONS = [
   {
     sheetName: 'Venda a Vista',
     pdfName: 'Venda a Vista',
-    planoFinanceiro: ['*'],
-    planoFinanceiroExcecao: ['Receita de Estoque de Terrenos'],
+    planoFinanceiro: ['Receita de Incorporação de Imóveis', 'Receita de Bens/Imóveis Adquiridos de Terceiros', 'Descontos Concedidos (Unidades Imobiliárias)', 'xxxxxReceita de Aluguel (Locação)', 'Permuta Externa', 'Receita de Cliente Desconhecido', 'Receita de Administração (Taxa Administrativa)', 'Receita Empreitada Só Mão de Obra', 'Receita de Projeto', 'Receita de Locação (Aluguel)', 'Entrada de Financiamento para Construção', 'Entrada de Capital de Giro', 'Receita de Aplicações Financeiras', 'Receita de Empréstimos', 'Aporte Capital de Sócio', 'Descontos Obtidos', 'Receita de Venda de Imobilizado', 'Receita Aluguel PCS 35', 'Estoque de Material', 'Receita Energia Solar Locatários', 'Venda de Passivos', '(-) Anulação de Custos', '(-) Anulação de Custos Mão de Obra', '(-) Retenção Caução/Sinal', '(-) Retenção de INSS', '(-) Retenção de ISS', '(-) Retenção de PIS', '(-) Retenção de CSLL', '(-) Retenção de COFINS', '(-) Retenção de IR', '(-) Retenção (PIS/COFINS/CSLL -  4,65%)', '(-) Retenção de Permuta', '(-) Transf. Materiais Estoque Laurentino P/ Finan', '(-) Transf. Materiais Estoque Laurentino P/ Bom J.', '(-) Transf. Mat. Estoque P/ Obras da Laurentino', '(-) Reembolso de Despesas Gerais (Obra)', '(-) Divisão de muro', '(-) Retenção Contribuição Sindical (Escritório)', '(-) Reembolso de Despesas Administrativas', '(-) Restituição IPTU Imóveis Alugados (Escritório)', '(-) Reembolso de Despesas Financeiras', '(-) Reembolso de Despesas Tributárias', '(-) Abatimento de Adiantamento', '(-) Restituição Condomínio', '(-) Restituição água'],
+    planoFinanceiroExcecao: [],
     documentos: ['CONTRATO'],
     condicoesPagamento: [
       'Venda a Vista', 
@@ -154,8 +154,7 @@ const REPORT_DEFINITIONS = [
   {
     sheetName: 'Financiamento',
     pdfName: 'Financiamento',
-    planoFinanceiro: ['*'],
-    planoFinanceiroExcecao: ['Receita de Estoque de Terrenos'],
+    planoFinanceiro: ['Receita de Incorporação de Imóveis', 'Receita de Bens/Imóveis Adquiridos de Terceiros', 'Descontos Concedidos (Unidades Imobiliárias)', 'xxxxxReceita de Aluguel (Locação)', 'Permuta Externa', 'Receita de Cliente Desconhecido', 'Receita de Administração (Taxa Administrativa)', 'Receita Empreitada Só Mão de Obra', 'Receita de Projeto', 'Receita de Locação (Aluguel)', 'Entrada de Financiamento para Construção', 'Entrada de Capital de Giro', 'Receita de Aplicações Financeiras', 'Receita de Empréstimos', 'Aporte Capital de Sócio', 'Descontos Obtidos', 'Receita de Venda de Imobilizado', 'Receita Aluguel PCS 35', 'Estoque de Material', 'Receita Energia Solar Locatários', 'Venda de Passivos', '(-) Anulação de Custos', '(-) Anulação de Custos Mão de Obra', '(-) Retenção Caução/Sinal', '(-) Retenção de INSS', '(-) Retenção de ISS', '(-) Retenção de PIS', '(-) Retenção de CSLL', '(-) Retenção de COFINS', '(-) Retenção de IR', '(-) Retenção (PIS/COFINS/CSLL -  4,65%)', '(-) Retenção de Permuta', '(-) Transf. Materiais Estoque Laurentino P/ Finan', '(-) Transf. Materiais Estoque Laurentino P/ Bom J.', '(-) Transf. Mat. Estoque P/ Obras da Laurentino', '(-) Reembolso de Despesas Gerais (Obra)', '(-) Divisão de muro', '(-) Retenção Contribuição Sindical (Escritório)', '(-) Reembolso de Despesas Administrativas', '(-) Restituição IPTU Imóveis Alugados (Escritório)', '(-) Reembolso de Despesas Financeiras', '(-) Reembolso de Despesas Tributárias', '(-) Abatimento de Adiantamento', '(-) Restituição Condomínio', '(-) Restituição água'],
     documentos: ['CONTRATO'],
     condicoesPagamento: [
       'Novo Financiamento', 
@@ -172,8 +171,8 @@ const REPORT_DEFINITIONS = [
   {
     sheetName: 'Venda Lote',
     pdfName: 'Venda Lote',
-    planoFinanceiro: ['*'],
-    planoFinanceiroExcecao: ['Receita de Estoque de Terrenos'],
+    planoFinanceiro: ['Receita de Estoque de Terrenos'],
+    planoFinanceiroExcecao: [],
     documentos: ['*'],
     condicoesPagamento: ['*'],
     flags: {
@@ -217,8 +216,8 @@ const REPORT_DEFINITIONS = [
   {
     sheetName: 'Receitas Diversas',
     pdfName: 'Receitas Diversas',
-    planoFinanceiro: ['*'],
-    planoFinanceiroExcecao: ['Receita de Estoque de Terrenos', 'Receita de Empréstimos', 'Venda de Passivos', 'Aporte Capital de Sócio'],
+    planoFinanceiro: ['Receita de Incorporação de Imóveis', 'Receita de Bens/Imóveis Adquiridos de Terceiros', 'Descontos Concedidos (Unidades Imobiliárias)', 'xxxxxReceita de Aluguel (Locação)', 'Permuta Externa', 'Receita de Cliente Desconhecido', 'Receita de Administração (Taxa Administrativa)', 'Receita Empreitada Só Mão de Obra', 'Receita de Projeto', 'Receita de Locação (Aluguel)', 'Entrada de Financiamento para Construção', 'Entrada de Capital de Giro', 'Receita de Aplicações Financeiras', 'Descontos Obtidos', 'Receita de Venda de Imobilizado', 'Receita Aluguel PCS 35', 'Estoque de Material', 'Receita Energia Solar Locatários', '(-) Anulação de Custos', '(-) Anulação de Custos Mão de Obra', '(-) Retenção Caução/Sinal', '(-) Retenção de INSS', '(-) Retenção de ISS', '(-) Retenção de PIS', '(-) Retenção de CSLL', '(-) Retenção de COFINS', '(-) Retenção de IR', '(-) Retenção (PIS/COFINS/CSLL -  4,65%)', '(-) Retenção de Permuta', '(-) Transf. Materiais Estoque Laurentino P/ Finan', '(-) Transf. Materiais Estoque Laurentino P/ Bom J.', '(-) Transf. Mat. Estoque P/ Obras da Laurentino', '(-) Reembolso de Despesas Gerais (Obra)', '(-) Divisão de muro', '(-) Retenção Contribuição Sindical (Escritório)', '(-) Reembolso de Despesas Administrativas', '(-) Restituição IPTU Imóveis Alugados (Escritório)', '(-) Reembolso de Despesas Financeiras', '(-) Reembolso de Despesas Tributárias', '(-) Abatimento de Adiantamento', '(-) Restituição Condomínio', '(-) Restituição água'],
+    planoFinanceiroExcecao: [],
     documentos: ['*'],
     documentosExcecao: ['CONTRATO'],
     condicoesPagamento: ['*'],
@@ -1991,6 +1990,9 @@ async function findModalFrame(
   const started =
     Date.now();
 
+  const normalizedMarker = String(marker).trim();
+  const markerRegex = new RegExp(escRe(normalizedMarker), 'i');
+
   while (
     Date.now() - started <
     timeout
@@ -2010,15 +2012,48 @@ async function findModalFrame(
           continue;
         }
 
-        const content =
-          await frame.content();
+        // 1) Busca o texto do título no conteúdo bruto
+        try {
+          const content =
+            await frame.content();
 
-        if (
-          content.includes(marker)
-        ) {
+          if (
+            content &&
+            content.match(markerRegex)
+          ) {
+            return frame;
+          }
+        } catch {}
 
-          return frame;
-        }
+        // 2) Busca texto visível no frame
+        try {
+          const visibleTitle = await frame.locator(`text=${normalizedMarker}`).count();
+          if (visibleTitle && visibleTitle > 0) {
+            return frame;
+          }
+        } catch {}
+
+        // 3) Busca seletor conhecido de modal de seleção
+        try {
+          const modalTrigger = await frame.locator(
+            'input[name="pbSelecionar"], #pbSelecionar, input[type="button"][value*="TODOS" i], input[type="submit"][value*="TODOS" i], button:has-text("TODOS")'
+          ).count();
+
+          if (modalTrigger && modalTrigger > 0) {
+            return frame;
+          }
+        } catch {}
+
+        // 4) Busca cabeçalhos semelhantes ao título do modal
+        try {
+          const headerMatch = await frame.locator(
+            `h1:has-text("${normalizedMarker}"), h2:has-text("${normalizedMarker}"), span:has-text("${normalizedMarker}")`
+          ).count();
+
+          if (headerMatch && headerMatch > 0) {
+            return frame;
+          }
+        } catch {}
 
       } catch {}
     }
@@ -2325,8 +2360,13 @@ async function findRowByText(
             )
               .trim();
 
+          // Normaliza espaços múltiplos para melhor comparação
+          const normalizedContent = content.replace(/\s+/g, ' ');
+          const normalizedText = text.replace(/\s+/g, ' ');
+
           if (
-            content === text
+            normalizedContent === normalizedText ||
+            normalizedContent.includes(normalizedText)
           ) {
 
             return {
