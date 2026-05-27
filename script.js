@@ -2080,7 +2080,7 @@ async function selectContasCorrente({
     page,
 
     triggerSelector:
-      'img[onclick*="ContaCorrente"], img[onclick*="contaCorrente"]',
+      'img[onclick*="contaCorrente"]',
 
     modalTitle:
       'Consulta de Contas Correntes',
@@ -2088,10 +2088,7 @@ async function selectContasCorrente({
     // campo "Nome"
     searchInputSelector: [
 
-      'form[name="contaCorrenteForm"] input[type="text"]:nth-of-type(2)',
-
-      // fallback
-      'form[name="contaCorrenteForm"] input[type="text"]',
+      'input[name="entity.nmConta"]',
 
     ],
 
@@ -3389,9 +3386,9 @@ await selectViaModal({
     modalTitle:
       'Consulta de Plano Financeiro',
 
-    searchInputSelector:
-      'input[name="nmConta"]',
-
+    searchInputSelector: [
+      'input[name="entity.nmConta"]',
+    ],
     values,
 
   });
@@ -3947,22 +3944,64 @@ async function selectViaModal({
   // HELPERS
   // =====================================================
 
-  async function resolveInput(surface) {
+  async function resolveInput(
+    container,
+    selectors = [],
+    retries = 3
+  ) {
 
-    const input =
-      await findVisibleInput(
-        surface,
-        searchInputSelector
-      );
+    for (let attempt = 0; attempt < retries; attempt++) {
 
-    if (!input) {
+      for (const selector of selectors) {
 
-      throw new Error(
-        `Não encontrei input visível. Selectors: ${JSON.stringify(searchInputSelector)}`
-      );
+        const locators =
+          container.locator(selector);
+
+        const count =
+          await locators.count();
+
+        for (let i = 0; i < count; i++) {
+
+          const input =
+            locators.nth(i);
+
+          try {
+
+            // Aguarda o elemento ficar visível com timeout
+            await input.waitFor({
+              state: 'visible',
+              timeout: 2000
+            }).catch(() => {});
+
+            const visible =
+              await input.isVisible();
+
+            if (!visible) {
+              continue;
+            }
+
+            const box =
+              await input.boundingBox();
+
+            if (!box) {
+              continue;
+            }
+
+            return input;
+
+          } catch (_) {}
+        }
+      }
+
+      // Se não encontrou, aguarda um pouco antes de tentar novamente
+      if (attempt < retries - 1) {
+        await page.waitForTimeout(500);
+      }
     }
 
-    return input;
+    throw new Error(
+      `Não encontrei input visível. Selectors: ${selectors.join(', ')}`
+    );
   }
 
   async function fillLegacyInput(
@@ -4029,7 +4068,8 @@ async function selectViaModal({
 
     const input =
       await resolveInput(
-        mainFrame
+        mainFrame,
+        searchInputSelector
       );
 
     await fillLegacyInput(
@@ -4074,9 +4114,29 @@ async function selectViaModal({
     );
   }
 
+  // Aguarda o conteúdo do modal estar pronto
+  for (const selector of searchInputSelector) {
+    try {
+      await modalFrame.locator(selector).first().waitFor({
+        state: 'attached',
+        timeout: 5000
+      }).catch(() => {});
+    } catch (_) {}
+  }
+
   // =====================================================
   // MARCA TODOS OS VALORES
   // =====================================================
+
+  // =====================================================
+// MARCA TODOS OS VALORES
+// =====================================================
+
+  const modalInput =
+    await resolveInput(
+      modalFrame,
+      searchInputSelector
+    );
 
   for (const currentValue of entries) {
 
@@ -4087,15 +4147,44 @@ async function selectViaModal({
       modalTitle,
     });
 
-    // procura a linha contendo o texto
+    // ================================================
+    // LIMPA FILTRO ANTERIOR
+    // ================================================
 
-  // ================================================
-  // LOCALIZA CÉLULA PELO TEXTO
-  // ================================================
+    await modalInput.fill('')
+      .catch(() => {});
 
-    const { cell } = await findRowByText( page, currentValue, 30000 );
-    const checkbox = cell.locator(` xpath=ancestor::tr[1] //input[@type="checkbox"] `).first();
+    await page.waitForTimeout(300);
 
+    // ================================================
+    // DIGITA NOVO VALOR
+    // ================================================
+
+    await fillLegacyInput(
+      modalInput,
+      currentValue
+    );
+
+    await modalInput.press('Enter')
+      .catch(() => {});
+
+    await page.waitForTimeout(1500);
+
+    // ================================================
+    // LOCALIZA LINHA
+    // ================================================
+
+    const { cell } =
+      await findRowByText(
+        page,
+        currentValue,
+        30000
+      );
+
+    const checkbox =
+      cell.locator(
+        'xpath=ancestor::tr[1]//input[@type="checkbox"]'
+      ).first();
 
     const checked =
       await checkbox
@@ -4121,9 +4210,7 @@ async function selectViaModal({
       modalTitle,
     });
 
-    await page.waitForTimeout(
-      1000
-    );
+    await page.waitForTimeout(1000);
   }
 
   // =====================================================
