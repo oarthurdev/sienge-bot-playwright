@@ -3764,18 +3764,29 @@ async function resolveModalLocator(
 async function findRowByText(
   page,
   text,
-  timeout = 30000
+  timeout = 30000,
+  preferredFrame = null
 ) {
 
   const started =
     Date.now();
+
+  let frames = page.frames();
+  
+  // Se temos um frame preferido, o colocamos primeiro na lista
+  if (preferredFrame) {
+    frames = [
+      preferredFrame,
+      ...frames.filter(f => f !== preferredFrame)
+    ];
+  }
 
   while (
     Date.now() - started <
     timeout
   ) {
 
-    for (const frame of page.frames()) {
+    for (const frame of frames) {
 
       try {
 
@@ -3806,24 +3817,68 @@ async function findRowByText(
           const normalizedContent = content.replace(/\s+/g, ' ');
           const normalizedText = text.replace(/\s+/g, ' ');
 
-          if (
-            normalizedContent === normalizedText ||
-            normalizedContent.includes(normalizedText)
-          ) {
+          // Tenta match exato primeiro
+          if (normalizedContent === normalizedText) {
+            // Aguarda a célula estar visível e estável
+            try {
+              await cell.waitFor({ state: 'visible', timeout: 3000 }).catch(() => {});
+            } catch (_) {}
+
+            logEvent({
+              level: 'debug',
+              message: `Linha encontrada (EXATO): ${text}`,
+              frameUrl: frame.url(),
+              cellIndex: i
+            });
 
             return {
               frame,
               cell,
             };
           }
+
+          // Se não for exato mas for incluído, marca para possível match posterior
+          // (só usa se não encontrar exato)
+          if (normalizedContent.includes(normalizedText)) {
+            logEvent({
+              level: 'debug',
+              message: `Linha encontrada (PARTIAL): ${text}`,
+              frameUrl: frame.url(),
+              cellIndex: i
+            });
+
+            // Continua procurando por um match exato
+            // Se não encontrar, este será o fallback
+            let foundExact = false;
+            
+            // Continua procurando no resto das células
+            for (let j = i + 1; j < count; j++) {
+              const nextCell = cells.nth(j);
+              const nextContent = (await nextCell.innerText().catch(() => '')).trim().replace(/\s+/g, ' ');
+              if (nextContent === normalizedText) {
+                foundExact = true;
+                // Retorna o match exato
+                return {
+                  frame,
+                  cell: nextCell,
+                };
+              }
+            }
+            
+            // Se não encontrou exato depois, retorna o current (partial match)
+            if (!foundExact) {
+              return {
+                frame,
+                cell,
+              };
+            }
+          }
         }
 
       } catch (_) {}
     }
 
-    await page.waitForTimeout(
-      500
-    );
+    await new Promise(resolve => setTimeout(resolve, 500));
   }
 
   throw new Error(
@@ -3957,45 +4012,102 @@ async function selectViaModal({
         const locators =
           container.locator(selector);
 
-        const count =
-          await locators.count();
+        try {
 
-        for (let i = 0; i < count; i++) {
+          const count =
+            await locators.count();
 
-          const input =
-            locators.nth(i);
+          if (count === 0 && attempt === 0) {
+            continue;
+          }
 
-          try {
+          for (let i = 0; i < count; i++) {
 
-            // Aguarda o elemento ficar visível com timeout
-            await input.waitFor({
-              state: 'visible',
-              timeout: 2000
-            }).catch(() => {});
+            const input =
+              locators.nth(i);
 
-            const visible =
-              await input.isVisible();
+            try {
 
-            if (!visible) {
-              continue;
-            }
+              // Aguarda o elemento ficar visível com timeout
+              await input.waitFor({
+                state: 'visible',
+                timeout: 3000
+              }).catch(() => {});
 
-            const box =
-              await input.boundingBox();
+              const visible =
+                await input.isVisible();
 
-            if (!box) {
-              continue;
-            }
+              if (!visible) {
+                continue;
+              }
 
-            return input;
+              const box =
+                await input.boundingBox();
 
-          } catch (_) {}
-        }
+              if (!box) {
+                continue;
+              }
+
+              logEvent({
+                level: 'debug',
+                message: `Input encontrado no modal. Seletor: ${selector}, Tentativa: ${attempt + 1}/${retries}`
+              });
+
+              return input;
+
+            } catch (_) {}
+          }
+
+        } catch (_) {}
       }
 
       // Se não encontrou, aguarda um pouco antes de tentar novamente
       if (attempt < retries - 1) {
-        await page.waitForTimeout(500);
+        logEvent({
+          level: 'debug',
+          message: `Input não encontrado na tentativa ${attempt + 1}. Aguardando 800ms...`
+        });
+        // Aguarda 800ms usando promise
+        await new Promise(resolve => setTimeout(resolve, 800));
+      }
+    }
+
+    logEvent({
+      level: 'error',
+      message: `Falha ao encontrar input após ${retries} tentativas`,
+      selectors: selectors
+    });
+
+    // Última tentativa: encontra qualquer input, mesmo que não visível
+    try {
+      const anyInput = await container.locator('input').first();
+      if (anyInput) {
+        logEvent({
+          level: 'warn',
+          message: `Usando fallback: primeiro input encontrado (pode não estar visível)`
+        });
+        return anyInput;
+      }
+    } catch (_) {}
+
+    // Debug: Tenta salvar o HTML do modal para diagnóstico
+    if (DEBUG_HTML) {
+      try {
+        const modalHtml = await container.content().catch(() => '<!-- erro ao capturar -->');;
+        const debugFile = path.join(
+          SCREENSHOT_DIR,
+          `debug-modal-${nowIso().replace(/[:.]/g, '-')}.html`
+        );
+        fs.writeFileSync(debugFile, modalHtml || '<!-- vazio -->');
+        logEvent({
+          level: 'info',
+          message: `HTML do modal salvo em: ${debugFile}`
+        });
+      } catch (e) {
+        logEvent({
+          level: 'warn',
+          message: `Erro ao salvar HTML debug: ${e.message}`
+        });
       }
     }
 
@@ -4009,8 +4121,18 @@ async function selectViaModal({
     nextValue
   ) {
 
+    // Tenta tornar visível e scrollar para a vista
+    try {
+      await locator.scrollIntoViewIfNeeded();
+    } catch (_) {}
+
     await locator.evaluate(
       (el, value) => {
+
+        // Tenta remover estilos que possam estar ocultando
+        el.style.display = '';
+        el.style.visibility = 'visible';
+        el.style.opacity = '1';
 
         el.focus();
 
@@ -4114,6 +4236,12 @@ async function selectViaModal({
     );
   }
 
+  logEvent({
+    level: 'info',
+    message: `Modal encontrado: ${modalTitle}`,
+    frameUrl: modalFrame.url()
+  });
+
   // Aguarda o conteúdo do modal estar pronto
   for (const selector of searchInputSelector) {
     try {
@@ -4132,10 +4260,22 @@ async function selectViaModal({
 // MARCA TODOS OS VALORES
 // =====================================================
 
+  // Tenta com seletores padrão + alternativos
+  const selectorsToTry = [
+    ...searchInputSelector,
+    // Fallbacks: input de qualquer tipo no modal
+    'input[type="text"]:not([readonly])',
+    'input:not([readonly])',
+    'input[formatType="TEXT"]',
+    'td.spwCelulaGrid input[type="text"]',
+    'input[class*="Grid"]',
+    'input'
+  ];
+
   const modalInput =
     await resolveInput(
       modalFrame,
-      searchInputSelector
+      selectorsToTry
     );
 
   for (const currentValue of entries) {
@@ -4154,7 +4294,19 @@ async function selectViaModal({
     await modalInput.fill('')
       .catch(() => {});
 
-    await page.waitForTimeout(300);
+    // Aguarda e garante que o input foi realmente limpo
+    await page.waitForTimeout(500);
+
+    // Verifica se foi realmente limpo
+    const inputValue = await modalInput.inputValue().catch(() => '');
+    if (inputValue && inputValue.trim()) {
+      // Se ainda tem valor, tenta novamente
+      await modalInput.evaluate((el) => {
+        el.value = '';
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+      await page.waitForTimeout(300);
+    }
 
     // ================================================
     // DIGITA NOVO VALOR
@@ -4168,7 +4320,13 @@ async function selectViaModal({
     await modalInput.press('Enter')
       .catch(() => {});
 
-    await page.waitForTimeout(1500);
+    // Aguarda resultado da busca ser carregado
+    await page.waitForTimeout(2000);
+
+    // Aguarda a tabela ser atualizada
+    try {
+      await modalFrame.locator('td').first().waitFor({ timeout: 5000 });
+    } catch (_) {}
 
     // ================================================
     // LOCALIZA LINHA
@@ -4178,7 +4336,8 @@ async function selectViaModal({
       await findRowByText(
         page,
         currentValue,
-        30000
+        30000,
+        modalFrame  // Passa frame do modal como preferido
       );
 
     const checkbox =
@@ -4210,7 +4369,15 @@ async function selectViaModal({
       modalTitle,
     });
 
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(800);
+
+    // ================================================
+    // LIMPA FILTRO PARA PRÓXIMA SELEÇÃO
+    // ================================================
+    try {
+      await modalInput.fill('');
+      await page.waitForTimeout(300);
+    } catch (_) {}
   }
 
   // =====================================================
