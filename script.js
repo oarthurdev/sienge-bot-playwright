@@ -16,6 +16,13 @@ const SCREENSHOT_DIR = process.env.SCREENSHOT_DIR || path.resolve(process.cwd(),
 const LOG_PATH = process.env.LOG_PATH || path.resolve(process.cwd(), 'sienge-authorize-log.json');
 const DEBUG_HTML = (process.env.DEBUG_HTML ?? 'false').toLowerCase() === 'true';
 const TASK_MODE = (process.env.TASK_MODE || 'authorize').toLowerCase();
+function getCliArg(name) {
+  const idx = process.argv.indexOf(name);
+  if (idx >= 0 && process.argv.length > idx + 1) return process.argv[idx + 1];
+  return null;
+}
+
+const SINGLE_REPORT_ARG = (process.env.SINGLE_REPORT || getCliArg('--single') || getCliArg('-s')) || null;
 const REPORT_OUTPUT_DIR = process.env.REPORT_OUTPUT_DIR || path.resolve(process.cwd(), 'reports');
 const TARGET_PAGE_URL = `${BASE_URL}/sienge/8/index.html#/common/page/1777`;
 const REPORT_FILTER_PAGE_URL = `${BASE_URL}/sienge/8/index.html#/common/page/4929`;
@@ -1738,6 +1745,8 @@ async function resetSomenteCamposEditaveis(surface) {
       continue;
     }
 
+    
+
     await field.evaluate(el => {
       el.value = '';
       el.dispatchEvent(new Event('input', { bubbles: true }));
@@ -2131,15 +2140,18 @@ async function selectContasCorrente({
     page,
 
     triggerSelector:
-      'img[onclick*="contaCorrente"]',
+      'img[onclick*="searchContaCorrenteCompleto.jsp"]',
 
     modalTitle:
       'Consulta de Contas Correntes',
 
     // campo "Nome"
     searchInputSelector: [
-
+      // usa os seletores reais do modal de contas correntes
+      'input[name="entity.contaCorrentePK.nuConta"]',
+      '#entity.contaCorrentePK.nuConta',
       'input[name="entity.nmConta"]',
+      '#entity.nmConta',
 
     ],
 
@@ -3438,7 +3450,12 @@ await selectViaModal({
       'Consulta de Plano Financeiro',
 
     searchInputSelector: [
+      // cobre variações: busca por campos relacionados a 'plano' ou 'nmConta'
       'input[name="entity.nmConta"]',
+      'input[name*="plano"]',
+      'input[id*="plano"]',
+      '#nmConta',
+      'input[name*="nmConta"]',
     ],
     values,
 
@@ -3832,100 +3849,87 @@ async function findRowByText(
     ];
   }
 
+  function normalizeText(s) {
+    try {
+      return String(s || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^\w\s]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toLowerCase();
+    } catch (_) { return String(s || '').replace(/\s+/g, ' ').trim(); }
+  }
+
+  const normalizedText = normalizeText(text);
+
   while (
     Date.now() - started <
     timeout
   ) {
 
     for (const frame of frames) {
-
       try {
+        // procura em uma gama maior de elementos (td, th, tr, span, div, a)
+        const selectors = ['td', 'th', 'tr', 'span', 'div', 'a', 'label'];
+        for (const sel of selectors) {
+          const elems = frame.locator(sel);
+          const count = await elems.count().catch(() => 0);
+          for (let i = 0; i < count; i++) {
+            const el = elems.nth(i);
+            const content = (await el.innerText().catch(() => '')).trim();
+            const normalizedContent = normalizeText(content);
 
-        const cells =
-          frame.locator('td');
+            if (!normalizedContent) continue;
 
-        const count =
-          await cells.count();
-
-        for (
-          let i = 0;
-          i < count;
-          i++
-        ) {
-
-          const cell =
-            cells.nth(i);
-
-          const content =
-            (
-              await cell
-                .innerText()
-                .catch(() => '')
-            )
-              .trim();
-
-          // Normaliza espaços múltiplos para melhor comparação
-          const normalizedContent = content.replace(/\s+/g, ' ');
-          const normalizedText = text.replace(/\s+/g, ' ');
-
-          // Tenta match exato primeiro
-          if (normalizedContent === normalizedText) {
-            // Aguarda a célula estar visível e estável
-            try {
-              await cell.waitFor({ state: 'visible', timeout: 3000 }).catch(() => {});
-            } catch (_) {}
-
-            logEvent({
-              level: 'debug',
-              message: `Linha encontrada (EXATO): ${text}`,
-              frameUrl: frame.url(),
-              cellIndex: i
-            });
-
-            return {
-              frame,
-              cell,
-            };
-          }
-
-          // Se não for exato mas for incluído, marca para possível match posterior
-          // (só usa se não encontrar exato)
-          if (normalizedContent.includes(normalizedText)) {
-            logEvent({
-              level: 'debug',
-              message: `Linha encontrada (PARTIAL): ${text}`,
-              frameUrl: frame.url(),
-              cellIndex: i
-            });
-
-            // Continua procurando por um match exato
-            // Se não encontrar, este será o fallback
-            let foundExact = false;
-            
-            // Continua procurando no resto das células
-            for (let j = i + 1; j < count; j++) {
-              const nextCell = cells.nth(j);
-              const nextContent = (await nextCell.innerText().catch(() => '')).trim().replace(/\s+/g, ' ');
-              if (nextContent === normalizedText) {
-                foundExact = true;
-                // Retorna o match exato
-                return {
-                  frame,
-                  cell: nextCell,
-                };
-              }
+            // exact (case-sensitive after normalization)
+            if (normalizedContent === normalizedText) {
+              try { await el.waitFor({ state: 'visible', timeout: 3000 }).catch(() => {}); } catch (_) {}
+              logEvent({ level: 'debug', message: `Linha encontrada (EXATO) em ${sel}: ${text}`, frameUrl: frame.url(), index: i });
+              return { frame, cell: el };
             }
-            
-            // Se não encontrou exato depois, retorna o current (partial match)
-            if (!foundExact) {
-              return {
-                frame,
-                cell,
-              };
+
+            // partial (substring)
+            if (normalizedContent.includes(normalizedText)) {
+              logEvent({ level: 'debug', message: `Linha encontrada (PARTIAL) em ${sel}: ${text}`, frameUrl: frame.url(), index: i });
+              return { frame, cell: el };
+            }
+
+            // token match: split search into tokens and ensure each token exists in content
+            const tokens = normalizedText.split(' ').filter(Boolean);
+            if (tokens.length > 1) {
+              let all = true;
+              for (const t of tokens) {
+                if (!normalizedContent.includes(t)) { all = false; break; }
+              }
+              if (all) {
+                logEvent({ level: 'debug', message: `Linha encontrada (TOKENS) em ${sel}: ${text}`, frameUrl: frame.url(), index: i });
+                return { frame, cell: el };
+              }
             }
           }
         }
+      } catch (_) {}
 
+      // Fallback: busca por <tr> via script no contexto do frame, ignorando acentos
+      try {
+        const idx = await frame.evaluate((search) => {
+          function normalize(s) {
+            try {
+              return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+            } catch (_) { return String(s || '').replace(/\s+/g, ' ').trim().toLowerCase(); }
+          }
+          const rows = Array.from(document.querySelectorAll('tr'));
+          for (let i = 0; i < rows.length; i++) {
+            if (normalize(rows[i].innerText).includes(search.toLowerCase())) return i + 1;
+          }
+          return null;
+        }, normalizedText).catch(() => null);
+
+        if (idx) {
+          logEvent({ level: 'debug', message: `Linha encontrada via fallback <tr> index ${idx}: ${text}`, frameUrl: frame.url() });
+          return { frame, cell: frame.locator(`xpath=(//tr)[${idx}]`) };
+        }
       } catch (_) {}
     }
 
@@ -4044,6 +4048,14 @@ async function selectViaModal({
     throw new Error(
       'Não foi possível obter contentFrame do iFramePage.'
     );
+  }
+
+  // Garante que os filtros avançados estejam expandidos no frame principal
+  try {
+    await ensureExpandedFilters(mainFrame);
+  } catch (e) {
+    // não é fatal — apenas log
+    logEvent({ level: 'debug', message: `Falha ao expandir filtros no mainFrame: ${String(e && e.message || e)}` });
   }
 
   // =====================================================
@@ -4239,20 +4251,37 @@ async function selectViaModal({
     const singleValue =
       entries[0];
 
-    const input =
-      await resolveInput(
-        mainFrame,
-        searchInputSelector
-      );
-
-    await fillLegacyInput(
-      input,
-      singleValue
+    // Para o caso único, tentamos uma lista mais ampla de seletores
+    const mainSelectors = Array.isArray(searchInputSelector) ? [...searchInputSelector] : [searchInputSelector];
+    mainSelectors.push(
+      'input[name*="plano"]',
+      'input[id*="plano"]',
+      'input[class*="plano"]',
+      'input[placeholder*="Plano"]',
+      'input[placeholder*="plano"]',
+      'input'
     );
 
-    await page.waitForTimeout(
-      1000
-    );
+    const input = await resolveInput(mainFrame, mainSelectors, 4).catch(() => null);
+
+    if (!input) {
+      logEvent({ level: 'warn', message: `Não encontrei input do tipo 'plano' no frame principal. Tentando localizar qualquer input visível.` });
+      // última tentativa: pega primeiro input visível no mainFrame
+      try {
+        const any = mainFrame.locator('input').first();
+        if (await any.count().catch(() => 0)) {
+          await fillLegacyInput(any, singleValue);
+        }
+      } catch (e) {
+        logEvent({ level: 'error', message: `Falha ao preencher input único do mainFrame: ${e.message}` });
+      }
+    } else {
+      await fillLegacyInput(input, singleValue);
+      // força perda de foco/validação
+      try { await input.press('Tab').catch(() => {}); } catch (_) {}
+    }
+
+    await page.waitForTimeout(1200);
 
     logEvent({
       level: 'info',
@@ -4273,7 +4302,7 @@ async function selectViaModal({
     force: true,
   });
 
-  const modalFrame =
+  let modalFrame =
     await findModalFrame(
       page,
       modalTitle,
@@ -4292,6 +4321,125 @@ async function selectViaModal({
     message: `Modal encontrado: ${modalTitle}`,
     frameUrl: modalFrame.url()
   });
+
+  // Verifica se o frame encontrado contém o input esperado; caso contrário, tenta localizar
+  // um frame que tenha os seletores de busca (evita abrir modal errado, ex: Consulta de Empresas)
+  try {
+    const searchSelectors = Array.isArray(searchInputSelector) ? searchInputSelector : [searchInputSelector];
+
+    async function frameHasAnyInput(f) {
+      try {
+        for (const sel of searchSelectors) {
+          const c = await (f.locator ? f.locator(sel).count().catch(() => 0) : 0);
+          if (c && c > 0) return true;
+        }
+      } catch (_) {}
+      return false;
+    }
+
+    let hasInput = await frameHasAnyInput(modalFrame);
+
+    if (!hasInput) {
+      logEvent({ level: 'warn', message: `Frame modal não contém input esperado. Tentando fechar modais errados e reabrir (3 tentativas)...`, modalTitle });
+
+      // tenta múltiplas vezes: fecha modal de empresas se aberto, re-clica trigger e procura frame que contenha os seletores
+      for (let attempt = 1; attempt <= 3 && !hasInput; attempt++) {
+        logEvent({ level: 'info', message: `Tentativa ${attempt} para obter modal correto: ${modalTitle}` });
+
+        // detecta e fecha modal de Empresas se presente
+        try {
+          const emp = page.locator('div.dojoDialog:has-text("Consulta de Empresas"), .spwDialog:has-text("Consulta de Empresas"), table[id="empresa"]');
+          if (await emp.count().catch(() => 0)) {
+            logEvent({ level: 'info', message: 'Modal de Empresas detectado; fechando antes de reabrir o modal correto.' });
+            const closeBtn = page.locator('.spwAlertaFechar, img[title="Fechar"], .ui-dialog-titlebar-close, input[value="FECHAR"], button:has-text("FECHAR")').first();
+            if (await closeBtn.count().catch(() => 0)) {
+              await closeBtn.click({ force: true }).catch(() => {});
+              await page.waitForTimeout(600);
+            }
+          }
+        } catch (e) {
+          logEvent({ level: 'debug', message: 'Erro tentando fechar modal de Empresas', detail: String(e && e.message || e) });
+        }
+
+        // tenta reabrir o modal clicando novamente no trigger (relocaliza trigger para evitar stale)
+        try {
+          const retrigger = mainFrame.locator(`${triggerSelector}[src*="botProcurar.png"]`).first();
+          if (await retrigger.count().catch(() => 0)) {
+            await retrigger.click({ force: true }).catch(() => {});
+            await page.waitForTimeout(600 + attempt * 300);
+          }
+        } catch (e) {
+          logEvent({ level: 'debug', message: 'Falha ao reclicar no trigger do modal', detail: String(e && e.message || e) });
+        }
+
+        // procura em frames por qualquer seletor esperado
+        for (const f of page.frames()) {
+          if (await frameHasAnyInput(f)) {
+            modalFrame = f;
+            hasInput = true;
+            logEvent({ level: 'info', message: `Trocando para frame que contém seletor (após tentativa ${attempt})`, frameUrl: f.url(), modalTitle });
+            break;
+          }
+        }
+
+        // verifica overlay no próprio page
+        if (!hasInput) {
+          for (const sel of searchSelectors) {
+            try {
+              const cc = await page.locator(sel).count().catch(() => 0);
+              if (cc && cc > 0) {
+                modalFrame = page;
+                hasInput = true;
+                logEvent({ level: 'info', message: `Trocando para page (overlay) que contém seletor ${sel} (após tentativa ${attempt})`, frameUrl: page.url(), modalTitle });
+                break;
+              }
+            } catch (_) {}
+          }
+        }
+      }
+
+      if (!hasInput) {
+        logEvent({ level: 'warn', message: `Ainda não encontrei input esperado no modal para: ${modalTitle}. Salvando debug.`, modalTitle });
+        await saveDebugState('modal-wrong-frame').catch(() => {});
+        throw new Error(`Modal encontrado mas não contém os inputs esperados: ${modalTitle}`);
+      }
+    }
+  } catch (e) {
+    // se alguma verificação falhar, rethrow para caller
+    throw e;
+  }
+
+  // helper: salva estado debug (HTML do modal, preview e screenshot)
+  async function saveDebugState(tag) {
+    if (!DEBUG_HTML) return null;
+    try {
+      await fs.promises.mkdir(SCREENSHOT_DIR, { recursive: true });
+    } catch (_) {}
+    const ts = nowIso().replace(/[:.]/g, '-');
+    const base = sanitizeFileName(`${modalTitle}-${tag}-${ts}`);
+    const htmlPath = path.join(SCREENSHOT_DIR, `${base}.html`);
+    const previewPath = path.join(SCREENSHOT_DIR, `${base}-preview.json`);
+    const shotPath = path.join(SCREENSHOT_DIR, `${base}.png`);
+    try {
+      const modalHtml = await modalFrame.content().catch(() => '<!-- erro ao capturar -->');
+      fs.writeFileSync(htmlPath, modalHtml || '<!-- vazio -->');
+    } catch (e) {
+      logEvent({ level: 'warn', message: `Erro ao salvar HTML debug: ${e.message}` });
+    }
+    try {
+      const preview = await modalFrame.evaluate(() => Array.from(document.querySelectorAll('tr')).slice(0,30).map(r => r.innerText)).catch(() => []);
+      fs.writeFileSync(previewPath, JSON.stringify(preview, null, 2));
+    } catch (e) {
+      logEvent({ level: 'warn', message: `Erro ao salvar preview debug: ${e.message}` });
+    }
+    try {
+      await page.screenshot({ path: shotPath, fullPage: true }).catch(() => {});
+    } catch (e) {
+      logEvent({ level: 'warn', message: `Erro ao salvar screenshot debug: ${e.message}` });
+    }
+    logEvent({ level: 'info', message: `Debug salvo: html=${htmlPath}, preview=${previewPath}, shot=${shotPath}` });
+    return { htmlPath, previewPath, shotPath };
+  }
 
   // Aguarda o conteúdo do modal estar pronto
   for (const selector of searchInputSelector) {
@@ -4371,54 +4519,125 @@ async function selectViaModal({
     await modalInput.press('Enter')
       .catch(() => {});
 
-    // Aguarda resultado da busca ser carregado
-    await page.waitForTimeout(2000);
+    // Aguarda resultado da busca ser carregado (um pouco mais tolerante)
+    await page.waitForTimeout(2300);
 
     // Aguarda a tabela ser atualizada
     try {
-      await modalFrame.locator('td').first().waitFor({ timeout: 5000 });
+      await modalFrame.locator('td').first().waitFor({ timeout: 7000 });
     } catch (_) {}
 
     // ================================================
-    // LOCALIZA LINHA
+    // LOCALIZA LINHA (com fallback inteligente)
     // ================================================
 
-    const { cell } =
-      await findRowByText(
-        page,
-        currentValue,
-        30000,
-        modalFrame  // Passa frame do modal como preferido
-      );
+    let cell = null;
+    let cellFrame = null;
 
-    const checkbox =
-      cell.locator(
-        'xpath=ancestor::tr[1]//input[@type="checkbox"]'
-      ).first();
+    try {
+      const res = await findRowByText(page, currentValue, 30000, modalFrame);
+      cell = res.cell; cellFrame = res.frame;
+    } catch (err) {
+      // tenta fallback: remover prefixos comuns como 'Aplicacao' / 'Aplicação' e pesquisar o restante
+      try {
+        const alt = String(currentValue || '').replace(/^\s*(aplica[cç][ãa]o|aplicacao|conta)\s+/i, '').trim();
+        if (alt && alt.length < String(currentValue || '').length) {
+          logEvent({ level: 'warn', message: `Busca inicial falhou para '${currentValue}', tentando fallback com: ${alt}`, modalTitle });
+          const res2 = await findRowByText(page, alt, 20000, modalFrame);
+          cell = res2.cell; cellFrame = res2.frame;
+        }
+      } catch (_) {
+        // outro fallback: busca apenas os últimos dois tokens
+        try {
+          const tokens = String(currentValue || '').split(/\s+/).filter(Boolean);
+          if (tokens.length > 1) {
+            const lastTwo = tokens.slice(-2).join(' ');
+            logEvent({ level: 'warn', message: `Tentando fallback tokens para '${currentValue}' -> '${lastTwo}'`, modalTitle });
+            const res3 = await findRowByText(page, lastTwo, 20000, modalFrame);
+            cell = res3.cell; cellFrame = res3.frame;
+          }
+        } catch (errFinal) {
+          // grava HTML do modal e preview das primeiras linhas quando DEBUG_HTML ativo
+          if (DEBUG_HTML) {
+            try {
+              const modalHtml = await modalFrame.content().catch(() => '<!-- erro ao capturar -->');
+              const debugFile = path.join(SCREENSHOT_DIR, `debug-modal-${sanitizeFileName(modalTitle)}-${nowIso().replace(/[:.]/g, '-')}.html`);
+              fs.writeFileSync(debugFile, modalHtml || '<!-- vazio -->');
 
-    const checked =
-      await checkbox
-        .isChecked()
-        .catch(() => false);
+              // também grava preview das primeiras 20 linhas normalizadas
+              const preview = await modalFrame.evaluate(() => Array.from(document.querySelectorAll('tr')).slice(0,20).map(r => r.innerText));
+              const previewFile = path.join(SCREENSHOT_DIR, `debug-modal-preview-${sanitizeFileName(modalTitle)}-${nowIso().replace(/[:.]/g, '-')}.json`);
+              fs.writeFileSync(previewFile, JSON.stringify(preview, null, 2));
+              logEvent({ level: 'info', message: `HTML do modal salvo em: ${debugFile}`, previewPath: previewFile });
+            } catch (e) {
+              logEvent({ level: 'warn', message: `Erro ao salvar HTML debug: ${e.message}` });
+            }
+          }
 
-    if (!checked) {
-
-      await checkbox.check()
-        .catch(async () => {
-
-          await checkbox.click({
-            force: true
-          });
-
-        });
+          // rethrow para o caller lidar com o erro
+          throw errFinal || err;
+        }
+      }
     }
 
-    logEvent({
-      level: 'info',
-      message:
-        `Checkbox marcado: ${currentValue}`,
-      modalTitle,
-    });
+    // Tenta localizar a linha (tr) mais próxima e então o checkbox dentro dela
+    let rowLocator = null;
+    try {
+      const ancestor = cell.locator('xpath=ancestor::tr[1]').first();
+      const ancCount = await ancestor.count().catch(() => 0);
+      if (ancCount) {
+        rowLocator = ancestor;
+      } else {
+        // Se o elemento encontrado já for uma <tr>, use-o
+        const tagName = await cell.evaluate(el => el.tagName && el.tagName.toLowerCase()).catch(() => '');
+        if (tagName === 'tr') rowLocator = cell;
+      }
+    } catch (_) {}
+
+    // Se não obteve rowLocator, tenta encontrar uma <tr> que contenha o texto no mesmo frame
+    if (!rowLocator) {
+      try {
+        const xpath = `//tr[.//text()[contains(normalize-space(.), "${currentValue}")]]`;
+        const frameForSearch = cellFrame || modalFrame;
+        const maybeRow = frameForSearch.locator(`xpath=${xpath}`).first();
+        if (await maybeRow.count().catch(() => 0)) rowLocator = maybeRow;
+      } catch (_) {}
+    }
+
+    // Finalmente, busca o checkbox dentro da row ou dentro do próprio elemento
+    let checkbox = null;
+    if (rowLocator) {
+      checkbox = rowLocator.locator('input[type="checkbox"]').first();
+    } else {
+      checkbox = cell.locator('input[type="checkbox"]').first();
+    }
+
+    try {
+      const checked = await checkbox.isChecked().catch(() => false);
+      if (!checked) {
+        try {
+          await checkbox.check();
+        } catch (_) {
+          try { await checkbox.click({ force: true }); } catch (_) {
+            // último recurso: click via evaluate
+            try {
+              await checkbox.evaluate((el) => el.click());
+            } catch (_) {}
+          }
+        }
+      }
+
+      logEvent({
+        level: 'info',
+        message:
+          `Checkbox marcado: ${currentValue}`,
+        modalTitle,
+      });
+    } catch (err) {
+      await saveDebugState('checkbox-error');
+      logEvent({ level: 'error', message: `Erro ao manipular checkbox para ${currentValue}: ${err.message}` });
+      throw err;
+    }
 
     await page.waitForTimeout(800);
 
@@ -5180,7 +5399,26 @@ async function runReports(context, page) {
   page.setDefaultTimeout(15000);
   page.setDefaultNavigationTimeout(30000);
 
-  const reports = REPORT_DEFINITIONS.map(report => ({ ...report }));
+  let reports = REPORT_DEFINITIONS.map(report => ({ ...report }));
+
+  // Suporta modo de execução de um único relatório via env `SINGLE_REPORT` ou CLI `--single <index|name>`
+  if (SINGLE_REPORT_ARG) {
+    const arg = String(SINGLE_REPORT_ARG).trim();
+    let selected = null;
+    if (/^\d+$/.test(arg)) {
+      const idx = Math.max(0, Number(arg) - 1);
+      if (idx >= 0 && idx < reports.length) selected = reports[idx];
+    } else {
+      selected = reports.find(r => r.sheetName.toLowerCase() === arg.toLowerCase());
+    }
+
+    if (selected) {
+      logEvent({ level: 'info', message: `Modo single report ativado: ${arg}` });
+      reports = [selected];
+    } else {
+      logEvent({ level: 'warn', message: `Single report não encontrado: ${arg}. Executando todos.` });
+    }
+  }
 
   const startedAt = new Date().toISOString();
 
@@ -5244,6 +5482,14 @@ async function runReports(context, page) {
 
       return { report: reportName, result };
     } catch (err) {
+      // Captura estado da página para diagnóstico (inclui screenshot e html)
+      try {
+        await logPageState(page, `Erro no relatório ${reportName}: ${String(err && err.message || err)}`, {
+          level: 'error',
+          shotName: `report-error-${sanitizeFileName(reportName)}-${nowIso().replace(/[:.]/g, '-')}`,
+        });
+      } catch (_) {}
+
       const finishedAt = new Date().toISOString();
       await updateReportStatusSerialized({ perReportEntry: { report: reportName, props: { status: 'error', finishedAt, error: String(err && err.message || err) } } });
       logEvent({ level: 'error', message: 'Falha no relatório.', report: reportName, detail: String(err && err.message || err) });
@@ -5264,6 +5510,8 @@ async function runReports(context, page) {
       status.completedReports.push({ report: s.value.report, finishedAt: new Date().toISOString() });
     }
   }
+
+    
   status.current = completed;
   status.progress = Math.round((completed / reports.length) * 100);
   status.currentReport = null;
