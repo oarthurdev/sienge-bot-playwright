@@ -1751,11 +1751,45 @@ async function resetSomenteCamposEditaveis(surface) {
 
 
 async function updateReportStatus(data) {
-  await fs.promises.writeFile(
-    STATUS_FILE,
-    JSON.stringify(data, null, 2),
-    "utf8"
-  );
+  // Persists a combined status file with overall status and per-report entries.
+  // If `data` contains overall keys (running, total, progress, etc.) it will be
+  // saved under `overall`. If it contains `perReportEntry: { report, props }`
+  // it will merge into `reports[report]`.
+  // Serializa acessos ao arquivo de status para evitar condições de corrida
+  let cur = {};
+  try {
+    cur = JSON.parse(await fs.promises.readFile(STATUS_FILE, 'utf8')) || {};
+  } catch {}
+
+  const overallKeys = ['running', 'startedAt', 'finishedAt', 'total', 'current', 'progress', 'currentReport', 'completedReports', 'error'];
+  const isOverall = overallKeys.some(k => Object.prototype.hasOwnProperty.call(data || {}, k));
+  if (isOverall) {
+    cur.overall = { ...(cur.overall || {}), ...(data || {}) };
+  }
+
+  if (data && data.perReportEntry) {
+    cur.reports = cur.reports || {};
+    const name = data.perReportEntry.report;
+    cur.reports[name] = { ...(cur.reports[name] || {}), ...(data.perReportEntry.props || {}) };
+  }
+
+  // Backward compatibility: if caller passed a plain object without wrapper,
+  // and it wasn't recognized as overall, write it as-is.
+  if (!isOverall && !(data && data.perReportEntry)) {
+    cur = data;
+  }
+
+  await fs.promises.writeFile(STATUS_FILE, JSON.stringify(cur, null, 2), 'utf8');
+}
+
+// Mutex simples para serializar atualizações do STATUS_FILE entre chamadas assíncronas
+let STATUS_UPDATE_LOCK = Promise.resolve();
+
+async function updateReportStatusSerialized(data) {
+  const op = async () => updateReportStatus(data);
+  // Encadeia a operação na fila
+  STATUS_UPDATE_LOCK = STATUS_UPDATE_LOCK.then(op, op);
+  return STATUS_UPDATE_LOCK;
 }
 
 function readLog() {
@@ -1770,7 +1804,24 @@ function logEvent(event) {
   const arr = readLog();
   arr.push(payload);
   fs.writeFileSync(LOG_PATH, JSON.stringify(arr, null, 2), 'utf8');
-  console.log(`[${payload.ts}] [${String(payload.level || 'info').toUpperCase()}] ${payload.message || ''}`);
+  const baseLine = `[${payload.ts}] [${String(payload.level || 'info').toUpperCase()}] ${payload.message || ''}`;
+
+  const parts = [];
+  if (payload.report) parts.push(`report=${payload.report}`);
+  if (typeof payload.progress !== 'undefined') parts.push(`progress=${payload.progress}%`);
+  if (payload.current) parts.push(`current=${payload.current}`);
+  if (payload.total) parts.push(`total=${payload.total}`);
+  if (payload.path) parts.push(`path=${payload.path}`);
+  if (payload.url) parts.push(`url=${payload.url}`);
+  if (payload.bytes) parts.push(`bytes=${payload.bytes}`);
+  if (payload.shotName) parts.push(`shot=${payload.shotName}`);
+  if (payload.detail) parts.push(`detail=${truncateForLog(payload.detail, 200)}`);
+
+  if (parts.length) {
+    console.log(baseLine + ' - ' + parts.join(' | '));
+  } else {
+    console.log(baseLine);
+  }
 }
 
 function truncateForLog(value, maxLen = 500) {
@@ -4781,6 +4832,7 @@ async function generateSingleReport(
     message:
       `Relatório "${report.sheetName}": clicando Visualizar.`,
   });
+  console.log(`Relatório "${report.sheetName}": acionando Visualizar (aguardando popup)...`);
 
   const btnFiltrar =
     reportFrame.locator(
@@ -5017,6 +5069,7 @@ async function generateSingleReport(
       `Baixando PDF "${report.sheetName}".`,
     reportUrl,
   });
+  console.log(`Relatório "${report.sheetName}": iniciando download do PDF...`);
 
   const response =
     await context.request.get(
@@ -5063,33 +5116,18 @@ async function generateSingleReport(
 
   const stats =
     fs.statSync(finalPdfPath);
-
-  logEvent({
-    level: 'info',
-    message:
-      'PDF salvo.',
-    bytes: stats.size,
-    path: finalPdfPath,
-  });
+  logEvent({ level: 'info', message: 'PDF salvo.', bytes: stats.size, path: finalPdfPath });
+  console.log(`Relatório "${report.sheetName}" salvo em: ${finalPdfPath} (${stats.size} bytes)`);
 
   if (stats.size < 5000) {
-
-    throw new Error(
-      `PDF inválido (${stats.size} bytes).`
-    );
+    throw new Error(`PDF inválido (${stats.size} bytes).`);
   }
 
-  await popup.close()
-    .catch(() => {});
+  await popup.close().catch(() => {});
 
-  logEvent({
-    level: 'info',
-    message:
-      `Relatório "${report.sheetName}" salvo com sucesso.`,
-    path: finalPdfPath,
-  });
+  logEvent({ level: 'info', message: `Relatório "${report.sheetName}" salvo com sucesso.`, path: finalPdfPath });
 
-  return finalPdfPath;
+  return { path: finalPdfPath, bytes: stats.size };
 }
 
 async function closeLegacyPopups(page) {
@@ -5158,8 +5196,15 @@ async function runReports(context, page) {
     error: null,
   };
 
+  // Inicializa entradas por relatório como 'pending' e grava status inicial
+  for (const r of reports) {
+    try {
+      await updateReportStatusSerialized({ perReportEntry: { report: r.sheetName, props: { status: 'pending' } } });
+    } catch {}
+  }
+
   // STATUS INICIAL
-  await updateReportStatus(status);
+  await updateReportStatusSerialized(status);
 
   logEvent({
     level: 'info',
@@ -5168,66 +5213,63 @@ async function runReports(context, page) {
     outputDir: REPORT_OUTPUT_DIR,
   });
 
-  await goDirectToReportsPageAfterLogin(page);
-
+  // Abra todas as abas primeiro, depois gere os relatórios em paralelo
+  const entries = [];
   for (let index = 0; index < reports.length; index++) {
-
     const report = reports[index];
+    console.log(`Criando aba para relatório ${index + 1}/${reports.length}: ${report.sheetName}`);
+    const reportPage = await context.newPage();
+    reportPage.setDefaultTimeout(15000);
+    reportPage.setDefaultNavigationTimeout(30000);
+    await attachPageDebug(reportPage);
+    console.log(`Aba criada: ${report.sheetName}`);
+    entries.push({ report, page: reportPage, index });
+  }
 
-    status.current = index + 1;
-    status.progress = Math.round((index / reports.length) * 100);
-    status.currentReport = report.sheetName;
-    status.error = null;
-
-    await updateReportStatus(status);
-
-    logEvent({
-      level: 'info',
-      message: 'Iniciando relatório',
-      report: report.sheetName,
-    });
-
+  const tasks = entries.map(entry => (async () => {
+    const { report, page, index } = entry;
+    const reportName = report.sheetName;
+    const startedAtReport = new Date().toISOString();
     try {
+      // marca início
+      await updateReportStatusSerialized({ perReportEntry: { report: reportName, props: { status: 'running', startedAt: startedAtReport, index: index + 1 } } });
+      logEvent({ level: 'info', message: 'Relatório iniciado.', report: reportName, current: index + 1, total: reports.length });
 
-      await generateSingleReport(
-        context,
-        page,
-        report
-      );
+      const result = await generateSingleReport(context, page, report);
 
-      status.completedReports.push({
-        report: report.sheetName,
-        finishedAt: new Date().toISOString(),
-      });
+      const finishedAt = new Date().toISOString();
 
-      status.progress = Math.round(((index + 1) / reports.length) * 100);
+      await updateReportStatusSerialized({ perReportEntry: { report: reportName, props: { status: 'done', finishedAt, path: result && result.path ? result.path : (typeof result === 'string' ? result : null), bytes: result && result.bytes ? result.bytes : null } } });
+      logEvent({ level: 'info', message: 'Relatório concluído.', report: reportName, path: result && result.path ? result.path : null, bytes: result && result.bytes ? result.bytes : null });
 
-      await updateReportStatus(status);
-
+      return { report: reportName, result };
     } catch (err) {
-
-      console.log(err);
-
-      status.running = false;
-      status.finishedAt = new Date().toISOString();
-      status.error = String(err.message || err);
-
-      await updateReportStatus(status);
-
-      await logPageState(
-        page,
-        `Falha ao gerar o relatório "${report.sheetName}".`,
-        {
-          level: 'error',
-          shotName: `report-error-${sanitizeFileName(report.sheetName)}`,
-          report: report.sheetName,
-          detail: String(err.message || err),
-        }
-      );
-
+      const finishedAt = new Date().toISOString();
+      await updateReportStatusSerialized({ perReportEntry: { report: reportName, props: { status: 'error', finishedAt, error: String(err && err.message || err) } } });
+      logEvent({ level: 'error', message: 'Falha no relatório.', report: reportName, detail: String(err && err.message || err) });
+      // rethrow para Promise.allSettled manejar
       throw err;
+    } finally {
+      try { await page.close(); } catch {}
+    }
+  })());
+
+  const settled = await Promise.allSettled(tasks);
+
+  // atualiza relatório geral com resultados
+  const completed = settled.filter(s => s.status === 'fulfilled').length;
+  status.completedReports = [];
+  for (const s of settled) {
+    if (s.status === 'fulfilled') {
+      status.completedReports.push({ report: s.value.report, finishedAt: new Date().toISOString() });
     }
   }
+  status.current = completed;
+  status.progress = Math.round((completed / reports.length) * 100);
+  status.currentReport = null;
+  status.error = settled.some(s => s.status === 'rejected') ? 'some_reports_failed' : null;
+
+  await updateReportStatusSerialized(status);
 
   status.running = false;
   status.finishedAt = new Date().toISOString();
