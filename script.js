@@ -1709,6 +1709,134 @@ const REPORT_DEFINITIONS = [
   },
 ];
 
+const MODAL_SELECTION_DEFINITIONS = [
+  {
+    key: 'planoFinanceiro',
+    titleMatchers: ['plano financeiro'],
+    frameSelectors: [
+      'input[name="planoFinMultSelectedEntitiesList"]',
+      'input#idObjRetorno[value="planoFinMult"]',
+      'input#multSelecaoProperty[value="planosFin"]',
+      'input[name="entity.nmConta"]',
+      'input[name="entity.cdContaMask"]',
+    ],
+    searchInputSelectors: [
+      'input[name="entity.nmConta"]',
+      'input[name*="plano"]',
+      'input[id*="plano"]',
+      '#nmConta',
+      'input[name*="nmConta"]',
+    ],
+    rowValueSelectors: [
+      'td[reference="nmConta"]',
+      'td[reference="cdContaMask"]',
+    ],
+    rowCheckboxSelector: 'input[type="checkbox"][name="rowSelect"]',
+  },
+  {
+    key: 'contasCorrente',
+    titleMatchers: ['contas correntes', 'conta corrente'],
+    frameSelectors: [
+      'input[name="contaCorrenteSelectedEntitiesList"]',
+      'input#idObjRetorno[value="contaCorrente"]',
+      'input#multSelecaoProperty[value="contasCorrentes"]',
+      'input[name="entity.nmConta"]',
+      'input[name="entity.contaCorrentePK.nuConta"]',
+    ],
+    searchInputSelectors: [
+      'input[name="entity.contaCorrentePK.nuConta"]',
+      '#entity.contaCorrentePK.nuConta',
+      'input[name="entity.nmConta"]',
+      '#entity.nmConta',
+    ],
+    rowValueSelectors: [
+      'td[reference="nmContaCorrente"]',
+      'td[reference="contaCorrentePK.nuConta"]',
+    ],
+    rowCheckboxSelector: 'input[type="checkbox"][name="rowSelect"]',
+  },
+  {
+    key: 'documentos',
+    titleMatchers: ['documentos', 'consulta de documentos'],
+    frameSelectors: [
+      'input[name="docMultFilterContaRecebidasSelectedEntitiesList"]',
+      'input#idObjRetorno[value="docMultFilterContaRecebidas"]',
+      'input#multSelecaoProperty[value="documentos"]',
+      'input[name="entity.nmDocumento"]',
+      'input[name="entity.documentoPK.cdDocumento"]',
+    ],
+    searchInputSelectors: [
+      'input[name="entity.nmDocumento"]',
+      'input[name="nmDocumento"]',
+    ],
+    rowValueSelectors: [
+      'td[reference="nmDocumento"]',
+      'td[reference="documentoPK.cdDocumento"]',
+    ],
+    rowCheckboxSelector: 'input[type="checkbox"][name="rowSelect"]',
+  },
+  {
+    key: 'condicoesPagamento',
+    titleMatchers: ['tipos de condicoes', 'condicoes pagamento', 'condição de pagamento'],
+    frameSelectors: [
+      'input[name="tipoCondicaoSelectedEntitiesList"]',
+      'input#idObjRetorno[value="tipoCondicao"]',
+      'input#multSelecaoProperty[value="tiposCondicao"]',
+      'input[name="tipoCondicaoFilter.deTipoCondicao"]',
+      'input[name="tipoCondicaoFilter.tipoCondicaoPK.cdTipoCondicao"]',
+    ],
+    searchInputSelectors: [
+      'input[name="tipoCondicaoFilter.deTipoCondicao"]',
+      'input[name="deTipoCondicao"]',
+    ],
+    rowValueSelectors: [
+      'td[reference="deTipoCondicao"]',
+      'td[reference="tipoCondicaoPK.cdTipoCondicao"]',
+    ],
+    rowCheckboxSelector: 'input[type="checkbox"][name="rowSelect"]',
+  },
+];
+
+function normalizeSelectionText(value) {
+  try {
+    return String(value == null ? '' : value)
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^\w\s]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase();
+  } catch (_) {
+    return String(value == null ? '' : value)
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase();
+  }
+}
+
+function getModalSelectionDefinition(modalTitle) {
+  const normalizedTitle = normalizeSelectionText(modalTitle);
+
+  for (const definition of MODAL_SELECTION_DEFINITIONS) {
+    if (
+      definition.titleMatchers.some(
+        matcher => normalizedTitle.includes(normalizeSelectionText(matcher))
+      )
+    ) {
+      return definition;
+    }
+  }
+
+  return {
+    key: 'generic',
+    titleMatchers: [],
+    frameSelectors: [],
+    searchInputSelectors: [],
+    rowValueSelectors: ['td'],
+    rowCheckboxSelector: 'input[type="checkbox"][name="rowSelect"]',
+  };
+}
+
 function getAllPlanoFinanceiroValues() {
 
   return uniqueNonEmpty(
@@ -3342,7 +3470,8 @@ async function goDirectToReportsPageAfterLogin(page) {
 async function findSelectionFrame(
   page,
   frameName,
-  debugLabel
+  debugLabel,
+  selectors = []
 ) {
 
   await page.waitForTimeout(4000);
@@ -3361,8 +3490,18 @@ async function findSelectionFrame(
 
       const url = frame.url();
 
-      const matches =
+      let matches =
         url.includes(frameName);
+
+      if (!matches && selectors.length) {
+        for (const selector of selectors) {
+          const count = await frame.locator(selector).count().catch(() => 0);
+          if (count > 0) {
+            matches = true;
+            break;
+          }
+        }
+      }
 
       if (matches) {
 
@@ -3390,7 +3529,8 @@ async function getDocumentosFrame(page) {
   return findSelectionFrame(
     page,
     'documento',
-    'Frame de Documentos'
+    'Frame de Documentos',
+    getModalSelectionDefinition('Consulta de Documentos').frameSelectors
   );
 }
 
@@ -3402,7 +3542,8 @@ async function getCondicaoPagamentoFrame(page) {
   return findSelectionFrame(
     page,
     'condicao',
-    'Frame de Condição de Pagamento'
+    'Frame de Condição de Pagamento',
+    getModalSelectionDefinition('Consulta de Tipos de Condições').frameSelectors
   );
 }
 
@@ -3419,6 +3560,16 @@ async function getPlanoFinanceiroFrame(page) {
       ).count();
 
       if (hasSelecionar > 0) {
+        const selectors = getModalSelectionDefinition('Consulta de Plano Financeiro').frameSelectors;
+        let matches = false;
+        for (const selector of selectors) {
+          if (await frame.locator(selector).count().catch(() => 0)) {
+            matches = true;
+            break;
+          }
+        }
+
+        if (!matches) continue;
 
         logEvent({
           level: 'info',
@@ -3990,6 +4141,187 @@ async function findVisibleLocatorInFrames(
   );
 }
 
+async function findSelectionModalFrame(
+  page,
+  modalTitle,
+  timeout = 30000
+) {
+
+  const definition =
+    getModalSelectionDefinition(modalTitle);
+
+  const selectors =
+    uniqueNonEmpty([
+      ...definition.frameSelectors,
+      ...definition.searchInputSelectors,
+    ]);
+
+  const started =
+    Date.now();
+
+  while (
+    Date.now() - started <
+    timeout
+  ) {
+
+    for (const frame of page.frames()) {
+
+      try {
+
+        const hasSelecionar =
+          await frame.locator(
+            'input[name="pbSelecionar"]'
+          ).count().catch(() => 0);
+
+        if (!hasSelecionar) {
+          continue;
+        }
+
+        let matches = false;
+
+        for (const selector of selectors) {
+          const count =
+            await frame.locator(selector).count().catch(() => 0);
+
+          if (count > 0) {
+            matches = true;
+            break;
+          }
+        }
+
+        if (matches) {
+          return frame;
+        }
+
+      } catch (_) {}
+    }
+
+    await page.waitForTimeout(500);
+  }
+
+  return null;
+}
+
+async function findSelectionRow(
+  modalFrame,
+  value,
+  selectors = [],
+  timeout = 15000
+) {
+
+  const started =
+    Date.now();
+
+  const normalizedValue =
+    normalizeSelectionText(value);
+
+  const rowSelectors = [
+    '#tabelaResultado tr[indice]',
+    '#tabelaResultado tr[linha="true"]',
+    'tr[indice]',
+    'tr[linha="true"]',
+  ];
+
+  while (
+    Date.now() - started <
+    timeout
+  ) {
+
+    let rows = null;
+
+    for (const selector of rowSelectors) {
+      try {
+        const locator = modalFrame.locator(selector);
+        const count = await locator.count().catch(() => 0);
+        if (count > 0) {
+          rows = locator;
+          break;
+        }
+      } catch (_) {}
+    }
+
+    if (!rows) {
+      await modalFrame.page().waitForTimeout(500);
+      continue;
+    }
+
+    const count =
+      await rows.count().catch(() => 0);
+
+    for (let i = 0; i < count; i++) {
+      const row = rows.nth(i);
+
+      try {
+        const rowText =
+          normalizeSelectionText(
+            await row.innerText().catch(() => '')
+          );
+
+        if (
+          rowText === normalizedValue
+        ) {
+          return row;
+        }
+
+        for (const selector of selectors) {
+          const cell = row.locator(selector).first();
+          const cellCount =
+            await cell.count().catch(() => 0);
+
+          if (!cellCount) {
+            continue;
+          }
+
+          const cellText =
+            normalizeSelectionText(
+              await cell.innerText().catch(() => '')
+            );
+
+          if (
+            cellText === normalizedValue
+          ) {
+            return row;
+          }
+        }
+      } catch (_) {}
+    }
+
+    await modalFrame.page().waitForTimeout(500);
+  }
+
+  throw new Error(
+    `Linha não encontrada no modal: ${value}`
+  );
+}
+
+async function ensureCheckboxChecked(
+  rowLocator,
+  checkboxSelector = 'input[type="checkbox"][name="rowSelect"]'
+) {
+
+  const checkbox =
+    rowLocator.locator(checkboxSelector).first();
+
+  const checked =
+    await checkbox.isChecked().catch(() => false);
+
+  if (checked) {
+    return true;
+  }
+
+  try {
+    await checkbox.check();
+  } catch (_) {
+    try {
+      await checkbox.click({ force: true });
+    } catch (_) {
+      await checkbox.evaluate(el => el.click()).catch(() => {});
+    }
+  }
+
+  return true;
+}
+
 async function selectViaModal({
 
   page,
@@ -4017,6 +4349,17 @@ async function selectViaModal({
   if (!entries.length) {
     return;
   }
+
+  const modalDefinition =
+    getModalSelectionDefinition(modalTitle);
+
+  const searchSelectors =
+    uniqueNonEmpty([
+      ...(Array.isArray(searchInputSelector)
+        ? searchInputSelector
+        : [searchInputSelector]),
+      ...modalDefinition.searchInputSelectors,
+    ]);
 
   logEvent({
     level: 'info',
@@ -4056,127 +4399,6 @@ async function selectViaModal({
   } catch (e) {
     // não é fatal — apenas log
     logEvent({ level: 'debug', message: `Falha ao expandir filtros no mainFrame: ${String(e && e.message || e)}` });
-  }
-
-  // =====================================================
-  // HELPERS
-  // =====================================================
-
-  async function resolveInput(
-    container,
-    selectors = [],
-    retries = 3
-  ) {
-
-    for (let attempt = 0; attempt < retries; attempt++) {
-
-      for (const selector of selectors) {
-
-        const locators =
-          container.locator(selector);
-
-        try {
-
-          const count =
-            await locators.count();
-
-          if (count === 0 && attempt === 0) {
-            continue;
-          }
-
-          for (let i = 0; i < count; i++) {
-
-            const input =
-              locators.nth(i);
-
-            try {
-
-              // Aguarda o elemento ficar visível com timeout
-              await input.waitFor({
-                state: 'visible',
-                timeout: 3000
-              }).catch(() => {});
-
-              const visible =
-                await input.isVisible();
-
-              if (!visible) {
-                continue;
-              }
-
-              const box =
-                await input.boundingBox();
-
-              if (!box) {
-                continue;
-              }
-
-              logEvent({
-                level: 'debug',
-                message: `Input encontrado no modal. Seletor: ${selector}, Tentativa: ${attempt + 1}/${retries}`
-              });
-
-              return input;
-
-            } catch (_) {}
-          }
-
-        } catch (_) {}
-      }
-
-      // Se não encontrou, aguarda um pouco antes de tentar novamente
-      if (attempt < retries - 1) {
-        logEvent({
-          level: 'debug',
-          message: `Input não encontrado na tentativa ${attempt + 1}. Aguardando 800ms...`
-        });
-        // Aguarda 800ms usando promise
-        await new Promise(resolve => setTimeout(resolve, 800));
-      }
-    }
-
-    logEvent({
-      level: 'error',
-      message: `Falha ao encontrar input após ${retries} tentativas`,
-      selectors: selectors
-    });
-
-    // Última tentativa: encontra qualquer input, mesmo que não visível
-    try {
-      const anyInput = await container.locator('input').first();
-      if (anyInput) {
-        logEvent({
-          level: 'warn',
-          message: `Usando fallback: primeiro input encontrado (pode não estar visível)`
-        });
-        return anyInput;
-      }
-    } catch (_) {}
-
-    // Debug: Tenta salvar o HTML do modal para diagnóstico
-    if (DEBUG_HTML) {
-      try {
-        const modalHtml = await container.content().catch(() => '<!-- erro ao capturar -->');;
-        const debugFile = path.join(
-          SCREENSHOT_DIR,
-          `debug-modal-${nowIso().replace(/[:.]/g, '-')}.html`
-        );
-        fs.writeFileSync(debugFile, modalHtml || '<!-- vazio -->');
-        logEvent({
-          level: 'info',
-          message: `HTML do modal salvo em: ${debugFile}`
-        });
-      } catch (e) {
-        logEvent({
-          level: 'warn',
-          message: `Erro ao salvar HTML debug: ${e.message}`
-        });
-      }
-    }
-
-    throw new Error(
-      `Não encontrei input visível. Selectors: ${selectors.join(', ')}`
-    );
   }
 
   async function fillLegacyInput(
@@ -4241,58 +4463,6 @@ async function selectViaModal({
     );
   }
 
-  // =====================================================
-  // VALOR ÚNICO
-  // MAIN FRAME DIRETO
-  // =====================================================
-
-  if (entries.length === 1) {
-
-    const singleValue =
-      entries[0];
-
-    // Para o caso único, tentamos uma lista mais ampla de seletores
-    const mainSelectors = Array.isArray(searchInputSelector) ? [...searchInputSelector] : [searchInputSelector];
-    mainSelectors.push(
-      'input[name*="plano"]',
-      'input[id*="plano"]',
-      'input[class*="plano"]',
-      'input[placeholder*="Plano"]',
-      'input[placeholder*="plano"]',
-      'input'
-    );
-
-    const input = await resolveInput(mainFrame, mainSelectors, 4).catch(() => null);
-
-    if (!input) {
-      logEvent({ level: 'warn', message: `Não encontrei input do tipo 'plano' no frame principal. Tentando localizar qualquer input visível.` });
-      // última tentativa: pega primeiro input visível no mainFrame
-      try {
-        const any = mainFrame.locator('input').first();
-        if (await any.count().catch(() => 0)) {
-          await fillLegacyInput(any, singleValue);
-        }
-      } catch (e) {
-        logEvent({ level: 'error', message: `Falha ao preencher input único do mainFrame: ${e.message}` });
-      }
-    } else {
-      await fillLegacyInput(input, singleValue);
-      // força perda de foco/validação
-      try { await input.press('Tab').catch(() => {}); } catch (_) {}
-    }
-
-    await page.waitForTimeout(1200);
-
-    logEvent({
-      level: 'info',
-      message:
-        `Valor único aplicado direto no frame principal: ${singleValue}`,
-      modalTitle,
-    });
-
-    return;
-  }
-
   const trigger =
     mainFrame.locator(
       `${triggerSelector}[src*="botProcurar.png"]`
@@ -4303,11 +4473,20 @@ async function selectViaModal({
   });
 
   let modalFrame =
-    await findModalFrame(
+    await findSelectionModalFrame(
       page,
       modalTitle,
       30000
     );
+
+  if (!modalFrame) {
+    modalFrame =
+      await findModalFrame(
+        page,
+        modalTitle,
+        30000
+      );
+  }
 
   if (!modalFrame) {
 
@@ -4321,93 +4500,6 @@ async function selectViaModal({
     message: `Modal encontrado: ${modalTitle}`,
     frameUrl: modalFrame.url()
   });
-
-  // Verifica se o frame encontrado contém o input esperado; caso contrário, tenta localizar
-  // um frame que tenha os seletores de busca (evita abrir modal errado, ex: Consulta de Empresas)
-  try {
-    const searchSelectors = Array.isArray(searchInputSelector) ? searchInputSelector : [searchInputSelector];
-
-    async function frameHasAnyInput(f) {
-      try {
-        for (const sel of searchSelectors) {
-          const c = await (f.locator ? f.locator(sel).count().catch(() => 0) : 0);
-          if (c && c > 0) return true;
-        }
-      } catch (_) {}
-      return false;
-    }
-
-    let hasInput = await frameHasAnyInput(modalFrame);
-
-    if (!hasInput) {
-      logEvent({ level: 'warn', message: `Frame modal não contém input esperado. Tentando fechar modais errados e reabrir (3 tentativas)...`, modalTitle });
-
-      // tenta múltiplas vezes: fecha modal de empresas se aberto, re-clica trigger e procura frame que contenha os seletores
-      for (let attempt = 1; attempt <= 3 && !hasInput; attempt++) {
-        logEvent({ level: 'info', message: `Tentativa ${attempt} para obter modal correto: ${modalTitle}` });
-
-        // detecta e fecha modal de Empresas se presente
-        try {
-          const emp = page.locator('div.dojoDialog:has-text("Consulta de Empresas"), .spwDialog:has-text("Consulta de Empresas"), table[id="empresa"]');
-          if (await emp.count().catch(() => 0)) {
-            logEvent({ level: 'info', message: 'Modal de Empresas detectado; fechando antes de reabrir o modal correto.' });
-            const closeBtn = page.locator('.spwAlertaFechar, img[title="Fechar"], .ui-dialog-titlebar-close, input[value="FECHAR"], button:has-text("FECHAR")').first();
-            if (await closeBtn.count().catch(() => 0)) {
-              await closeBtn.click({ force: true }).catch(() => {});
-              await page.waitForTimeout(600);
-            }
-          }
-        } catch (e) {
-          logEvent({ level: 'debug', message: 'Erro tentando fechar modal de Empresas', detail: String(e && e.message || e) });
-        }
-
-        // tenta reabrir o modal clicando novamente no trigger (relocaliza trigger para evitar stale)
-        try {
-          const retrigger = mainFrame.locator(`${triggerSelector}[src*="botProcurar.png"]`).first();
-          if (await retrigger.count().catch(() => 0)) {
-            await retrigger.click({ force: true }).catch(() => {});
-            await page.waitForTimeout(600 + attempt * 300);
-          }
-        } catch (e) {
-          logEvent({ level: 'debug', message: 'Falha ao reclicar no trigger do modal', detail: String(e && e.message || e) });
-        }
-
-        // procura em frames por qualquer seletor esperado
-        for (const f of page.frames()) {
-          if (await frameHasAnyInput(f)) {
-            modalFrame = f;
-            hasInput = true;
-            logEvent({ level: 'info', message: `Trocando para frame que contém seletor (após tentativa ${attempt})`, frameUrl: f.url(), modalTitle });
-            break;
-          }
-        }
-
-        // verifica overlay no próprio page
-        if (!hasInput) {
-          for (const sel of searchSelectors) {
-            try {
-              const cc = await page.locator(sel).count().catch(() => 0);
-              if (cc && cc > 0) {
-                modalFrame = page;
-                hasInput = true;
-                logEvent({ level: 'info', message: `Trocando para page (overlay) que contém seletor ${sel} (após tentativa ${attempt})`, frameUrl: page.url(), modalTitle });
-                break;
-              }
-            } catch (_) {}
-          }
-        }
-      }
-
-      if (!hasInput) {
-        logEvent({ level: 'warn', message: `Ainda não encontrei input esperado no modal para: ${modalTitle}. Salvando debug.`, modalTitle });
-        await saveDebugState('modal-wrong-frame').catch(() => {});
-        throw new Error(`Modal encontrado mas não contém os inputs esperados: ${modalTitle}`);
-      }
-    }
-  } catch (e) {
-    // se alguma verificação falhar, rethrow para caller
-    throw e;
-  }
 
   // helper: salva estado debug (HTML do modal, preview e screenshot)
   async function saveDebugState(tag) {
@@ -4442,7 +4534,7 @@ async function selectViaModal({
   }
 
   // Aguarda o conteúdo do modal estar pronto
-  for (const selector of searchInputSelector) {
+  for (const selector of searchSelectors) {
     try {
       await modalFrame.locator(selector).first().waitFor({
         state: 'attached',
@@ -4455,27 +4547,19 @@ async function selectViaModal({
   // MARCA TODOS OS VALORES
   // =====================================================
 
-  // =====================================================
-// MARCA TODOS OS VALORES
-// =====================================================
-
-  // Tenta com seletores padrão + alternativos
-  const selectorsToTry = [
-    ...searchInputSelector,
-    // Fallbacks: input de qualquer tipo no modal
-    'input[type="text"]:not([readonly])',
-    'input:not([readonly])',
-    'input[formatType="TEXT"]',
-    'td.spwCelulaGrid input[type="text"]',
-    'input[class*="Grid"]',
-    'input'
-  ];
-
   const modalInput =
     await resolveInput(
       modalFrame,
-      selectorsToTry
+      searchSelectors,
+      4
+    ).catch(() => null);
+
+  if (!modalInput) {
+    await saveDebugState('input-not-found').catch(() => {});
+    throw new Error(
+      `Nao encontrei input visivel no modal: ${modalTitle}`
     );
+  }
 
   for (const currentValue of entries) {
 
@@ -4639,6 +4723,7 @@ async function selectViaModal({
       throw err;
     }
 
+    saveShot(page, `checkbox-${sanitizeFileName(currentValue)}`).catch(() => {});
     await page.waitForTimeout(800);
 
     // ================================================
@@ -4672,6 +4757,179 @@ async function selectViaModal({
     modalTitle,
   });
 }
+
+async function selectViaModalByGrid({
+  page,
+  triggerSelector,
+  modalTitle,
+  searchInputSelector,
+  value,
+  values,
+}) {
+  const entries = uniqueNonEmpty(values || [value]);
+  if (!entries.length) return;
+
+  const modalDefinition = getModalSelectionDefinition(modalTitle);
+  const searchSelectors = uniqueNonEmpty([
+    ...(Array.isArray(searchInputSelector) ? searchInputSelector : [searchInputSelector]),
+    ...modalDefinition.searchInputSelectors,
+  ]);
+
+  logEvent({
+    level: 'info',
+    message: `Selecionando valores: ${entries.join(', ')}`,
+    modalTitle,
+    count: entries.length,
+  });
+
+  const iframeLocator = page.locator('iframe#iFramePage');
+  await iframeLocator.waitFor({ state: 'attached', timeout: 30000 });
+  const mainFrame = await iframeLocator.contentFrame();
+  if (!mainFrame) throw new Error('Nao foi possivel obter contentFrame do iFramePage.');
+
+  try {
+    await ensureExpandedFilters(mainFrame);
+  } catch (e) {
+    logEvent({ level: 'debug', message: `Falha ao expandir filtros no mainFrame: ${String(e && e.message || e)}` });
+  }
+
+  async function fillLegacyInput(locator, nextValue) {
+    try {
+      await locator.scrollIntoViewIfNeeded();
+    } catch (_) {}
+    await locator.evaluate((el, value) => {
+      el.style.display = '';
+      el.style.visibility = 'visible';
+      el.style.opacity = '1';
+      el.focus();
+      el.value = '';
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      el.value = value;
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+      el.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+      el.dispatchEvent(new Event('blur', { bubbles: true }));
+    }, String(nextValue));
+  }
+
+  const trigger = mainFrame.locator(`${triggerSelector}[src*="botProcurar.png"]`).first();
+  await trigger.click({ force: true });
+
+  let modalFrame = await findSelectionModalFrame(page, modalTitle, 30000);
+  if (!modalFrame) {
+    modalFrame = await findModalFrame(page, modalTitle, 30000);
+  }
+  if (!modalFrame) {
+    throw new Error(`Modal nao encontrado: ${modalTitle}`);
+  }
+
+  logEvent({
+    level: 'info',
+    message: `Modal encontrado: ${modalTitle}`,
+    frameUrl: modalFrame.url(),
+  });
+
+  async function saveDebugState(tag) {
+    if (!DEBUG_HTML) return null;
+    try {
+      await fs.promises.mkdir(SCREENSHOT_DIR, { recursive: true });
+    } catch (_) {}
+    const ts = nowIso().replace(/[:.]/g, '-');
+    const base = sanitizeFileName(`${modalTitle}-${tag}-${ts}`);
+    const htmlPath = path.join(SCREENSHOT_DIR, `${base}.html`);
+    const previewPath = path.join(SCREENSHOT_DIR, `${base}-preview.json`);
+    const shotPath = path.join(SCREENSHOT_DIR, `${base}.png`);
+    try {
+      const modalHtml = await modalFrame.content().catch(() => '<!-- erro ao capturar -->');
+      fs.writeFileSync(htmlPath, modalHtml || '<!-- vazio -->');
+    } catch (e) {
+      logEvent({ level: 'warn', message: `Erro ao salvar HTML debug: ${e.message}` });
+    }
+    try {
+      const preview = await modalFrame.evaluate(() => Array.from(document.querySelectorAll('tr')).slice(0, 30).map(r => r.innerText)).catch(() => []);
+      fs.writeFileSync(previewPath, JSON.stringify(preview, null, 2));
+    } catch (e) {
+      logEvent({ level: 'warn', message: `Erro ao salvar preview debug: ${e.message}` });
+    }
+    try {
+      await page.screenshot({ path: shotPath, fullPage: true }).catch(() => {});
+    } catch (e) {
+      logEvent({ level: 'warn', message: `Erro ao salvar screenshot debug: ${e.message}` });
+    }
+    logEvent({ level: 'info', message: `Debug salvo: html=${htmlPath}, preview=${previewPath}, shot=${shotPath}` });
+    return { htmlPath, previewPath, shotPath };
+  }
+
+  for (const selector of searchSelectors) {
+    try {
+      await modalFrame.locator(selector).first().waitFor({ state: 'attached', timeout: 5000 }).catch(() => {});
+    } catch (_) {}
+  }
+
+  const modalInput = await findVisibleInput(modalFrame, searchSelectors);
+  if (!modalInput) {
+    await saveDebugState('input-not-found').catch(() => {});
+    throw new Error(`Nao encontrei input visivel no modal: ${modalTitle}`);
+  }
+
+  for (const currentValue of entries) {
+    logEvent({ level: 'info', message: `Selecionando no modal: ${currentValue}`, modalTitle });
+
+    await modalInput.fill('').catch(() => {});
+    await page.waitForTimeout(300);
+
+    const inputValue = await modalInput.inputValue().catch(() => '');
+    if (inputValue && inputValue.trim()) {
+      await modalInput.evaluate((el) => {
+        el.value = '';
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }).catch(() => {});
+      await page.waitForTimeout(200);
+    }
+
+    await fillLegacyInput(modalInput, currentValue);
+    await modalInput.press('Enter').catch(() => {});
+    await page.waitForTimeout(2200);
+
+    await modalFrame.locator('#tabelaResultado').waitFor({ state: 'visible', timeout: 7000 }).catch(() => {});
+
+    let rowLocator;
+    try {
+      rowLocator = await findSelectionRow(modalFrame, currentValue, modalDefinition.rowValueSelectors, 25000);
+    } catch (err) {
+      await saveDebugState('row-not-found').catch(() => {});
+      throw err;
+    }
+
+    try {
+      await ensureCheckboxChecked(rowLocator, modalDefinition.rowCheckboxSelector);
+      logEvent({ level: 'info', message: `Checkbox marcado: ${currentValue}`, modalTitle });
+    } catch (err) {
+      await saveDebugState('checkbox-error').catch(() => {});
+      logEvent({ level: 'error', message: `Erro ao manipular checkbox para ${currentValue}: ${err.message}` });
+      throw err;
+    }
+
+    saveShot(page, `checkbox-${sanitizeFileName(currentValue)}`).catch(() => {});
+    await page.waitForTimeout(700);
+    await modalInput.fill('').catch(() => {});
+    await page.waitForTimeout(200);
+  }
+
+  const { locator: selecionarBtn } = await findVisibleLocatorInFrames(page, '#pbSelecionar');
+  await selecionarBtn.click({ force: true });
+
+  await page.waitForTimeout(2000);
+  await page.waitForTimeout(2000);
+
+  logEvent({
+    level: 'info',
+    message: `Modal finalizado: ${entries.join(', ')}`,
+    modalTitle,
+  });
+}
+
+selectViaModal = selectViaModalByGrid;
 
 async function setInputSelectState(page, config) {
   const {
