@@ -1924,12 +1924,34 @@ async function updateReportStatus(data) {
   const isOverall = overallKeys.some(k => Object.prototype.hasOwnProperty.call(data || {}, k));
   if (isOverall) {
     cur.overall = { ...(cur.overall || {}), ...(data || {}) };
+    cur.overall.lastUpdated = nowIso();
+    cur.overall.completedReports = cur.overall.completedReports || [];
   }
 
   if (data && data.perReportEntry) {
     cur.reports = cur.reports || {};
     const name = data.perReportEntry.report;
-    cur.reports[name] = { ...(cur.reports[name] || {}), ...(data.perReportEntry.props || {}) };
+    const incoming = (data.perReportEntry.props || {});
+
+    // Normalize and enrich per-report props with useful realtime fields
+    const base = cur.reports[name] || {};
+    const merged = { ...base, ...incoming };
+
+    // Ensure timestamp fields
+    if (incoming.status === 'running' && !merged.startedAt) merged.startedAt = nowIso();
+    if (incoming.status === 'completed' && !merged.finishedAt) merged.finishedAt = nowIso();
+
+    // Standard realtime fields
+    merged.lastUpdated = nowIso();
+    merged.step = incoming.step || merged.step || null; // current sub-step
+    merged.stepStartedAt = incoming.stepStartedAt || merged.stepStartedAt || null;
+    merged.progress = typeof incoming.progress !== 'undefined' ? incoming.progress : (merged.progress || 0);
+    merged.totalItems = typeof incoming.totalItems !== 'undefined' ? incoming.totalItems : (merged.totalItems || null);
+    merged.processedItems = typeof incoming.processedItems !== 'undefined' ? incoming.processedItems : (merged.processedItems || 0);
+    merged.lastMessage = incoming.lastMessage || merged.lastMessage || null;
+    merged.lastError = incoming.lastError || merged.lastError || null;
+
+    cur.reports[name] = merged;
   }
 
   // Backward compatibility: if caller passed a plain object without wrapper,
@@ -5872,7 +5894,7 @@ async function runReports(context, page) {
   // Inicializa entradas por relatório como 'pending' e grava status inicial
   for (const r of reports) {
     try {
-      await updateReportStatusSerialized({ perReportEntry: { report: r.sheetName, props: { status: 'pending' } } });
+      await updateReportStatusSerialized({ perReportEntry: { report: r.sheetName, props: { status: 'pending', createdAt: nowIso(), lastUpdated: nowIso(), progress: 0, processedItems: 0, totalItems: null } } });
     } catch {}
   }
 
@@ -5905,14 +5927,14 @@ async function runReports(context, page) {
     const startedAtReport = new Date().toISOString();
     try {
       // marca início
-      await updateReportStatusSerialized({ perReportEntry: { report: reportName, props: { status: 'running', startedAt: startedAtReport, index: index + 1 } } });
+      await updateReportStatusSerialized({ perReportEntry: { report: reportName, props: { status: 'running', startedAt: startedAtReport, index: index + 1, step: 'start', stepStartedAt: nowIso(), progress: 0, lastMessage: 'started' } } });
       logEvent({ level: 'info', message: 'Relatório iniciado.', report: reportName, current: index + 1, total: reports.length });
 
       const result = await generateSingleReport(context, page, report);
 
       const finishedAt = new Date().toISOString();
 
-      await updateReportStatusSerialized({ perReportEntry: { report: reportName, props: { status: 'done', finishedAt, path: result && result.path ? result.path : (typeof result === 'string' ? result : null), bytes: result && result.bytes ? result.bytes : null } } });
+      await updateReportStatusSerialized({ perReportEntry: { report: reportName, props: { status: 'completed', finishedAt, path: result && result.path ? result.path : (typeof result === 'string' ? result : null), bytes: result && result.bytes ? result.bytes : null, progress: 100, lastMessage: 'completed' } } });
       logEvent({ level: 'info', message: 'Relatório concluído.', report: reportName, path: result && result.path ? result.path : null, bytes: result && result.bytes ? result.bytes : null });
 
       return { report: reportName, result };
@@ -5926,7 +5948,7 @@ async function runReports(context, page) {
       } catch (_) {}
 
       const finishedAt = new Date().toISOString();
-      await updateReportStatusSerialized({ perReportEntry: { report: reportName, props: { status: 'error', finishedAt, error: String(err && err.message || err) } } });
+      await updateReportStatusSerialized({ perReportEntry: { report: reportName, props: { status: 'error', finishedAt, lastError: String(err && err.message || err), lastMessage: 'error', progress: null } } });
       logEvent({ level: 'error', message: 'Falha no relatório.', report: reportName, detail: String(err && err.message || err) });
       // rethrow para Promise.allSettled manejar
       throw err;
