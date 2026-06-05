@@ -16,6 +16,26 @@ const SCREENSHOT_DIR = process.env.SCREENSHOT_DIR || path.resolve(process.cwd(),
 const LOG_PATH = process.env.LOG_PATH || path.resolve(process.cwd(), 'sienge-authorize-log.json');
 const DEBUG_HTML = (process.env.DEBUG_HTML ?? 'false').toLowerCase() === 'true';
 const TASK_MODE = (process.env.TASK_MODE || 'authorize').toLowerCase();
+const SAVE_SHOTS = (process.env.SAVE_SHOTS ?? 'false').toLowerCase() === 'true' || DEBUG_HTML;
+const MODAL_CACHE_PATH = process.env.MODAL_CACHE_PATH || path.resolve(process.cwd(), '.modal-cache.json');
+let MODAL_CACHE = {};
+
+async function loadModalCache() {
+  try {
+    if (fs.existsSync(MODAL_CACHE_PATH)) {
+      const raw = await fs.promises.readFile(MODAL_CACHE_PATH, 'utf8').catch(() => null);
+      if (raw) {
+        MODAL_CACHE = JSON.parse(raw) || {};
+      }
+    }
+  } catch (e) {}
+}
+
+async function saveModalCache() {
+  try {
+    await fs.promises.writeFile(MODAL_CACHE_PATH, JSON.stringify(MODAL_CACHE, null, 2)).catch(() => {});
+  } catch (e) {}
+}
 function getCliArg(name) {
   const idx = process.argv.indexOf(name);
   if (idx >= 0 && process.argv.length > idx + 1) return process.argv[idx + 1];
@@ -1940,7 +1960,9 @@ function logEvent(event) {
   const payload = { ts: nowIso(), ...event };
   const arr = readLog();
   arr.push(payload);
-  fs.writeFileSync(LOG_PATH, JSON.stringify(arr, null, 2), 'utf8');
+  try {
+    fs.writeFile(LOG_PATH, JSON.stringify(arr, null, 2), 'utf8', () => {});
+  } catch (_) {}
   const baseLine = `[${payload.ts}] [${String(payload.level || 'info').toUpperCase()}] ${payload.message || ''}`;
 
   const parts = [];
@@ -1964,6 +1986,43 @@ function logEvent(event) {
 function truncateForLog(value, maxLen = 500) {
   const s = String(value == null ? '' : value);
   return s.length > maxLen ? s.slice(0, maxLen) + '…' : s;
+}
+
+// -------------------------
+// Profiling / timing helpers
+// -------------------------
+const _measureTimers = new Map();
+function startMeasure(name, meta = {}) {
+  try {
+    const id = `${name}-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
+    _measureTimers.set(id, { name, meta, start: process.hrtime.bigint() });
+    return id;
+  } catch (err) {
+    return null;
+  }
+}
+
+async function stopMeasure(id, props = {}) {
+  try {
+    if (!id) return null;
+    const rec = _measureTimers.get(id);
+    if (!rec) return null;
+    _measureTimers.delete(id);
+    const diffNs = process.hrtime.bigint() - rec.start;
+    const durationMs = Math.round(Number(diffNs) / 1e6);
+    const payload = {
+      level: 'info',
+      message: `Measure ${rec.name}`,
+      detail: JSON.stringify({ ...(rec.meta || {}), ...props, durationMs }),
+    };
+    try { logEvent(payload); } catch (_) {}
+    try {
+      // if we have report name in meta, persist a per-report duration
+      const reportName = (rec.meta && rec.meta.report) || rec.name;
+      await updateReportStatusSerialized({ perReportEntry: { report: reportName, props: { lastDurationMs: durationMs, lastRunAt: nowIso() } } });
+    } catch (_) {}
+    return durationMs;
+  } catch (_) { return null; }
 }
 
 async function debugPageSnapshot(page, label) {
@@ -2037,10 +2096,13 @@ async function debugFrames(page, label) {
 
 async function ensureDir(dir) { await fs.promises.mkdir(dir, { recursive: true }); }
 async function saveShot(page, name) {
+  if (!SAVE_SHOTS) return null;
   await ensureDir(SCREENSHOT_DIR);
   const file = path.join(SCREENSHOT_DIR, `${Date.now()}-${name}.png`);
-  await page.screenshot({ path: file, fullPage: true });
-  return file;
+  try {
+    await page.screenshot({ path: file, fullPage: true });
+    return file;
+  } catch (e) { return null; }
 }
 async function saveHtml(page, name) {
   if (!DEBUG_HTML) return null;
@@ -2357,6 +2419,8 @@ async function configureReportFilters({
     message:
       `[${report.sheetName}] Iniciando configureReportFilters`,
   });
+
+  const __configureMeasure = startMeasure('configureReportFilters', { report: report.sheetName });
 
   const reportFrame = await getReportFilterFrame(page);
 
@@ -2904,12 +2968,13 @@ async function configureReportFilters({
   await page.waitForTimeout(
     3000
   );
-
   logEvent({
     level: 'info',
     message:
       `[${report.sheetName}] Filtros finalizados`,
   });
+
+  await stopMeasure(__configureMeasure, { phase: 'configureFilters' }).catch(() => {});
 }
 
 function uniqueNonEmpty(values = []) {
@@ -3125,6 +3190,8 @@ async function saveReportFromContext(
   maxRetries = 4
 ) {
 
+  const __saveMeasure = startMeasure('saveReportFromContext', { reportUrl, filePath });
+
   await ensureDir(path.dirname(filePath));
 
   const shouldRetryError = (error) => {
@@ -3180,6 +3247,7 @@ async function saveReportFromContext(
         body
       );
 
+      await stopMeasure(__saveMeasure, { phase: 'download', attempt }).catch(() => {});
       return filePath;
     } catch (error) {
       if (attempt < maxRetries - 1 && shouldRetryError(error)) {
@@ -3192,6 +3260,8 @@ async function saveReportFromContext(
         await sleepMs(2000);
         continue;
       }
+
+      await stopMeasure(__saveMeasure, { phase: 'download-error', attempt, error: String(error && error.message || error) }).catch(() => {});
 
       throw error;
     }
@@ -3369,6 +3439,8 @@ async function openReportsPage(page) {
     message: 'Abrindo tela Relatório Contas Recebidas.',
   });
 
+  const __openReportsMeasure = startMeasure('openReportsPage');
+
   await fetchWithRetry(
     page,
     REPORT_FILTER_PAGE_URL,
@@ -3405,6 +3477,8 @@ async function openReportsPage(page) {
     message: 'Tela de relatório carregada.',
     url: page.url(),
   });
+
+  await stopMeasure(__openReportsMeasure, { phase: 'openReportsPage' }).catch(() => {});
 
   return true;
 }
@@ -4501,6 +4575,55 @@ async function selectViaModal({
     frameUrl: modalFrame.url()
   });
 
+  // ===== tentativa rápida usando cache (se existir) =====
+  try {
+    const cached = MODAL_CACHE[modalTitle];
+    if (!cached) {
+      // coleta e armazena opções do modal para uso posterior
+      try {
+        const opts = await modalFrame.evaluate(() => Array.from(document.querySelectorAll('tr')).map(r => r.innerText)).catch(() => null);
+        if (Array.isArray(opts) && opts.length) {
+          MODAL_CACHE[modalTitle] = opts.map(o => String(o || '').normalize('NFD').replace(/\p{M}/gu, '').replace(/\s+/g, ' ').trim().toLowerCase());
+          saveModalCache().catch(() => {});
+        }
+      } catch (_) {}
+    } else {
+      // fast selection using cache: try to click checkboxes by matching normalized cached entries
+      const normalizedEntries = entries.map(e => String(e || '').normalize('NFD').replace(/\p{M}/gu, '').trim().toLowerCase()).filter(Boolean);
+      if (normalizedEntries.length) {
+        const matched = await modalFrame.evaluate((normalizedEntries) => {
+          function normalize(s){ return (s||'').normalize('NFD').replace(/\p{M}/gu,'').replace(/\s+/g,' ').trim().toLowerCase(); }
+          const rows = Array.from(document.querySelectorAll('tr'));
+          const seen = new Set();
+          let found = 0;
+          for (const row of rows) {
+            const text = normalize(row.innerText || '');
+            for (const ne of normalizedEntries) {
+              if (!ne || seen.has(ne)) continue;
+              if (text.indexOf(ne) !== -1) {
+                const checkbox = row.querySelector('input[type="checkbox"]');
+                if (checkbox && !checkbox.checked) try{ checkbox.click(); }catch(e){}
+                seen.add(ne);
+                found++;
+              }
+            }
+          }
+          return { found, expected: normalizedEntries.length, matched: Array.from(seen) };
+        }, normalizedEntries).catch(() => null);
+
+        if (matched && matched.found >= matched.expected) {
+          logEvent({ level: 'info', message: `Modal selection from cache succeeded: ${matched.matched.join(', ')}`, modalTitle });
+          const { locator: selecionarBtn } = await findVisibleLocatorInFrames(page, '#pbSelecionar');
+          await selecionarBtn.click({ force: true }).catch(() => {});
+          await page.waitForTimeout(500).catch(() => {});
+          return;
+        }
+      }
+    }
+  } catch (e) {
+    logEvent({ level: 'debug', message: `Cache quick-attempt failed: ${String(e && e.message || e)}`, modalTitle });
+  }
+
   // helper: salva estado debug (HTML do modal, preview e screenshot)
   async function saveDebugState(tag) {
     if (!DEBUG_HTML) return null;
@@ -4514,13 +4637,13 @@ async function selectViaModal({
     const shotPath = path.join(SCREENSHOT_DIR, `${base}.png`);
     try {
       const modalHtml = await modalFrame.content().catch(() => '<!-- erro ao capturar -->');
-      fs.writeFileSync(htmlPath, modalHtml || '<!-- vazio -->');
+      await fs.promises.writeFile(htmlPath, modalHtml || '<!-- vazio -->').catch(() => {});
     } catch (e) {
       logEvent({ level: 'warn', message: `Erro ao salvar HTML debug: ${e.message}` });
     }
     try {
       const preview = await modalFrame.evaluate(() => Array.from(document.querySelectorAll('tr')).slice(0,30).map(r => r.innerText)).catch(() => []);
-      fs.writeFileSync(previewPath, JSON.stringify(preview, null, 2));
+      await fs.promises.writeFile(previewPath, JSON.stringify(preview, null, 2)).catch(() => {});
     } catch (e) {
       logEvent({ level: 'warn', message: `Erro ao salvar preview debug: ${e.message}` });
     }
@@ -4561,6 +4684,69 @@ async function selectViaModal({
     );
   }
 
+  // TENTA SELEÇÃO EM LOTE (mais rápida) — seleciona checkboxes no DOM de uma só vez
+  try {
+    const normalizedEntries = entries.map(e => String(e || '').trim().toLowerCase()).filter(Boolean);
+    if (normalizedEntries.length) {
+      // scroll modal to render virtualized rows before matching
+      await modalFrame.evaluate(() => {
+        const scroller = document.querySelector('.ui-table') || document.querySelector('.modal-body') || document.scrollingElement || document.documentElement;
+        if (!scroller) return;
+        const height = scroller.scrollHeight || (document.body && document.body.scrollHeight) || 0;
+        let y = 0;
+        while (y < height) {
+          scroller.scrollTop = y;
+          y += 400;
+        }
+      }).catch(() => {});
+
+      const matched = await modalFrame.evaluate((normalizedEntries) => {
+        function normalize(s) {
+          return (s || '').normalize('NFD').replace(/\p{M}/gu, '').replace(/\s+/g, ' ').trim().toLowerCase();
+        }
+        const rows = Array.from(document.querySelectorAll('tr'));
+        let found = 0;
+        const seen = new Set();
+        const tokensList = normalizedEntries.map(e => e.split(/\s+/).filter(Boolean));
+        for (const row of rows) {
+          const textRaw = row.innerText || '';
+          const text = normalize(textRaw);
+          for (let i = 0; i < normalizedEntries.length; i++) {
+            const ne = normalizedEntries[i];
+            if (!ne || seen.has(ne)) continue;
+            const tokens = tokensList[i];
+            // match if all tokens exist in row text (loose AND)
+            const ok = tokens.every(t => text.indexOf(t) !== -1);
+            if (ok) {
+              const checkbox = row.querySelector('input[type="checkbox"]');
+              if (checkbox && !checkbox.checked) {
+                try { checkbox.click(); } catch (e) { /* ignore */ }
+              }
+              seen.add(ne);
+              found++;
+            }
+          }
+        }
+        return { found, expected: normalizedEntries.length, matched: Array.from(seen) };
+      }, normalizedEntries).catch(() => null);
+
+      if (matched && matched.found >= matched.expected) {
+        logEvent({ level: 'info', message: `Bulk modal selection succeeded: ${matched.matched.join(', ')}`, modalTitle });
+
+        // Clica no botão selecionar e finaliza o modal
+        const { locator: selecionarBtn } = await findVisibleLocatorInFrames(page, '#pbSelecionar');
+        await selecionarBtn.click({ force: true });
+        await page.waitForTimeout(800);
+
+        logEvent({ level: 'info', message: `Modal finalizado (bulk): ${entries.join(', ')}`, modalTitle });
+        return;
+      }
+    }
+  } catch (e) {
+    // falhar na tentativa de bulk não deve interromper o fluxo — cai para seleção por item
+    logEvent({ level: 'debug', message: `Bulk selection attempt failed: ${String(e && e.message || e)}`, modalTitle });
+  }
+
   for (const currentValue of entries) {
 
     logEvent({
@@ -4574,11 +4760,10 @@ async function selectViaModal({
     // LIMPA FILTRO ANTERIOR
     // ================================================
 
-    await modalInput.fill('')
-      .catch(() => {});
+    await modalInput.fill('').catch(() => {});
 
-    // Aguarda e garante que o input foi realmente limpo
-    await page.waitForTimeout(500);
+    // Aguarda que o resultado da limpeza seja refletido no DOM (ou timeout)
+    try { await modalInput.waitFor({ state: 'visible', timeout: 1200 }); } catch (_) {}
 
     // Verifica se foi realmente limpo
     const inputValue = await modalInput.inputValue().catch(() => '');
@@ -4600,15 +4785,11 @@ async function selectViaModal({
       currentValue
     );
 
-    await modalInput.press('Enter')
-      .catch(() => {});
+    await modalInput.press('Enter').catch(() => {});
 
-    // Aguarda resultado da busca ser carregado (um pouco mais tolerante)
-    await page.waitForTimeout(2300);
-
-    // Aguarda a tabela ser atualizada
+    // Aguarda a tabela ser atualizada reactively
     try {
-      await modalFrame.locator('td').first().waitFor({ timeout: 7000 });
+      await modalFrame.locator('tr').first().waitFor({ timeout: 7000 });
     } catch (_) {}
 
     // ================================================
@@ -4646,12 +4827,12 @@ async function selectViaModal({
             try {
               const modalHtml = await modalFrame.content().catch(() => '<!-- erro ao capturar -->');
               const debugFile = path.join(SCREENSHOT_DIR, `debug-modal-${sanitizeFileName(modalTitle)}-${nowIso().replace(/[:.]/g, '-')}.html`);
-              fs.writeFileSync(debugFile, modalHtml || '<!-- vazio -->');
+              await fs.promises.writeFile(debugFile, modalHtml || '<!-- vazio -->').catch(() => {});
 
               // também grava preview das primeiras 20 linhas normalizadas
               const preview = await modalFrame.evaluate(() => Array.from(document.querySelectorAll('tr')).slice(0,20).map(r => r.innerText));
               const previewFile = path.join(SCREENSHOT_DIR, `debug-modal-preview-${sanitizeFileName(modalTitle)}-${nowIso().replace(/[:.]/g, '-')}.json`);
-              fs.writeFileSync(previewFile, JSON.stringify(preview, null, 2));
+              await fs.promises.writeFile(previewFile, JSON.stringify(preview, null, 2)).catch(() => {});
               logEvent({ level: 'info', message: `HTML do modal salvo em: ${debugFile}`, previewPath: previewFile });
             } catch (e) {
               logEvent({ level: 'warn', message: `Erro ao salvar HTML debug: ${e.message}` });
@@ -4841,13 +5022,13 @@ async function selectViaModalByGrid({
     const shotPath = path.join(SCREENSHOT_DIR, `${base}.png`);
     try {
       const modalHtml = await modalFrame.content().catch(() => '<!-- erro ao capturar -->');
-      fs.writeFileSync(htmlPath, modalHtml || '<!-- vazio -->');
+      await fs.promises.writeFile(htmlPath, modalHtml || '<!-- vazio -->').catch(() => {});
     } catch (e) {
       logEvent({ level: 'warn', message: `Erro ao salvar HTML debug: ${e.message}` });
     }
     try {
       const preview = await modalFrame.evaluate(() => Array.from(document.querySelectorAll('tr')).slice(0, 30).map(r => r.innerText)).catch(() => []);
-      fs.writeFileSync(previewPath, JSON.stringify(preview, null, 2));
+      await fs.promises.writeFile(previewPath, JSON.stringify(preview, null, 2)).catch(() => {});
     } catch (e) {
       logEvent({ level: 'warn', message: `Erro ao salvar preview debug: ${e.message}` });
     }
@@ -5184,6 +5365,10 @@ async function generateSingleReport(
     message: 'Entrou em generateSingleReport',
     report: report.sheetName,
   });
+
+  const __genMeasure = startMeasure('generateSingleReport', { report: report.sheetName });
+
+  try {
 
   await openReportsPage(page);
 
@@ -5586,10 +5771,7 @@ async function generateSingleReport(
     } catch {};
   }
 
-  fs.writeFileSync(
-    finalPdfPath,
-    buffer
-  );
+  await fs.promises.writeFile(finalPdfPath, buffer).catch((e) => { throw e; });
 
   const stats =
     fs.statSync(finalPdfPath);
@@ -5605,6 +5787,9 @@ async function generateSingleReport(
   logEvent({ level: 'info', message: `Relatório "${report.sheetName}" salvo com sucesso.`, path: finalPdfPath });
 
   return { path: finalPdfPath, bytes: stats.size };
+  } finally {
+    await stopMeasure(__genMeasure, { phase: 'generateSingleReport' }).catch(() => {});
+  }
 }
 
 async function closeLegacyPopups(page) {
@@ -6728,6 +6913,19 @@ async function attachPageDebug(page) {
       logEvent({ level: 'debug', message: `Console ${msg.type()} da página.`, detail: msg.text() });
     }
   });
+  try {
+    await page.route('**/*', (route) => {
+      const req = route.request();
+      const url = req.url();
+      const rt = req.resourceType();
+      // block heavy/static assets that don't affect selection
+      if (['image', 'media', 'font'].includes(rt)) return route.abort();
+      // block common analytics/ads third-party hosts
+      const blockedHosts = ['google-analytics', 'googlesyndication', 'doubleclick', 'gstatic', 'analytics', 'hotjar', 'facebook', 'ads', 'adservice'];
+      for (const h of blockedHosts) if (url.includes(h)) return route.abort();
+      return route.continue();
+    });
+  } catch (e) {}
 }
 
 async function fetchWithRetry(page, url, options = {}, maxRetries = 3) {
@@ -6787,6 +6985,7 @@ async function runAuthorization(context, page) {
 async function run() {
   await ensureDir(SCREENSHOT_DIR);
   await ensureDir(REPORT_OUTPUT_DIR);
+  await loadModalCache().catch(() => {});
   const browser = await chromium.launch({ headless: HEADLESS });
   const context = await browser.newContext(fs.existsSync(STATE_PATH) ? { storageState: STATE_PATH } : {});
   const page = await context.newPage();
