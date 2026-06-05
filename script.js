@@ -1903,7 +1903,9 @@ async function resetSomenteCamposEditaveis(surface) {
     }).catch(() => {});
   }
 
-  await new Promise(resolve => setTimeout(resolve, 800));
+  try {
+    await surface.waitForSelector('body', { timeout: 1000 }).catch(() => {});
+  } catch (_) {}
 }
 
 
@@ -2149,8 +2151,8 @@ async function waitForAppReady(
     timeout,
   }).catch(() => {});
 
-  // espera JS legado
-  await page.waitForTimeout(1500);
+  // espera JS legado: preferir waitForFunction ao invés de timeout fixo
+  await page.waitForFunction(() => document.readyState === 'complete', { timeout: 5000 }).catch(() => {});
 
   // espera jquery se existir
   await page.waitForFunction(() => {
@@ -4575,55 +4577,6 @@ async function selectViaModal({
     frameUrl: modalFrame.url()
   });
 
-  // ===== tentativa rápida usando cache (se existir) =====
-  try {
-    const cached = MODAL_CACHE[modalTitle];
-    if (!cached) {
-      // coleta e armazena opções do modal para uso posterior
-      try {
-        const opts = await modalFrame.evaluate(() => Array.from(document.querySelectorAll('tr')).map(r => r.innerText)).catch(() => null);
-        if (Array.isArray(opts) && opts.length) {
-          MODAL_CACHE[modalTitle] = opts.map(o => String(o || '').normalize('NFD').replace(/\p{M}/gu, '').replace(/\s+/g, ' ').trim().toLowerCase());
-          saveModalCache().catch(() => {});
-        }
-      } catch (_) {}
-    } else {
-      // fast selection using cache: try to click checkboxes by matching normalized cached entries
-      const normalizedEntries = entries.map(e => String(e || '').normalize('NFD').replace(/\p{M}/gu, '').trim().toLowerCase()).filter(Boolean);
-      if (normalizedEntries.length) {
-        const matched = await modalFrame.evaluate((normalizedEntries) => {
-          function normalize(s){ return (s||'').normalize('NFD').replace(/\p{M}/gu,'').replace(/\s+/g,' ').trim().toLowerCase(); }
-          const rows = Array.from(document.querySelectorAll('tr'));
-          const seen = new Set();
-          let found = 0;
-          for (const row of rows) {
-            const text = normalize(row.innerText || '');
-            for (const ne of normalizedEntries) {
-              if (!ne || seen.has(ne)) continue;
-              if (text.indexOf(ne) !== -1) {
-                const checkbox = row.querySelector('input[type="checkbox"]');
-                if (checkbox && !checkbox.checked) try{ checkbox.click(); }catch(e){}
-                seen.add(ne);
-                found++;
-              }
-            }
-          }
-          return { found, expected: normalizedEntries.length, matched: Array.from(seen) };
-        }, normalizedEntries).catch(() => null);
-
-        if (matched && matched.found >= matched.expected) {
-          logEvent({ level: 'info', message: `Modal selection from cache succeeded: ${matched.matched.join(', ')}`, modalTitle });
-          const { locator: selecionarBtn } = await findVisibleLocatorInFrames(page, '#pbSelecionar');
-          await selecionarBtn.click({ force: true }).catch(() => {});
-          await page.waitForTimeout(500).catch(() => {});
-          return;
-        }
-      }
-    }
-  } catch (e) {
-    logEvent({ level: 'debug', message: `Cache quick-attempt failed: ${String(e && e.message || e)}`, modalTitle });
-  }
-
   // helper: salva estado debug (HTML do modal, preview e screenshot)
   async function saveDebugState(tag) {
     if (!DEBUG_HTML) return null;
@@ -4736,7 +4689,7 @@ async function selectViaModal({
         // Clica no botão selecionar e finaliza o modal
         const { locator: selecionarBtn } = await findVisibleLocatorInFrames(page, '#pbSelecionar');
         await selecionarBtn.click({ force: true });
-        await page.waitForTimeout(800);
+        await page.waitForTimeout(200);
 
         logEvent({ level: 'info', message: `Modal finalizado (bulk): ${entries.join(', ')}`, modalTitle });
         return;
@@ -4760,10 +4713,11 @@ async function selectViaModal({
     // LIMPA FILTRO ANTERIOR
     // ================================================
 
-    await modalInput.fill('').catch(() => {});
+    await modalInput.fill('')
+      .catch(() => {});
 
-    // Aguarda que o resultado da limpeza seja refletido no DOM (ou timeout)
-    try { await modalInput.waitFor({ state: 'visible', timeout: 1200 }); } catch (_) {}
+    // Aguarda e garante que o input foi realmente limpo
+    await page.waitForTimeout(500);
 
     // Verifica se foi realmente limpo
     const inputValue = await modalInput.inputValue().catch(() => '');
@@ -4785,68 +4739,88 @@ async function selectViaModal({
       currentValue
     );
 
-    await modalInput.press('Enter').catch(() => {});
+    await modalInput.press('Enter')
+      .catch(() => {});
 
-    // Aguarda a tabela ser atualizada reactively
+    // Aguarda reatividade do modal: procura o texto de forma normalizada usando waitForFunction
+    const normalizedToken = String(currentValue || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
     try {
-      await modalFrame.locator('tr').first().waitFor({ timeout: 7000 });
+      await modalFrame.waitForFunction((t) => {
+        try {
+          const norm = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+          return document.body && norm(document.body.innerText).includes(t);
+        } catch (e) { return false; }
+      }, {}, normalizedToken).catch(() => {});
     } catch (_) {}
 
-    // ================================================
-    // LOCALIZA LINHA (com fallback inteligente)
-    // ================================================
+    // espera a tabela aparecer minimamente
+    try { await modalFrame.locator('tr').first().waitFor({ timeout: 7000 }); } catch (_) {}
 
+    // Primeiro: busca o índice da <tr> no DOM via evaluate (um roundtrip único, rápido)
     let cell = null;
     let cellFrame = null;
+    let rowLocator = null;
 
     try {
-      const res = await findRowByText(page, currentValue, 30000, modalFrame);
-      cell = res.cell; cellFrame = res.frame;
-    } catch (err) {
-      // tenta fallback: remover prefixos comuns como 'Aplicacao' / 'Aplicação' e pesquisar o restante
-      try {
-        const alt = String(currentValue || '').replace(/^\s*(aplica[cç][ãa]o|aplicacao|conta)\s+/i, '').trim();
-        if (alt && alt.length < String(currentValue || '').length) {
-          logEvent({ level: 'warn', message: `Busca inicial falhou para '${currentValue}', tentando fallback com: ${alt}`, modalTitle });
-          const res2 = await findRowByText(page, alt, 20000, modalFrame);
-          cell = res2.cell; cellFrame = res2.frame;
-        }
-      } catch (_) {
-        // outro fallback: busca apenas os últimos dois tokens
+      const idx = await modalFrame.evaluate((needle) => {
         try {
-          const tokens = String(currentValue || '').split(/\s+/).filter(Boolean);
-          if (tokens.length > 1) {
-            const lastTwo = tokens.slice(-2).join(' ');
-            logEvent({ level: 'warn', message: `Tentando fallback tokens para '${currentValue}' -> '${lastTwo}'`, modalTitle });
-            const res3 = await findRowByText(page, lastTwo, 20000, modalFrame);
-            cell = res3.cell; cellFrame = res3.frame;
+          const norm = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+          const rows = Array.from(document.querySelectorAll('tr'));
+          for (let i = 0; i < rows.length; i++) {
+            if (norm(rows[i].innerText).includes(needle)) return i + 1;
           }
-        } catch (errFinal) {
-          // grava HTML do modal e preview das primeiras linhas quando DEBUG_HTML ativo
-          if (DEBUG_HTML) {
-            try {
-              const modalHtml = await modalFrame.content().catch(() => '<!-- erro ao capturar -->');
-              const debugFile = path.join(SCREENSHOT_DIR, `debug-modal-${sanitizeFileName(modalTitle)}-${nowIso().replace(/[:.]/g, '-')}.html`);
-              await fs.promises.writeFile(debugFile, modalHtml || '<!-- vazio -->').catch(() => {});
+        } catch (e) {}
+        return null;
+      }, normalizedToken).catch(() => null);
 
-              // também grava preview das primeiras 20 linhas normalizadas
-              const preview = await modalFrame.evaluate(() => Array.from(document.querySelectorAll('tr')).slice(0,20).map(r => r.innerText));
-              const previewFile = path.join(SCREENSHOT_DIR, `debug-modal-preview-${sanitizeFileName(modalTitle)}-${nowIso().replace(/[:.]/g, '-')}.json`);
-              await fs.promises.writeFile(previewFile, JSON.stringify(preview, null, 2)).catch(() => {});
-              logEvent({ level: 'info', message: `HTML do modal salvo em: ${debugFile}`, previewPath: previewFile });
-            } catch (e) {
-              logEvent({ level: 'warn', message: `Erro ao salvar HTML debug: ${e.message}` });
+      if (idx) {
+        rowLocator = modalFrame.locator(`xpath=(//tr)[${idx}]`);
+        cell = rowLocator;
+        cellFrame = modalFrame;
+      } else {
+        // fallback para lógica mais ampla existente
+        try {
+          const res = await findRowByText(page, currentValue, 30000, modalFrame);
+          cell = res.cell; cellFrame = res.frame;
+        } catch (err) {
+          // tenta fallback: remover prefixos comuns como 'Aplicacao' / 'Aplicação' e pesquisar o restante
+          try {
+            const alt = String(currentValue || '').replace(/^\s*(aplica[cç][ãa]o|aplicacao|conta)\s+/i, '').trim();
+            if (alt && alt.length < String(currentValue || '').length) {
+              logEvent({ level: 'warn', message: `Busca inicial falhou para '${currentValue}', tentando fallback com: ${alt}`, modalTitle });
+              const res2 = await findRowByText(page, alt, 20000, modalFrame);
+              cell = res2.cell; cellFrame = res2.frame;
+            }
+          } catch (_) {
+            try {
+              const tokens = String(currentValue || '').split(/\s+/).filter(Boolean);
+              if (tokens.length > 1) {
+                const lastTwo = tokens.slice(-2).join(' ');
+                logEvent({ level: 'warn', message: `Tentando fallback tokens para '${currentValue}' -> '${lastTwo}'`, modalTitle });
+                const res3 = await findRowByText(page, lastTwo, 20000, modalFrame);
+                cell = res3.cell; cellFrame = res3.frame;
+              }
+            } catch (errFinal) {
+              if (DEBUG_HTML) {
+                try {
+                  const modalHtml = await modalFrame.content().catch(() => '<!-- erro ao capturar -->');
+                  const debugFile = path.join(SCREENSHOT_DIR, `debug-modal-${sanitizeFileName(modalTitle)}-${nowIso().replace(/[:.]/g, '-')}.html`);
+                  await fs.promises.writeFile(debugFile, modalHtml || '<!-- vazio -->').catch(() => {});
+                  const preview = await modalFrame.evaluate(() => Array.from(document.querySelectorAll('tr')).slice(0,20).map(r => r.innerText));
+                  const previewFile = path.join(SCREENSHOT_DIR, `debug-modal-preview-${sanitizeFileName(modalTitle)}-${nowIso().replace(/[:.]/g, '-')}.json`);
+                  await fs.promises.writeFile(previewFile, JSON.stringify(preview, null, 2)).catch(() => {});
+                  logEvent({ level: 'info', message: `HTML do modal salvo em: ${debugFile}`, previewPath: previewFile });
+                } catch (e) { logEvent({ level: 'warn', message: `Erro ao salvar HTML debug: ${e.message}` }); }
+              }
+              throw errFinal || err;
             }
           }
-
-          // rethrow para o caller lidar com o erro
-          throw errFinal || err;
         }
       }
+    } catch (e) {
+      // segue para tentar localizar a row abaixo
     }
-
-    // Tenta localizar a linha (tr) mais próxima e então o checkbox dentro dela
-    let rowLocator = null;
     try {
       const ancestor = cell.locator('xpath=ancestor::tr[1]').first();
       const ancCount = await ancestor.count().catch(() => 0);
@@ -4871,33 +4845,51 @@ async function selectViaModal({
 
     // Finalmente, busca o checkbox dentro da row ou dentro do próprio elemento
     let checkbox = null;
-    if (rowLocator) {
-      checkbox = rowLocator.locator('input[type="checkbox"]').first();
-    } else {
-      checkbox = cell.locator('input[type="checkbox"]').first();
-    }
-
     try {
-      const checked = await checkbox.isChecked().catch(() => false);
-      if (!checked) {
-        try {
-          await checkbox.check();
-        } catch (_) {
-          try { await checkbox.click({ force: true }); } catch (_) {
-            // último recurso: click via evaluate
-            try {
-              await checkbox.evaluate((el) => el.click());
-            } catch (_) {}
+      if (rowLocator) checkbox = rowLocator.locator('input[type="checkbox"]').first();
+      else if (cell) checkbox = cell.locator('input[type="checkbox"]').first();
+
+      if (checkbox && (await checkbox.count().catch(() => 0))) {
+        const checked = await checkbox.isChecked().catch(() => false);
+        if (!checked) {
+          try {
+            await checkbox.check();
+          } catch (_) {
+            // fallback: try click forced
+            try { await checkbox.click({ force: true }); } catch (_) {
+              // último recurso: marcar via evaluate no contexto do frame (único roundtrip)
+              try {
+                await (cellFrame || modalFrame).evaluate((needle) => {
+                  const norm = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+                  for (const r of document.querySelectorAll('tr')) {
+                    if (norm(r.innerText).includes(needle)) {
+                      const cb = r.querySelector('input[type="checkbox"]');
+                      if (cb && !cb.checked) cb.click();
+                      break;
+                    }
+                  }
+                }, normalizedToken).catch(() => {});
+              } catch (_) {}
+            }
           }
         }
-      }
 
-      logEvent({
-        level: 'info',
-        message:
-          `Checkbox marcado: ${currentValue}`,
-        modalTitle,
-      });
+        logEvent({ level: 'info', message: `Checkbox marcado: ${currentValue}`, modalTitle });
+      } else {
+        // se não encontrou checkbox via locators, tenta fallback evaluate para marcar
+        await (cellFrame || modalFrame).evaluate((needle) => {
+          const norm = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+          for (const r of document.querySelectorAll('tr')) {
+            if (norm(r.innerText).includes(needle)) {
+              const cb = r.querySelector('input[type="checkbox"]');
+              if (cb && !cb.checked) cb.click();
+              break;
+            }
+          }
+        }, normalizedToken).catch(() => {});
+
+        logEvent({ level: 'info', message: `Checkbox marcado via fallback evaluate: ${currentValue}`, modalTitle });
+      }
     } catch (err) {
       await saveDebugState('checkbox-error');
       logEvent({ level: 'error', message: `Erro ao manipular checkbox para ${currentValue}: ${err.message}` });
@@ -4905,7 +4897,7 @@ async function selectViaModal({
     }
 
     saveShot(page, `checkbox-${sanitizeFileName(currentValue)}`).catch(() => {});
-    await page.waitForTimeout(800);
+    await page.waitForTimeout(200);
 
     // ================================================
     // LIMPA FILTRO PARA PRÓXIMA SELEÇÃO
@@ -6206,7 +6198,7 @@ async function handleMfa(page) {
   const ok = await fillMfaCode(page, code);
   if (!ok) throw new Error('Não encontrei o input para inserir o código MFA.');
 
-  await page.waitForTimeout(800);
+  await page.waitForTimeout(200);
   const verifyClicked = await clickFirstVisible('Botão Verificar', [
     page.getByRole('button', { name: /verificar/i }),
     page.getByText(/^VERIFICAR$/i),
@@ -6985,7 +6977,6 @@ async function runAuthorization(context, page) {
 async function run() {
   await ensureDir(SCREENSHOT_DIR);
   await ensureDir(REPORT_OUTPUT_DIR);
-  await loadModalCache().catch(() => {});
   const browser = await chromium.launch({ headless: HEADLESS });
   const context = await browser.newContext(fs.existsSync(STATE_PATH) ? { storageState: STATE_PATH } : {});
   const page = await context.newPage();
