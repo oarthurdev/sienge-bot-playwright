@@ -6,18 +6,21 @@ const { stdin: input, stdout: output } = require('process');
 const { chromium } = require('playwright');
 require('dotenv').config();
 
-const STATUS_FILE = "/tmp/report-status.json";
+// Instance identifier to allow multiple parallel runs. Defaults to process.pid
+const INSTANCE_ID = process.env.INSTANCE_ID || process.env.RUN_ID || process.env.RUN_INSTANCE || String(process.pid);
+
+const STATUS_FILE = process.env.STATUS_FILE || `/tmp/report-status-${INSTANCE_ID}.json`;
 const BASE_URL = process.env.SIENGE_BASE_URL;
 const USERNAME = process.env.SIENGE_USERNAME;
 const PASSWORD = process.env.SIENGE_PASSWORD;
 const HEADLESS = (process.env.HEADLESS ?? 'true').toLowerCase() !== 'false';
 const STATE_PATH = process.env.STATE_PATH || path.resolve(process.cwd(), 'sienge-storage-state.json');
-const SCREENSHOT_DIR = process.env.SCREENSHOT_DIR || path.resolve(process.cwd(), 'screenshots');
-const LOG_PATH = process.env.LOG_PATH || path.resolve(process.cwd(), 'sienge-authorize-log.json');
+const SCREENSHOT_DIR = process.env.SCREENSHOT_DIR || path.resolve(process.cwd(), `screenshots-${INSTANCE_ID}`);
+const LOG_PATH = process.env.LOG_PATH || path.resolve(process.cwd(), `sienge-authorize-log-${INSTANCE_ID}.json`);
 const DEBUG_HTML = (process.env.DEBUG_HTML ?? 'false').toLowerCase() === 'true';
 const TASK_MODE = (process.env.TASK_MODE || 'authorize').toLowerCase();
 const SAVE_SHOTS = (process.env.SAVE_SHOTS ?? 'false').toLowerCase() === 'true' || DEBUG_HTML;
-const MODAL_CACHE_PATH = process.env.MODAL_CACHE_PATH || path.resolve(process.cwd(), '.modal-cache.json');
+const MODAL_CACHE_PATH = process.env.MODAL_CACHE_PATH || path.resolve(process.cwd(), `.modal-cache-${INSTANCE_ID}.json`);
 let MODAL_CACHE = {};
 
 async function loadModalCache() {
@@ -1954,6 +1957,23 @@ async function updateReportStatus(data) {
     cur.reports[name] = merged;
   }
 
+  // Recalcula resumo overall a partir das entradas por relatório quando disponíveis
+  try {
+    if (cur.reports) {
+      const names = Object.keys(cur.reports);
+      const reps = names.map(n => ({ name: n, ...(cur.reports[n] || {}) }));
+      const progVals = reps.map(r => (typeof r.progress === 'number' ? r.progress : null)).filter(Boolean);
+      if (!cur.overall) cur.overall = {};
+      if (progVals.length) {
+        cur.overall.progress = Math.round(progVals.reduce((a, b) => a + b, 0) / progVals.length);
+      }
+      cur.overall.total = cur.overall.total || names.length;
+      cur.overall.current = reps.filter(r => (r.status === 'completed' || r.status === 'done')).length;
+      cur.overall.completedReports = reps.filter(r => (r.status === 'completed' || r.status === 'done')).map(r => ({ report: r.name, finishedAt: r.finishedAt || r.lastUpdated || null }));
+      cur.overall.lastUpdated = nowIso();
+    }
+  } catch (_) {}
+
   // Backward compatibility: if caller passed a plain object without wrapper,
   // and it wasn't recognized as overall, write it as-is.
   if (!isOverall && !(data && data.perReportEntry)) {
@@ -3463,7 +3483,7 @@ async function openReportsPage(page) {
     message: 'Abrindo tela Relatório Contas Recebidas.',
   });
 
-  const __openReportsMeasure = startMeasure('openReportsPage');
+  //const __openReportsMeasure = startMeasure('openReportsPage');
 
   await fetchWithRetry(
     page,
@@ -3502,7 +3522,7 @@ async function openReportsPage(page) {
     url: page.url(),
   });
 
-  await stopMeasure(__openReportsMeasure, { phase: 'openReportsPage' }).catch(() => {});
+  //await stopMeasure(__openReportsMeasure, { phase: 'openReportsPage' }).catch(() => {});
 
   return true;
 }
@@ -5551,6 +5571,11 @@ async function generateSingleReport(
     return ;
   }
 
+  // report: popup detected -> update progress
+  try {
+    await updateReportStatusSerialized({ perReportEntry: { report: report.sheetName, props: { progress: 10, lastMessage: 'popup_detected', step: 'popup', stepStartedAt: nowIso() } } });
+  } catch (_) {}
+
 
   // =====================================================
   // ESPERA CARREGAMENTO REAL
@@ -5690,6 +5715,11 @@ async function generateSingleReport(
     reportUrl,
   });
 
+  // report: URL resolved
+  try {
+    await updateReportStatusSerialized({ perReportEntry: { report: report.sheetName, props: { progress: 60, lastMessage: 'report_url_resolved', step: 'url', stepStartedAt: nowIso() } } });
+  } catch (_) {}
+
   // =====================================================
   // LIMPEZA
   // =====================================================
@@ -5747,6 +5777,10 @@ async function generateSingleReport(
   });
   console.log(`Relatório "${report.sheetName}": iniciando download do PDF...`);
 
+  try {
+    await updateReportStatusSerialized({ perReportEntry: { report: report.sheetName, props: { progress: 70, lastMessage: 'downloading', step: 'download', stepStartedAt: nowIso() } } });
+  } catch (_) {}
+
   const response =
     await context.request.get(
       reportUrl,
@@ -5791,6 +5825,11 @@ async function generateSingleReport(
     fs.statSync(finalPdfPath);
   logEvent({ level: 'info', message: 'PDF salvo.', bytes: stats.size, path: finalPdfPath });
   console.log(`Relatório "${report.sheetName}" salvo em: ${finalPdfPath} (${stats.size} bytes)`);
+
+  // report: saved
+  try {
+    await updateReportStatusSerialized({ perReportEntry: { report: report.sheetName, props: { progress: 100, lastMessage: 'saved', step: 'finished', finishedAt: nowIso(), processedItems: 1, totalItems: 1 } } });
+  } catch (_) {}
 
   if (stats.size < 5000) {
     throw new Error(`PDF inválido (${stats.size} bytes).`);
