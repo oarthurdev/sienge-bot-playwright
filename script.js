@@ -5628,6 +5628,8 @@ async function generateSingleReport(
     timeout: 30000,
   });
 
+  try { await setReportProgress(report.sheetName, 5, { lastMessage: 'view_clicked', step: 'view', stepStartedAt: nowIso() }); } catch (_) {}
+
   // =====================================================
   // AGUARDA POPUP
   // =====================================================
@@ -5672,12 +5674,14 @@ async function generateSingleReport(
     12000
   );
 
+  try { await setReportProgress(report.sheetName, 30, { lastMessage: 'popup_loaded', step: 'popup_loaded' }); } catch (_) {}
+
   // =====================================================
   // LOOP URL FINAL
   // =====================================================
   // report: about to look for final URL
   try {
-    await setReportProgress(report.sheetName, 20, { lastMessage: 'waiting_for_url', step: 'url_wait', stepStartedAt: nowIso() });
+    await setReportProgress(report.sheetName, 35, { lastMessage: 'waiting_for_url', step: 'url_wait', stepStartedAt: nowIso() });
   } catch (_) {}
 
   const start =
@@ -5731,6 +5735,8 @@ async function generateSingleReport(
 
     if (found) {
 
+      try { await setReportProgress(report.sheetName, 50, { lastMessage: 'found_final_url', step: 'url_found' }); } catch (_) {}
+
       reportUrl = found;
 
       break;
@@ -5760,6 +5766,8 @@ async function generateSingleReport(
           );
 
         if (internalUrl) {
+
+          try { await setReportProgress(report.sheetName, 50, { lastMessage: 'found_internal_url', step: 'url_found' }); } catch (_) {}
 
           reportUrl =
             internalUrl.startsWith('http')
@@ -6055,9 +6063,8 @@ async function runReports(context, page) {
     const reportName = report.sheetName;
     const startedAtReport = new Date().toISOString();
     try {
-      // marca início
-      await updateReportStatusSerialized({ perReportEntry: { report: reportName, props: { status: 'running', startedAt: startedAtReport, index: index + 1, step: 'start', stepStartedAt: nowIso(), progress: 0, lastMessage: 'started' } } });
-      try { await setReportProgress(reportName, 2, { lastMessage: 'initializing' }); } catch (_) {}
+      // marca início — coloque o relatório no passo 'initializing' com 2% de progresso
+      await updateReportStatusSerialized({ perReportEntry: { report: reportName, props: { status: 'running', startedAt: startedAtReport, index: index + 1, step: 'initializing', stepStartedAt: nowIso(), progress: 2, lastMessage: 'initializing' } } });
       logEvent({ level: 'info', message: 'Relatório iniciado.', report: reportName, current: index + 1, total: reports.length });
 
       const result = await generateSingleReport(context, page, report);
