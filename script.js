@@ -9,7 +9,9 @@ require('dotenv').config();
 // Instance identifier to allow multiple parallel runs. Defaults to process.pid
 const INSTANCE_ID = process.env.INSTANCE_ID || process.env.RUN_ID || process.env.RUN_INSTANCE || String(process.pid);
 
-const STATUS_FILE = process.env.STATUS_FILE || `/tmp/report-status-${INSTANCE_ID}.json`;
+// Use a single global status file by default to aggregate progress across runs.
+// Can be overridden via the `STATUS_FILE` env var when needed.
+const STATUS_FILE = process.env.STATUS_FILE || '/tmp/report-status.json';
 const BASE_URL = process.env.SIENGE_BASE_URL;
 const USERNAME = process.env.SIENGE_USERNAME;
 const PASSWORD = process.env.SIENGE_PASSWORD;
@@ -1938,6 +1940,12 @@ async function updateReportStatus(data) {
 
     // Normalize and enrich per-report props with useful realtime fields
     const base = cur.reports[name] || {};
+    // coerce progress to number when possible, allow explicit null for errors
+    if (incoming && Object.prototype.hasOwnProperty.call(incoming, 'progress') && incoming.progress !== null && typeof incoming.progress === 'string') {
+      const n = Number(incoming.progress);
+      if (!Number.isNaN(n)) incoming.progress = n;
+    }
+
     const merged = { ...base, ...incoming };
 
     // Ensure timestamp fields
@@ -1948,7 +1956,12 @@ async function updateReportStatus(data) {
     merged.lastUpdated = nowIso();
     merged.step = incoming.step || merged.step || null; // current sub-step
     merged.stepStartedAt = incoming.stepStartedAt || merged.stepStartedAt || null;
-    merged.progress = typeof incoming.progress !== 'undefined' ? incoming.progress : (merged.progress || 0);
+    // Preserve explicit null (for errors), otherwise ensure numeric progress defaulting to previous or 0
+    if (Object.prototype.hasOwnProperty.call(incoming, 'progress')) {
+      merged.progress = incoming.progress === null ? null : (typeof incoming.progress === 'number' ? incoming.progress : Number(incoming.progress) || 0);
+    } else {
+      merged.progress = typeof merged.progress === 'number' ? merged.progress : 0;
+    }
     merged.totalItems = typeof incoming.totalItems !== 'undefined' ? incoming.totalItems : (merged.totalItems || null);
     merged.processedItems = typeof incoming.processedItems !== 'undefined' ? incoming.processedItems : (merged.processedItems || 0);
     merged.lastMessage = incoming.lastMessage || merged.lastMessage || null;
@@ -1962,10 +1975,13 @@ async function updateReportStatus(data) {
     if (cur.reports) {
       const names = Object.keys(cur.reports);
       const reps = names.map(n => ({ name: n, ...(cur.reports[n] || {}) }));
-      const progVals = reps.map(r => (typeof r.progress === 'number' ? r.progress : null)).filter(Boolean);
+      const progVals = reps.map(r => (typeof r.progress === 'number' ? r.progress : null)).filter(v => v !== null);
       if (!cur.overall) cur.overall = {};
       if (progVals.length) {
         cur.overall.progress = Math.round(progVals.reduce((a, b) => a + b, 0) / progVals.length);
+      } else {
+        // keep existing overall.progress or default to 0
+        cur.overall.progress = typeof cur.overall.progress === 'number' ? cur.overall.progress : 0;
       }
       cur.overall.total = cur.overall.total || names.length;
       cur.overall.current = reps.filter(r => (r.status === 'completed' || r.status === 'done')).length;
@@ -1974,11 +1990,14 @@ async function updateReportStatus(data) {
     }
   } catch (_) {}
 
+  // Ensure file contains instance identifier for easier aggregation
+  try { cur.instanceId = cur.instanceId || INSTANCE_ID || String(process.pid); } catch (_) {}
+
   // Backward compatibility: if caller passed a plain object without wrapper,
   // and it wasn't recognized as overall, write it as-is.
-  if (!isOverall && !(data && data.perReportEntry)) {
-    cur = data;
-  }
+  // Do not allow callers to replace the whole status file with a single-report
+  // object. Always maintain the combined `overall` + `reports` structure so
+  // the status file contains detailed progress for all reports.
 
   await fs.promises.writeFile(STATUS_FILE, JSON.stringify(cur, null, 2), 'utf8');
 }
@@ -1991,6 +2010,15 @@ async function updateReportStatusSerialized(data) {
   // Encadeia a operação na fila
   STATUS_UPDATE_LOCK = STATUS_UPDATE_LOCK.then(op, op);
   return STATUS_UPDATE_LOCK;
+}
+
+// Helper para atualizações de progresso por relatório
+async function setReportProgress(report, pct, extra) {
+  if (!report) return;
+  try {
+    const props = Object.assign({ progress: pct, lastUpdated: nowIso() }, (extra || {}));
+    await updateReportStatusSerialized({ perReportEntry: { report, props } });
+  } catch (_) {}
 }
 
 function readLog() {
@@ -5595,6 +5623,10 @@ async function generateSingleReport(
   // =====================================================
   // LOOP URL FINAL
   // =====================================================
+  // report: about to look for final URL
+  try {
+    await setReportProgress(report.sheetName, 20, { lastMessage: 'waiting_for_url', step: 'url_wait', stepStartedAt: nowIso() });
+  } catch (_) {}
 
   const start =
     Date.now();
@@ -5789,6 +5821,8 @@ async function generateSingleReport(
       }
     );
 
+  try { await setReportProgress(report.sheetName, 75, { lastMessage: 'download_request_sent' }); } catch (_) {}
+
   const contentType =
     String(
       response.headers()['content-type'] || ''
@@ -5796,6 +5830,8 @@ async function generateSingleReport(
 
   const buffer =
     await response.body();
+
+  try { await setReportProgress(report.sheetName, 85, { lastMessage: 'downloaded' }); } catch (_) {}
 
   const head =
     buffer.subarray(0, 8).toString('utf8');
@@ -5820,6 +5856,8 @@ async function generateSingleReport(
   }
 
   await fs.promises.writeFile(finalPdfPath, buffer).catch((e) => { throw e; });
+
+  try { await setReportProgress(report.sheetName, 95, { lastMessage: 'saved_tmp', step: 'saving' }); } catch (_) {}
 
   const stats =
     fs.statSync(finalPdfPath);
@@ -5967,6 +6005,7 @@ async function runReports(context, page) {
     try {
       // marca início
       await updateReportStatusSerialized({ perReportEntry: { report: reportName, props: { status: 'running', startedAt: startedAtReport, index: index + 1, step: 'start', stepStartedAt: nowIso(), progress: 0, lastMessage: 'started' } } });
+      try { await setReportProgress(reportName, 2, { lastMessage: 'initializing' }); } catch (_) {}
       logEvent({ level: 'info', message: 'Relatório iniciado.', report: reportName, current: index + 1, total: reports.length });
 
       const result = await generateSingleReport(context, page, report);

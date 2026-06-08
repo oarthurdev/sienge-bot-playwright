@@ -4,7 +4,7 @@ const path = require('path');
 const readline = require('readline');
 
 const dirsToWatch = [process.argv[2] || '/tmp', process.cwd()];
-const pattern = process.env.STATUS_GLOB_PATTERN || /^report-status-(.+?)\.json$/i;
+const pattern = process.env.STATUS_GLOB_PATTERN || /^report-status(?:-(.+?))?\.json$/i;
 const pollInterval = Number(process.env.INTERVAL_MS) || 1000;
 const width = process.stdout.columns || 120;
 
@@ -16,6 +16,7 @@ function color(s, c){ return (c||'')+s+ansi.reset; }
 function clear(){ readline.cursorTo(process.stdout, 0, 0); readline.clearScreenDown(process.stdout); }
 function pad(s,n){ s=String(s||''); return s.length>=n? s.slice(0,n): s+ ' '.repeat(n-s.length); }
 function bar(p,w){ const pct = Math.max(0, Math.min(100, Number(p)||0)); const f = Math.round((pct/100)*w); return '['+'█'.repeat(f)+' '.repeat(w-f)+'] '+pct+'%'; }
+function miniBar(p,w){ const pct = Math.max(0, Math.min(100, Number(p)||0)); const f = Math.round((pct/100)*w); return '█'.repeat(f) + ' '.repeat(w-f) + ` ${pct}%`; }
 
 function findStatusFiles(){
   const out = new Map();
@@ -55,7 +56,7 @@ function renderAll(statusFilesMap){
   process.stdout.write(`${ansi.bold}${ansi.cyan}Multi-Instance Report Watcher${ansi.reset} — ${now}\n\n`);
 
   const entries = Array.from(statusFilesMap.entries());
-  if (!entries.length){ process.stdout.write(color('Nenhum arquivo report-status-*.json encontrado nos diretórios configurados.\n', ansi.yellow)); return; }
+  if (!entries.length){ process.stdout.write(color('Nenhum arquivo report-status*.json encontrado nos diretórios configurados.\n', ansi.yellow)); return; }
 
   const statuses = {};
   for (const [file, instId] of entries){ statuses[instId] = readJson(file); }
@@ -91,22 +92,40 @@ function renderAll(statusFilesMap){
     for (const r of Object.keys(s.reports)) allReports.add(r);
   }
   const reportNames = Array.from(allReports).sort();
-  const nameCol = Math.min(40, Math.max(20, Math.floor(width*0.35)));
-  const perInstCol = Math.max(10, Math.min(16, Math.floor((width - nameCol - 20) / Math.max(1, Object.keys(statuses).length))));
+  const nameCol = Math.min(48, Math.max(20, Math.floor(width*0.40)));
+  const instancesOrdered = Object.keys(statuses);
+  const perInstCol = Math.max(12, Math.min(20, Math.floor((width - nameCol - 4) / Math.max(1, instancesOrdered.length))));
 
   // header
   let hdr = pad('Report', nameCol) + ' ';
-  for (const inst of Object.keys(statuses)) hdr += pad(inst, perInstCol) + ' ';
-  process.stdout.write(hdr + '\n');
+  for (const inst of instancesOrdered){ hdr += pad(inst, perInstCol) + ' '; }
+  process.stdout.write(ansi.dim + hdr + ansi.reset + '\n');
+  // underline
+  process.stdout.write(pad('', nameCol).replace(/ /g,'-') + ' ' + instancesOrdered.map(()=>('-'.repeat(perInstCol))).join(' ') + '\n');
 
   for (const rname of reportNames){
     let line = pad(rname, nameCol) + ' ';
-    for (const inst of Object.keys(statuses)){
+    for (const inst of instancesOrdered){
       const rep = statuses[inst] && statuses[inst].reports && statuses[inst].reports[rname];
       if (!rep){ line += pad('-', perInstCol) + ' '; continue; }
-      const st = (rep.status || '-').slice(0, perInstCol-1).toUpperCase();
-      const prog = typeof rep.progress === 'number' ? rep.progress : '-';
-      line += pad(`${st} ${prog}%`, perInstCol) + ' ';
+
+      const prog = typeof rep.progress === 'number' ? rep.progress : null;
+      const status = (rep.status || '').toLowerCase();
+      let cell = '';
+
+      if (status === 'completed' || prog === 100){ cell = color('DONE', ansi.green); }
+      else if (status === 'running' || (typeof prog === 'number' && prog > 0 && prog < 100)) { cell = color('RUN', ansi.yellow); }
+      else if (status === 'error' || rep.lastError) { cell = color('ERR', ansi.red); }
+      else { cell = color('IDLE', ansi.dim); }
+
+      // compact bar width based on column
+      const barWidth = Math.max(4, perInstCol - 6);
+      const mb = prog === null ? pad('-', barWidth) : miniBar(prog, barWidth);
+      const right = `${mb}`;
+
+      // combine and pad
+      const combined = `${cell} ${right}`.slice(0, perInstCol);
+      line += pad(combined, perInstCol) + ' ';
     }
     process.stdout.write(line + '\n');
   }
