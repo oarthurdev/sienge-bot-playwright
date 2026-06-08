@@ -2447,6 +2447,7 @@ async function configureFlags(surface, flags = {}) {
 async function selectContasCorrente({
   page,
   values = [],
+  reportName,
 }) {
 
   await selectViaModal({
@@ -2470,8 +2471,10 @@ async function selectContasCorrente({
     ],
 
     values,
+    reportName,
 
   });
+  try { await setReportProgress(reportName, 28, { lastMessage: 'plano_financeiro_selected', step: 'filter_plano' }); } catch (_) {}
 }
 
 // =========================================================
@@ -2479,7 +2482,8 @@ async function selectContasCorrente({
 // =========================================================
 async function selectPlanoFinanceiroExcecao(
   page,
-  values = []
+  values = [],
+  reportName,
 ) {
 
   if (!values?.length) {
@@ -2496,6 +2500,7 @@ async function selectPlanoFinanceiroExcecao(
   await selectPlanoFinanceiro({
     page,
     values,
+    reportName,
   });
 
   // marca exceção
@@ -2543,6 +2548,8 @@ async function configureReportFilters({
     message:
       `[${report.sheetName}] Iniciando configureReportFilters`,
   });
+
+  try { await setReportProgress(report.sheetName, 4, { lastMessage: 'configure_filters_start', step: 'configure_start' }); } catch (_) {}
 
   const __configureMeasure = startMeasure('configureReportFilters', { report: report.sheetName });
 
@@ -2765,6 +2772,7 @@ async function configureReportFilters({
     actualDtInicio,
     actualDtFim,
   });
+  try { await setReportProgress(report.sheetName, 6, { lastMessage: 'dates_configured', step: 'dates' }); } catch (_) {}
 
   // =====================================================
   // CHECKBOX PARCELAS REPARCELADAS
@@ -2802,6 +2810,8 @@ async function configureReportFilters({
     report.ordem || 'VL'
   );
 
+  try { await setReportProgress(report.sheetName, 7, { lastMessage: 'ordenacao_configured', step: 'ordenacao' }); } catch (_) {}
+
   // =====================================================
   // TIPO LANÇAMENTO
   // =====================================================
@@ -2811,6 +2821,8 @@ async function configureReportFilters({
     report.processarLancamentos || 'CR'
   );
 
+  try { await setReportProgress(report.sheetName, 8, { lastMessage: 'tipo_lancamento_configured', step: 'tipo_lancamento' }); } catch (_) {}
+
   // =====================================================
   // FLAGS
   // =====================================================
@@ -2819,6 +2831,8 @@ async function configureReportFilters({
     reportFrame,
     report.flags || {}
   );
+
+  try { await setReportProgress(report.sheetName, 9, { lastMessage: 'flags_configured', step: 'flags' }); } catch (_) {}
 
   // =====================================================
   // EXPANDE FILTROS
@@ -2895,11 +2909,14 @@ async function configureReportFilters({
         planos,
       });
 
+      try { await setReportProgress(report.sheetName, 10, { lastMessage: 'selecting_plano_financeiro', step: 'plano_start' }); } catch (_) {}
       await selectPlanoFinanceiro({
 
         page,
 
         values: planos,
+
+        reportName: report.sheetName,
 
       });
     }
@@ -2952,11 +2969,14 @@ async function configureReportFilters({
         contas,
       });
 
+      try { await setReportProgress(report.sheetName, 15, { lastMessage: 'selecting_contas', step: 'contas_start' }); } catch (_) {}
       await selectContasCorrente({
 
         page,
 
         values: contas,
+
+        reportName: report.sheetName,
 
       });
     }
@@ -3009,11 +3029,14 @@ async function configureReportFilters({
         documentos,
       });
 
+      try { await setReportProgress(report.sheetName, 20, { lastMessage: 'selecting_documentos', step: 'documentos_start' }); } catch (_) {}
       await selectDocumentos({
 
         page,
 
         values: documentos,
+
+        reportName: report.sheetName,
 
       });
     }
@@ -3066,11 +3089,14 @@ async function configureReportFilters({
         condicoes,
       });
 
+      try { await setReportProgress(report.sheetName, 25, { lastMessage: 'selecting_condicoes', step: 'condicoes_start' }); } catch (_) {}
       await selectCondicoesPagamento({
 
         page,
 
         values: condicoes,
+
+        reportName: report.sheetName,
 
       });
     }
@@ -3097,6 +3123,7 @@ async function configureReportFilters({
     message:
       `[${report.sheetName}] Filtros finalizados`,
   });
+  try { await setReportProgress(report.sheetName, 30, { lastMessage: 'filters_finished', step: 'filters_done' }); } catch (_) {}
 
   await stopMeasure(__configureMeasure, { phase: 'configureFilters' }).catch(() => {});
 }
@@ -3114,6 +3141,7 @@ function uniqueNonEmpty(values = []) {
 async function selectCondicoesPagamento({
   page,
   values = [],
+  reportName,
 }) {
 
   await selectViaModal({
@@ -3134,6 +3162,7 @@ async function selectCondicoesPagamento({
     ],
 
     values,
+    reportName,
 
   });
 }
@@ -3787,8 +3816,9 @@ async function getPlanoFinanceiroFrame(page) {
 async function selectPlanoFinanceiro({
   page,
   values = [],
+  reportName,
 }) {
-await selectViaModal({
+  await selectViaModal({
 
     page,
 
@@ -3807,6 +3837,7 @@ await selectViaModal({
       'input[name*="nmConta"]',
     ],
     values,
+    reportName,
 
   });
 }
@@ -3817,8 +3848,9 @@ await selectViaModal({
 async function selectDocumentos({
   page,
   values = [],
+  reportName,
 }) {
-await selectViaModal({
+  await selectViaModal({
 
     page,
 
@@ -3836,6 +3868,7 @@ await selectViaModal({
     ],
 
     values,
+    reportName,
 
   });
 }
@@ -4533,6 +4566,9 @@ async function selectViaModal({
   value,
   values,
 
+  // optional report name to update progress
+  reportName,
+
 }) {
 
   // =====================================================
@@ -4699,6 +4735,8 @@ async function selectViaModal({
     frameUrl: modalFrame.url()
   });
 
+  try { await setReportProgress(reportName, 8, { lastMessage: `modal_open:${modalTitle}`, step: 'modal_open' }); } catch (_) {}
+
   // helper: salva estado debug (HTML do modal, preview e screenshot)
   async function saveDebugState(tag) {
     if (!DEBUG_HTML) return null;
@@ -4808,12 +4846,15 @@ async function selectViaModal({
       if (matched && matched.found >= matched.expected) {
         logEvent({ level: 'info', message: `Bulk modal selection succeeded: ${matched.matched.join(', ')}`, modalTitle });
 
+        try { await setReportProgress(reportName, 20, { lastMessage: 'bulk_selected', step: 'modal_bulk' }); } catch (_) {}
+
         // Clica no botão selecionar e finaliza o modal
         const { locator: selecionarBtn } = await findVisibleLocatorInFrames(page, '#pbSelecionar');
         await selecionarBtn.click({ force: true });
         await page.waitForTimeout(200);
 
         logEvent({ level: 'info', message: `Modal finalizado (bulk): ${entries.join(', ')}`, modalTitle });
+        try { await setReportProgress(reportName, 25, { lastMessage: 'modal_finished', step: 'modal_done' }); } catch (_) {}
         return;
       }
     }
@@ -4822,7 +4863,8 @@ async function selectViaModal({
     logEvent({ level: 'debug', message: `Bulk selection attempt failed: ${String(e && e.message || e)}`, modalTitle });
   }
 
-  for (const currentValue of entries) {
+  for (let vi = 0; vi < entries.length; vi++) {
+    const currentValue = entries[vi];
 
     logEvent({
       level: 'info',
@@ -4997,6 +5039,10 @@ async function selectViaModal({
         }
 
         logEvent({ level: 'info', message: `Checkbox marcado: ${currentValue}`, modalTitle });
+        try {
+          const pct = 8 + Math.round(((vi + 1) / entries.length) * 15);
+          await setReportProgress(reportName, Math.min(25, pct), { lastMessage: `selected:${currentValue}`, step: 'modal_select' });
+        } catch (_) {}
       } else {
         // se não encontrou checkbox via locators, tenta fallback evaluate para marcar
         await (cellFrame || modalFrame).evaluate((needle) => {
@@ -5051,6 +5097,7 @@ async function selectViaModal({
       `Modal finalizado: ${entries.join(', ')}`,
     modalTitle,
   });
+  try { await setReportProgress(reportName, 25, { lastMessage: 'modal_finished', step: 'modal_done' }); } catch (_) {}
 }
 
 async function selectViaModalByGrid({
