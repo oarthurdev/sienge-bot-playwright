@@ -1,6 +1,7 @@
 .env
 sienge-storage-state.json
 sienge-authorize-log.json
+sienge-authorize-log-*.json
 reports/
 node_modules/
 screenshots/

@@ -1935,8 +1935,34 @@ async function updateReportStatus(data) {
 
   if (data && data.perReportEntry) {
     cur.reports = cur.reports || {};
-    const name = data.perReportEntry.report;
+    // Normalize incoming report identifier to canonical form: report-<index>
+    let name = data.perReportEntry.report;
     const incoming = (data.perReportEntry.props || {});
+
+    if (typeof name === 'string' && !/^report-\d+$/.test(name)) {
+      const foundIndex = REPORT_DEFINITIONS.findIndex(r => r.sheetName === name || r.pdfName === name);
+      if (foundIndex >= 0) name = `report-${foundIndex + 1}`;
+    }
+
+    // Normalize existing cur.reports keys (merge any name-keyed entries into canonical keys)
+    try {
+      const normalized = {};
+      for (const k of Object.keys(cur.reports || {})) {
+        let canonical = k;
+        if (!/^report-\d+$/.test(k)) {
+          const idx = REPORT_DEFINITIONS.findIndex(r => r.sheetName === k || r.pdfName === k);
+          if (idx >= 0) canonical = `report-${idx + 1}`;
+        }
+        normalized[canonical] = { ...(normalized[canonical] || {}), ...(cur.reports[k] || {}) };
+        // ensure human-readable name property when possible
+        const m = /^report-(\d+)$/.exec(canonical);
+        if (m) {
+          const i = Number(m[1]) - 1;
+          if (REPORT_DEFINITIONS[i] && !normalized[canonical].name) normalized[canonical].name = REPORT_DEFINITIONS[i].sheetName;
+        }
+      }
+      cur.reports = normalized;
+    } catch (_) {}
 
     // Normalize and enrich per-report props with useful realtime fields
     const base = cur.reports[name] || {};
@@ -1966,6 +1992,24 @@ async function updateReportStatus(data) {
     merged.processedItems = typeof incoming.processedItems !== 'undefined' ? incoming.processedItems : (merged.processedItems || 0);
     merged.lastMessage = incoming.lastMessage || merged.lastMessage || null;
     merged.lastError = incoming.lastError || merged.lastError || null;
+
+    // Preserve canonical index and name from existing base (do not allow callers to overwrite)
+    if (base && typeof base.index !== 'undefined') {
+      merged.index = base.index;
+    } else if (typeof incoming.index !== 'undefined') {
+      merged.index = incoming.index;
+    }
+
+    if (base && base.name) {
+      merged.name = base.name;
+    } else if (!merged.name) {
+      // try to set human-readable name based on canonical key if possible
+      const m = /^report-(\d+)$/.exec(name);
+      if (m) {
+        const i = Number(m[1]) - 1;
+        if (REPORT_DEFINITIONS && REPORT_DEFINITIONS[i]) merged.name = REPORT_DEFINITIONS[i].sheetName;
+      }
+    }
 
     cur.reports[name] = merged;
   }
@@ -1999,7 +2043,15 @@ async function updateReportStatus(data) {
   // object. Always maintain the combined `overall` + `reports` structure so
   // the status file contains detailed progress for all reports.
 
-  await fs.promises.writeFile(STATUS_FILE, JSON.stringify(cur, null, 2), 'utf8');
+  // Persist atomically: write to temp file then rename
+  try {
+    const tmpPath = STATUS_FILE + '.tmp';
+    await fs.promises.writeFile(tmpPath, JSON.stringify(cur, null, 2), 'utf8');
+    await fs.promises.rename(tmpPath, STATUS_FILE);
+  } catch (err) {
+    // fallback to direct write if atomic rename fails
+    try { await fs.promises.writeFile(STATUS_FILE, JSON.stringify(cur, null, 2), 'utf8'); } catch (_) {}
+  }
 }
 
 // Mutex simples para serializar atualizações do STATUS_FILE entre chamadas assíncronas
