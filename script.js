@@ -5527,6 +5527,9 @@ async function generateSingleReport(
     report: report.sheetName,
   });
 
+  // PERFIL: marca início da geração do relatório para o profiler externo
+  try { console.log(`STEP START generateSingleReport ${report.sheetName}`); } catch (e) {}
+
   const __genMeasure = startMeasure('generateSingleReport', { report: report.sheetName });
 
   try {
@@ -5983,6 +5986,7 @@ async function generateSingleReport(
   await popup.close().catch(() => {});
 
   logEvent({ level: 'info', message: `Relatório "${report.sheetName}" salvo com sucesso.`, path: finalPdfPath });
+  try { console.log(`STEP END generateSingleReport ${report.sheetName}`); } catch (e) {}
 
   return { path: finalPdfPath, bytes: stats.size };
   } finally {
@@ -6036,6 +6040,9 @@ async function closeLegacyPopups(page) {
 async function runReports(context, page) {
 
   await ensureDir(REPORT_OUTPUT_DIR);
+
+  // PERFIL: marca início da rotina de geração de relatórios
+  try { console.log('STEP START runReports'); } catch (e) {}
 
   page.setDefaultTimeout(15000);
   page.setDefaultNavigationTimeout(30000);
@@ -6173,6 +6180,8 @@ async function runReports(context, page) {
     level: 'info',
     message: 'Geração de relatórios concluída.'
   });
+
+  try { console.log('STEP END runReports'); } catch (e) {}
 
   return {
     success: true,

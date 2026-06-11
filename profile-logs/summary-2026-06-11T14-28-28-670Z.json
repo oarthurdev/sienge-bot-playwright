@@ -1,0 +1,17 @@
+{
+  "command": "node -e console.log('STEP START generateSingleReport test'); setTimeout(()=>console.log('STEP END generateSingleReport test'),200)",
+  "exitCode": 0,
+  "startedAt": "2026-06-11T14:28:28.675Z",
+  "endedAt": "2026-06-11T14:28:28.935Z",
+  "durationMs": 260.865234,
+  "stdoutFile": "profile-logs/stdout-2026-06-11T14-28-28-670Z.log",
+  "stderrFile": "profile-logs/stderr-2026-06-11T14-28-28-670Z.log",
+  "steps": [
+    {
+      "name": "generateSingleReport test",
+      "start": 1781188108720,
+      "end": 1781188108920,
+      "durationMs": 200
+    }
+  ]
+}

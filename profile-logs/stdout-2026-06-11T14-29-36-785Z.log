@@ -1,0 +1,308 @@
+◇ injected env (6) from .env // tip: ◈ encrypted .env [www.dotenvx.com]
+[2026-06-11T14:29:37.792Z] [INFO] Inicializando modo PM2.
+[2026-06-11T14:29:38.766Z] [INFO] Início da execução do robô.
+[2026-06-11T14:29:41.569Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:29:41.719Z] [INFO] Sessão existente válida. - url=https://laurentino.sienge.com.br/sienge/8/index.html
+[2026-06-11T14:29:41.721Z] [INFO] Após login válido, tentando ir direto para a tela de relatório de contas recebidas.
+[2026-06-11T14:29:42.518Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:29:42.950Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:29:42.951Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:29:43.276Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:29:43.277Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:29:44.231Z] [DEBUG] Iniciando dismissHomeOverlays.
+[2026-06-11T14:29:44.567Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:29:44.758Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:29:45.081Z] [INFO] Fechar painel de ajuda contextual: clique realizado.
+[2026-06-11T14:29:45.428Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:29:45.716Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:29:46.802Z] [WARNING] fetchWithRetry: response not OK, retrying - url=https://laurentino.sienge.com.br/sienge/8/index.html#/common/page/4929
+[2026-06-11T14:29:48.167Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:29:48.168Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:29:48.861Z] [WARNING] fetchWithRetry: response not OK, retrying - url=https://laurentino.sienge.com.br/sienge/8/index.html#/common/page/4929
+[2026-06-11T14:29:48.901Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:29:48.931Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:29:49.028Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:29:49.028Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:29:49.030Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:29:52.261Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:29:52.262Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:29:52.271Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:29:52.294Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:29:52.294Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:29:52.295Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:29:52.295Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:29:52.296Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:29:52.304Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:29:52.389Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:29:52.392Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:29:52.392Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:29:52.641Z] [WARNING] Tentativa de redirecionamento pós-login não abriu a tela real de relatório.
+[2026-06-11T14:29:53.746Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:29:54.470Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:29:54.674Z] [WARNING] fetchWithRetry: response not OK, retrying - url=https://laurentino.sienge.com.br/sienge/8/index.html#/common/page/4929
+[2026-06-11T14:29:55.441Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:29:55.442Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:29:55.860Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:29:55.887Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:29:56.020Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:29:56.024Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:29:56.037Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:29:59.418Z] [WARNING] fetchWithRetry: response not OK, retrying - url=https://laurentino.sienge.com.br/sienge/8/index.html#/common/page/4929
+[2026-06-11T14:29:59.461Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:29:59.480Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:29:59.483Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:29:59.483Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:29:59.487Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:29:59.585Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:29:59.586Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:29:59.587Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:29:59.611Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:29:59.612Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:29:59.624Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:29:59.873Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:29:59.891Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:30:00.625Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:30:00.864Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:30:04.063Z] [WARNING] Tentativa de redirecionamento pós-login não abriu a tela real de relatório.
+STEP START runReports
+[2026-06-11T14:30:04.077Z] [INFO] Modo single report ativado: 1
+[2026-06-11T14:30:04.121Z] [INFO] Iniciando geração de relatórios.
+Criando aba para relatório 1/1: Receita Parcelas Mensal
+Aba criada: Receita Parcelas Mensal
+[2026-06-11T14:30:05.075Z] [INFO] Relatório iniciado. - report=Receita Parcelas Mensal | current=1 | total=1
+[2026-06-11T14:30:05.095Z] [INFO] Entrou em generateSingleReport - report=Receita Parcelas Mensal
+STEP START generateSingleReport Receita Parcelas Mensal
+[2026-06-11T14:30:05.098Z] [INFO] Abrindo tela Relatório Contas Recebidas.
+[2026-06-11T14:30:10.772Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:30:13.002Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:30:13.100Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_CONNECTION_CLOSED
+[2026-06-11T14:30:13.781Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:30:13.783Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:30:14.264Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:30:14.272Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:30:14.511Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:30:14.515Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:30:14.670Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:30:18.402Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:30:18.405Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:30:18.568Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:30:18.569Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:30:18.569Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:30:18.569Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:30:18.569Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:30:18.570Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:30:18.633Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:30:18.638Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:30:20.073Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:30:20.309Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:30:21.123Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:30:21.138Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:30:23.487Z] [INFO] Tela de relatório carregada. - url=https://laurentino.sienge.com.br/sienge/8/index.html#/common/page/4929
+{
+  sheetName: 'Receita Parcelas Mensal',
+  pdfName: 'Receita Parcelas Mensal',
+  planoFinanceiro: [
+    'Receita de Incorporação de Imóveis',
+    'Receita de Bens/Imóveis Adquiridos de Terceiros',
+    'Descontos Concedidos (Unidades Imobiliárias)',
+    'xxxxxReceita de Aluguel (Locação)',
+    'Permuta Externa',
+    'Receita de Cliente Desconhecido',
+    'Receita de Administração (Taxa Administrativa)',
+    'Receita Empreitada Só Mão de Obra',
+    'Receita de Projeto',
+    'Receita de Locação (Aluguel)',
+    'Entrada de Financiamento para Construção',
+    'Entrada de Capital de Giro',
+    'Receita de Aplicações Financeiras',
+    'Receita de Empréstimos',
+    'Aporte Capital de Sócio',
+    'Descontos Obtidos',
+    'Receita de Venda de Imobilizado',
+    'Receita Aluguel PCS 35',
+    'Estoque de Material',
+    'Receita Energia Solar Locatários',
+    'Venda de Passivos',
+    '(-) Anulação de Custos',
+    '(-) Anulação de Custos Mão de Obra',
+    '(-) Retenção Caução/Sinal',
+    '(-) Retenção de INSS',
+    '(-) Retenção de ISS',
+    '(-) Retenção de PIS',
+    '(-) Retenção de CSLL',
+    '(-) Retenção de COFINS',
+    '(-) Retenção de IR',
+    '(-) Retenção (PIS/COFINS/CSLL -  4,65%)',
+    '(-) Retenção de Permuta',
+    '(-) Transf. Materiais Estoque Laurentino P/ Finan',
+    '(-) Transf. Materiais Estoque Laurentino P/ Bom J.',
+    '(-) Transf. Mat. Estoque P/ Obras da Laurentino',
+    '(-) Reembolso de Despesas Gerais (Obra)',
+    '(-) Divisão de muro',
+    '(-) Retenção Contribuição Sindical (Escritório)',
+    '(-) Reembolso de Despesas Administrativas',
+    '(-) Restituição IPTU Imóveis Alugados (Escritório)',
+    '(-) Reembolso de Despesas Financeiras',
+    '(-) Reembolso de Despesas Tributárias',
+    '(-) Abatimento de Adiantamento',
+    '(-) Restituição Condomínio',
+    '(-) Restituição água'
+  ],
+  planoFinanceiroExcecao: [ '' ],
+  contasCorrente: [
+    'Viacredi Laurentino',
+    'CEF Laurentino',
+    'Sicredi Doca',
+    'Sicredi Laurentino',
+    'Aplicação Viacredi Laurentino',
+    'ADIANTAMENTO CASA DA LAJE 150 MIL',
+    'ADIANTAMENTO 250 MIL PRA CASA DA LAJE',
+    'Aplicação CEF Laurentino',
+    'Aplicação Doca Sicredi',
+    'Aplicação Sicredi Laurentino',
+    'ADIANTAMENTO CASA DA LAJE 175K',
+    'ADIANTAMENTO CASA DA LAJE 200K',
+    'ADIANTAMENTO CASA DA LAJE 250K',
+    'ADIANTAMENTO 95K PORTARIS',
+    'CAIXA Laurentino',
+    'Conta Babi - Não Conciliar',
+    'Conta Doca',
+    'Conta Equilíbrio',
+    'Emissao de Cheques',
+    'ESTOQUE',
+    'PERMUTA INDAPAV BP1 LOTE 13 CASA 1',
+    'Lançamentos Passados',
+    'PERMUTA DISBRACON LOTE 10 E 14 BV3',
+    'PERMUTA AB3 MR VIDROS',
+    'PERMUTA AB 4 E 5 MONDINI',
+    'PERMUTA DISBRACON ACACIA 26',
+    'PERMUTA ACÁCIAS POMERODE LOTE 8 MINI CAR',
+    'ADIANTAMENTO 115K VIDRAÇARIA ITOUP',
+    'PERMUTA AMS LAJES GOLDEN PARK',
+    'PERMUTA AMS LAJES LOTE 18 ACACIA POMEROD',
+    'PERMUTA GAIO SERPA',
+    'PERMUTA BERTELLI GREEN GARDEN LOTE 36',
+    'PERMUTA BERTELLI KW 3 SALA 1',
+    'PERMUTA BERTELLI KW 3 SALA 2',
+    'PERMUTA BERTELLI SEVEN POINT SALA 9',
+    'PERMUTA BONGO 2020 EBERT',
+    'PERMUTA MONDINI LOTE 09 CASA 2 BP1',
+    'PERMUTA BERTELLI VILA DAS NAÇÕES LT 15',
+    'PERMUTA BERTELLI VILA DAS NAÇÕES LT 14',
+    'PERMUTA PORTARIS CA 90 CS 1',
+    'PERMUTA CALHAS INDAIAL LT NOVA INDAIAL 4',
+    'PERMUTA CIVIC EBERT',
+    'PERMUTA CASA MIA SEVEN POINT SALA 6',
+    'PERMUTA CONCRETOREI GREEN GARDEN LOTE 45',
+    'PERMUTA DAINOX BP1 TERRENO MAT. 21884',
+    'PERMUTA DAINOX SALA 7 SEVEN POINT',
+    'PERMUTA DAINOX GOLDEN PARK LOT A DEF.',
+    'PERMUTA DAMACENO',
+    'PERMUTA DAMACENO ASFALTO GREEN GARDEN',
+    'PERMUTA DAMACENO LAND DO ALMIR',
+    'PERMUTA DISBRACON ACÁCIA POMERODE LOTE16',
+    'PERMUTA DISBRACON ACÁCIA POMERODE LOTE17',
+    'PERMUTA DISBRACON SEVEN POINT SALA 4',
+    'PERMUTA DISBRACON SEVEN POINT SALA 5',
+    'PERMUTA EBERT ONIX',
+    'PERMUTA ECO SPORT DAMACENO',
+    'PERMUTA FCF RENEGADE (TROCOU DO PA 28)',
+    'PERMUTA FIESTA (PEGEOUT) EBERT',
+    'PERMUTA CASA MIA GARTEN DORF LOTE 1 E 19',
+    'PERMUTA GG 21 DAINOX',
+    'PERMUTA CASA DA LAJE GREEN GARDEN LT 30',
+    'PERMUTA PORTARIS GG 31',
+    'PERMUTA GREEN GARDEN GRAMEIRA FELIPPI 27',
+    'PERMUTA GREEN GARDEN MULDE JANDT',
+    'Permuta Gol Kosmos',
+    'PERMUTA GRAMEIRA FELIPPI GOLDEN PARK',
+    'PERMUTA GRAMEIRA FELIPPI GOLDEN PARK 2',
+    'PERMUTA GRAMEIRA F. TOLEDO (TROCOU RY12)',
+    'PERMUTA INDAPAV SALA 13 SEVEN POINT',
+    'PERMUTA INDUMADER GREEN GARDEN 38',
+    'PERMUTA INDUMADER GOLDEN PARK 2 LOTES',
+    'PERMUTA INDUMADER GOLDEN PARK 3 LOTES',
+    'PERMUTA INDUMADER ROYAL PARK 4/5/6',
+    'PERMUTA INDUMADER ROYAL PARK 7/8/9',
+    'PERMUTA INDAPAV WARNOW 12X80',
+    'PERMUTA DAINOX GG LOTE 19',
+    'PERMUTA INDAPAV VOLVO GARTEN DORF',
+    'PERMUTA VIDRAÇARIA ITOUPAVAZINHA GP1 CS1',
+    'PERMUTA JOURNEY EBERT',
+    'PERMUTA KOSMOS GREEN GARDEN LOTE 23',
+    'PERMUTAS KOSMOS SEVEN POINT SALA 10',
+    'CASA DA LAJE ADIANTAMENTO 357K',
+    'PERMUTA CASA DA LAJE KW 4 SALA 02',
+    'PERMUTA CASA DA LAJE ACACIA POMEROD LT20',
+    'PERMUTA CASA DA LAJE ROYAL PARK LT 13/14',
+    'PERMUTA CASA DA LAJE SP SALA 8',
+    'PERMUTA LF CALHAS GOLDEN PARK A DEF.',
+    'PERMUTA LF CALHAS SEVEN POINT SALA 1',
+    'PERMUTA LF CALHAS RUA TOLEDO',
+    'PERMUTA CASA DA LAJE LOTE 03 BV3',
+    'PERMUTA CASA DA LAJE LOTE 13 BV',
+    'PERMUTA INDAPAV PC 35',
+    'PERMUTA CASA DA LAJE LOTE 49 CA',
+    'PERMUTA CALHAS INDAIAL LOTE 72 AA',
+    'PERMUTA BERTELLI LOTE 10 BP1',
+    'PERMUTA VIDRAÇARIA ITOUPAVAZINHA LT11BP1',
+    'PERMUTA VIDR. ITOUPAZAVINHA 55 CA',
+    'PERMUTA VIDR. ITOUPAVAZINHA 7/8 B. VISTA',
+    'PERMUTA LOT. ROYAL PARK SCHROEDER E SCHM',
+    'PERMUTA LIVINA EBERT',
+    ... 30 more items
+  ],
+  documentos: [ 'CONTRATO' ],
+  documentosExcecao: [ '' ],
+  condicoesPagamento: [ 'Parcelas Mensais', 'Novo Parcelas Mensais' ],
+  condicoesPagamentoExcecao: [ '' ],
+  flags: { imprimirParcelasReparceladas: false },
+  ordem: 'VL',
+  processarLancamentos: 'CR'
+}
+[2026-06-11T14:30:23.497Z] [INFO] [Receita Parcelas Mensal] Iniciando configureReportFilters
+[2026-06-11T14:30:23.519Z] [INFO] Resetando apenas campos editáveis.
+[2026-06-11T14:30:24.051Z] [INFO] [Receita Parcelas Mensal] Date override values
+[Receita Parcelas Mensal] Date override: envStart= envEnd= -> 01/04/2026 - 30/04/2026
+[2026-06-11T14:30:25.846Z] [INFO] [Receita Parcelas Mensal] Datas configuradas
+[2026-06-11T14:30:26.436Z] [INFO] [Receita Parcelas Mensal] Checkbox de parcelas reparceladas desmarcado
+[2026-06-11T14:30:26.660Z] [INFO] Ordenação configurada.
+[2026-06-11T14:30:26.755Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:30:26.808Z] [INFO] Tipo lançamento configurado.
+[2026-06-11T14:30:26.811Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:30:26.853Z] [INFO] Expandindo filtros.
+[2026-06-11T14:30:27.394Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:30:27.396Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:30:27.397Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:30:28.893Z] [INFO] Filtros expandidos.
+[2026-06-11T14:30:30.896Z] [INFO] [Receita Parcelas Mensal] Selecionando plano financeiro
+[2026-06-11T14:30:30.906Z] [INFO] Selecionando valores: Receita de Incorporação de Imóveis, Receita de Bens/Imóveis Adquiridos de Terceiros, Descontos Concedidos (Unidades Imobiliárias), xxxxxReceita de Aluguel (Locação), Permuta Externa, Receita de Cliente Desconhecido, Receita de Administração (Taxa Administrativa), Receita Empreitada Só Mão de Obra, Receita de Projeto, Receita de Locação (Aluguel), Entrada de Financiamento para Construção, Entrada de Capital de Giro, Receita de Aplicações Financeiras, Receita de Empréstimos, Aporte Capital de Sócio, Descontos Obtidos, Receita de Venda de Imobilizado, Receita Aluguel PCS 35, Estoque de Material, Receita Energia Solar Locatários, Venda de Passivos, (-) Anulação de Custos, (-) Anulação de Custos Mão de Obra, (-) Retenção Caução/Sinal, (-) Retenção de INSS, (-) Retenção de ISS, (-) Retenção de PIS, (-) Retenção de CSLL, (-) Retenção de COFINS, (-) Retenção de IR, (-) Retenção (PIS/COFINS/CSLL -  4,65%), (-) Retenção de Permuta, (-) Transf. Materiais Estoque Laurentino P/ Finan, (-) Transf. Materiais Estoque Laurentino P/ Bom J., (-) Transf. Mat. Estoque P/ Obras da Laurentino, (-) Reembolso de Despesas Gerais (Obra), (-) Divisão de muro, (-) Retenção Contribuição Sindical (Escritório), (-) Reembolso de Despesas Administrativas, (-) Restituição IPTU Imóveis Alugados (Escritório), (-) Reembolso de Despesas Financeiras, (-) Reembolso de Despesas Tributárias, (-) Abatimento de Adiantamento, (-) Restituição Condomínio, (-) Restituição água
+[2026-06-11T14:30:30.939Z] [INFO] Filtros já expandidos.
+[2026-06-11T14:30:30.994Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:30:30.994Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:30:31.046Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:30:31.052Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:30:31.054Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:30:31.057Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:30:32.384Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:30:32.386Z] [DEBUG] Console error da página. - detail=Failed to load resource: net::ERR_FAILED
+[2026-06-11T14:30:32.464Z] [INFO] Modal encontrado: Consulta de Plano Financeiro
+[2026-06-11T14:30:37.542Z] [INFO] Selecionando no modal: Receita de Incorporação de Imóveis
+[2026-06-11T14:30:41.003Z] [INFO] Checkbox marcado: Receita de Incorporação de Imóveis
+[2026-06-11T14:30:41.990Z] [INFO] Selecionando no modal: Receita de Bens/Imóveis Adquiridos de Terceiros
+[2026-06-11T14:30:45.272Z] [INFO] Checkbox marcado: Receita de Bens/Imóveis Adquiridos de Terceiros
+[2026-06-11T14:30:46.254Z] [INFO] Selecionando no modal: Descontos Concedidos (Unidades Imobiliárias)
+[2026-06-11T14:30:49.717Z] [INFO] Checkbox marcado: Descontos Concedidos (Unidades Imobiliárias)
+[2026-06-11T14:30:50.655Z] [INFO] Selecionando no modal: xxxxxReceita de Aluguel (Locação)
+[2026-06-11T14:30:53.787Z] [INFO] Checkbox marcado: xxxxxReceita de Aluguel (Locação)
+[2026-06-11T14:30:54.746Z] [INFO] Selecionando no modal: Permuta Externa
+[2026-06-11T14:30:57.808Z] [INFO] Checkbox marcado: Permuta Externa
+[2026-06-11T14:30:58.732Z] [INFO] Selecionando no modal: Receita de Cliente Desconhecido
+[2026-06-11T14:31:03.076Z] [INFO] Checkbox marcado: Receita de Cliente Desconhecido
+[2026-06-11T14:31:04.032Z] [INFO] Selecionando no modal: Receita de Administração (Taxa Administrativa)
+[2026-06-11T14:31:07.904Z] [INFO] Checkbox marcado: Receita de Administração (Taxa Administrativa)
+[2026-06-11T14:31:08.907Z] [INFO] Selecionando no modal: Receita Empreitada Só Mão de Obra
+[2026-06-11T14:31:12.695Z] [INFO] Checkbox marcado: Receita Empreitada Só Mão de Obra
+[2026-06-11T14:31:13.623Z] [INFO] Selecionando no modal: Receita de Projeto
+[2026-06-11T14:31:17.839Z] [INFO] Checkbox marcado: Receita de Projeto
+[2026-06-11T14:31:18.885Z] [INFO] Selecionando no modal: Receita de Locação (Aluguel)
