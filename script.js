@@ -7,7 +7,7 @@ const { chromium } = require('playwright');
 require('dotenv').config();
 
 // Instance identifier to allow multiple parallel runs. Defaults to process.pid
-const INSTANCE_ID = process.env.INSTANCE_ID || process.env.RUN_ID || process.env.RUN_INSTANCE || String(process.pid);
+const INSTANCE_ID = process.env.INSTANCE_ID;
 
 // Use a single global status file by default to aggregate progress across runs.
 // Can be overridden via the `STATUS_FILE` env var when needed.
@@ -16,7 +16,7 @@ const BASE_URL = process.env.SIENGE_BASE_URL;
 const USERNAME = process.env.SIENGE_USERNAME;
 const PASSWORD = process.env.SIENGE_PASSWORD;
 const HEADLESS = (process.env.HEADLESS ?? 'true').toLowerCase() !== 'false';
-const STATE_PATH = process.env.STATE_PATH || path.resolve(process.cwd(), 'sienge-storage-state.json');
+const STATE_PATH = process.env.STATE_PATH || path.resolve(process.cwd(), `sienge-storage-state-${INSTANCE_ID}.json`);
 const SCREENSHOT_DIR = process.env.SCREENSHOT_DIR || path.resolve(process.cwd(), `screenshots-${INSTANCE_ID}`);
 const LOG_PATH = process.env.LOG_PATH || path.resolve(process.cwd(), `sienge-authorize-log-${INSTANCE_ID}.json`);
 const DEBUG_HTML = (process.env.DEBUG_HTML ?? 'false').toLowerCase() === 'true';
@@ -2241,6 +2241,21 @@ async function pageSummary(page) {
   bodyText = String(bodyText || '').replace(/\s+/g, ' ').trim().slice(0, 3000);
   return { url: page.url(), title: await page.title().catch(() => ''), bodySnippet: bodyText };
 }
+async function saveStorageStateWithMeta(context) {
+  try {
+    await context.storageState({ path: STATE_PATH });
+  } catch (err) {
+    // bubble up
+    throw err;
+  }
+
+  try {
+    const meta = { instanceId: INSTANCE_ID, pid: process.pid, savedAt: nowIso(), statePath: STATE_PATH };
+    await fs.promises.writeFile(STATE_PATH + '.meta.json', JSON.stringify(meta, null, 2), 'utf8').catch(() => {});
+  } catch (e) {}
+
+  return STATE_PATH;
+}
 async function logPageState(page, message, extra = {}) {
   const shot = await saveShot(page, (extra.shotName || 'state').replace(/[^a-z0-9_-]+/gi, '-'));
   const html = await saveHtml(page, (extra.shotName || 'state').replace(/[^a-z0-9_-]+/gi, '-'));
@@ -2293,15 +2308,40 @@ async function waitForAppReady(
 async function clickFirstVisible(label, locators) {
   for (const locator of locators) {
     try {
-      const count = await locator.count();
+      const count = await locator.count().catch(() => 0);
       if (!count) continue;
       const first = locator.first();
       if (!(await first.isVisible({ timeout: 1500 }).catch(() => false))) continue;
-      await first.click({ timeout: 8000 });
-      logEvent({ level: 'info', message: `${label}: clique realizado.` });
-      return true;
+
+      // try to ensure element is in view
+      try { await first.scrollIntoViewIfNeeded().catch(() => {}); } catch (e) {}
+
+      // Try normal click, then fallbacks: force click, then evaluate click on element handle
+      try {
+        await first.click({ timeout: 8000 });
+        logEvent({ level: 'info', message: `${label}: clique realizado.` });
+        return true;
+      } catch (err) {
+        logEvent({ level: 'debug', message: `${label}: clique padrão falhou, tentando alternativas.`, detail: String(err && err.message || err) });
+        try {
+          await first.click({ timeout: 3000, force: true });
+          logEvent({ level: 'info', message: `${label}: clique realizado (force).` });
+          return true;
+        } catch (err2) {
+          try {
+            const handle = await first.elementHandle();
+            if (handle) {
+              await handle.evaluate((el) => { try { el.scrollIntoView({ block: 'center' }); el.click(); } catch (e) {} });
+              logEvent({ level: 'info', message: `${label}: clique realizado via evaluate.` });
+              return true;
+            }
+          } catch (err3) {
+            logEvent({ level: 'debug', message: `${label}: evaluate click falhou.`, detail: String(err3 && err3.message || err3) });
+          }
+        }
+      }
     } catch (err) {
-      logEvent({ level: 'debug', message: `${label}: tentativa falhou.`, detail: String(err.message || err) });
+      logEvent({ level: 'debug', message: `${label}: tentativa falhou.`, detail: String(err && err.message || err) });
     }
   }
   return false;
@@ -6340,16 +6380,58 @@ async function tryAccountChooser(page) {
   const summary = await pageSummary(page);
   if (!isAccountChooser(summary)) return false;
   logEvent({ level: 'info', message: 'Tela de seleção de conta detectada. Tentando clicar na conta salva.' });
-  const clicked = await clickFirstVisible('Conta salva Sienge ID', [
+  // Try multiple times with several selector strategies, then fallback to evaluate click
+  const candidatesFactory = () => [
     page.locator('button').filter({ hasText: new RegExp(escRe(USERNAME), 'i') }),
     page.locator('[role="button"]').filter({ hasText: new RegExp(escRe(USERNAME), 'i') }),
+    page.locator('a').filter({ hasText: new RegExp(escRe(USERNAME), 'i') }),
     page.locator('button').filter({ hasText: /conectado/i }),
-    page.getByText(/Tayane Granemann/i).locator('xpath=ancestor::button[1]'),
-  ]);
-  if (!clicked) throw new Error('Não consegui clicar na conta salva do Sienge ID.');
-  await waitForAppReady(page, 20000);
-  await logPageState(page, 'Conta salva clicada com sucesso.', { shotName: 'after-account-click' });
-  return true;
+    page.getByText(new RegExp(escRe(USERNAME), 'i')).locator('xpath=ancestor::button[1]'),
+    page.getByText(new RegExp(escRe(USERNAME), 'i')).locator('xpath=ancestor::a[1]'),
+  ];
+
+  let lastErr = null;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const clicked = await clickFirstVisible(`Conta salva Sienge ID (attempt ${attempt})`, candidatesFactory());
+      if (clicked) {
+        await waitForAppReady(page, 20000);
+        await logPageState(page, 'Conta salva clicada com sucesso.', { shotName: `after-account-click-attempt-${attempt}` });
+        return true;
+      }
+
+      // fallback: try to click via evaluate searching for text content
+      const userText = String(USERNAME || '').trim();
+      if (userText) {
+        const evalClicked = await page.evaluate((u) => {
+          try {
+            const norm = s => (s || '').trim();
+            const nodes = Array.from(document.querySelectorAll('button, a, div, span'));
+            for (const n of nodes) {
+              if (norm(n.innerText).toLowerCase().includes(u.toLowerCase())) {
+                try { n.click(); return true; } catch(e) {}
+              }
+            }
+          } catch (e) {}
+          return false;
+        }, userText).catch(() => false);
+
+        if (evalClicked) {
+          await waitForAppReady(page, 20000);
+          await logPageState(page, 'Conta salva clicada via evaluate.', { shotName: `after-account-click-eval-${attempt}` });
+          return true;
+        }
+      }
+    } catch (err) {
+      lastErr = err;
+      logEvent({ level: 'debug', message: `tryAccountChooser attempt ${attempt} failed`, detail: String(err && err.message || err) });
+      await page.waitForTimeout(800 + attempt * 300);
+    }
+  }
+
+  // final diagnostic: save page state and throw
+  await logPageState(page, 'Falha ao clicar na conta salva do Sienge ID.', { level: 'error', shotName: 'account-click-failed' });
+  throw new Error('Não consegui clicar na conta salva do Sienge ID.' + (lastErr ? ` Caused by: ${String(lastErr && lastErr.message || lastErr)}` : ''));
 }
 async function detectMfaPinInputs(page) {
   const locators = [
@@ -6566,7 +6648,7 @@ async function ensureLoggedIn(context, page) {
 
   logEvent({ level: 'info', message: 'Sessão inválida ou ausente. Fazendo login completo.' });
   await login(page);
-  await context.storageState({ path: STATE_PATH });
+  await saveStorageStateWithMeta(context);
 }
 
 
@@ -7185,7 +7267,7 @@ async function runAuthorization(context, page) {
     logEvent({ level: 'info', message: 'Processo de autorização concluído com sucesso.', screenshot: finalShot, ...summary });
   }
 
-  await context.storageState({ path: STATE_PATH });
+  await saveStorageStateWithMeta(context);
   logEvent({ level: 'info', message: 'Estado da sessão salvo com sucesso.', statePath: STATE_PATH });
 }
 
@@ -7226,7 +7308,7 @@ async function run() {
       await runAuthorization(context, page);
     }
 
-    await context.storageState({ path: STATE_PATH });
+    await saveStorageStateWithMeta(context);
     logEvent({ level: 'info', message: 'Estado da sessão salvo com sucesso.', statePath: STATE_PATH });
   } catch (err) {
     const errorShot = await saveShot(page, 'error');
