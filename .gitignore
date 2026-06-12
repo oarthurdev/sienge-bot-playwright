@@ -6,3 +6,4 @@ sienge-authorize-log-*.json
 reports/
 node_modules/
 screenshots/
+screenshots-*/
