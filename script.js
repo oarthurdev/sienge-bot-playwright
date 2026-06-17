@@ -88,7 +88,7 @@ const REPORT_DEFINITIONS = [
   {
     sheetName: 'Receita Parcelas Mensal',
     pdfName: 'Receita Parcelas Mensal',
-    planoFinanceiro: ['Receita de Incorporação de Imóveis', 'Receita de Bens/Imóveis Adquiridos de Terceiros', 'Descontos Concedidos (Unidades Imobiliárias)', 'xxxxxReceita de Aluguel (Locação)', 'Permuta Externa', 'Receita de Cliente Desconhecido', 'Receita de Administração (Taxa Administrativa)', 'Receita Empreitada Só Mão de Obra', 'Receita de Projeto', 'Receita de Locação (Aluguel)', 'Entrada de Financiamento para Construção', 'Entrada de Capital de Giro', 'Receita de Aplicações Financeiras', 'Receita de Empréstimos', 'Aporte Capital de Sócio', 'Descontos Obtidos', 'Receita de Venda de Imobilizado', 'Receita Aluguel PCS 35', 'Estoque de Material', 'Receita Energia Solar Locatários', 'Venda de Passivos', '(-) Anulação de Custos', '(-) Anulação de Custos Mão de Obra', '(-) Retenção Caução/Sinal', '(-) Retenção de INSS', '(-) Retenção de ISS', '(-) Retenção de PIS', '(-) Retenção de CSLL', '(-) Retenção de COFINS', '(-) Retenção de IR', '(-) Retenção (PIS/COFINS/CSLL - 4,65%)', '(-) Retenção de Permuta', '(-) Transf. Materiais Estoque Laurentino P/ Finan', '(-) Transf. Materiais Estoque Laurentino P/ Bom J.', '(-) Transf. Mat. Estoque P/ Obras da Laurentino', '(-) Reembolso de Despesas Gerais (Obra)', '(-) Divisão de muro', '(-) Retenção Contribuição Sindical (Escritório)', '(-) Reembolso de Despesas Administrativas', '(-) Restituição IPTU Imóveis Alugados (Escritório)', '(-) Reembolso de Despesas Financeiras', '(-) Reembolso de Despesas Tributárias', '(-) Abatimento de Adiantamento', '(-) Restituição Condomínio', '(-) Restituição água'],
+    planoFinanceiro: ['Receita de Incorporação de Imóveis', 'Receita de Bens/Imóveis Adquiridos de Terceiros', 'Descontos Concedidos (Unidades Imobiliárias)', 'xxxxxReceita de Aluguel (Locação)', 'Permuta Externa', 'Receita de Cliente Desconhecido', 'Receita de Administração (Taxa Administrativa)', 'Receita Empreitada Só Mão de Obra', 'Receita de Projeto', 'Receita de Locação (Aluguel)', 'Entrada de Financiamento para Construção', 'Entrada de Capital de Giro', 'Receita de Aplicações Financeiras', 'Receita de Empréstimos', 'Aporte Capital de Sócio', 'Descontos Obtidos', 'Receita de Venda de Imobilizado', 'Receita Aluguel PCS 35', 'Estoque de Material', 'Receita Energia Solar Locatários', 'Venda de Passivos', '(-) Anulação de Custos', '(-) Anulação de Custos Mão de Obra', '(-) Retenção Caução/Sinal', '(-) Retenção de INSS', '(-) Retenção de ISS', '(-) Retenção de PIS', '(-) Retenção de CSLL', '(-) Retenção de COFINS', '(-) Retenção de IR', '(-) Retenção (PIS/COFINS/CSLL -  4,65%)', '(-) Retenção de Permuta', '(-) Transf. Materiais Estoque Laurentino P/ Finan', '(-) Transf. Materiais Estoque Laurentino P/ Bom J.', '(-) Transf. Mat. Estoque P/ Obras da Laurentino', '(-) Reembolso de Despesas Gerais (Obra)', '(-) Divisão de muro', '(-) Retenção Contribuição Sindical (Escritório)', '(-) Reembolso de Despesas Administrativas', '(-) Restituição IPTU Imóveis Alugados (Escritório)', '(-) Reembolso de Despesas Financeiras', '(-) Reembolso de Despesas Tributárias', '(-) Abatimento de Adiantamento', '(-) Restituição Condomínio', '(-) Restituição água'],
     planoFinanceiroExcecao: [''],
     contasCorrente: [
       "Viacredi Laurentino",
@@ -379,7 +379,7 @@ const REPORT_DEFINITIONS = [
       "PERMUTA TERRENO HENRIQUE KUNEN EST. AREA",
       "PERMUTA TOMIO GREEN GARDEN LOTE 46"
     ],
-    planoFinanceiro: ['Receita de Incorporação de Imóveis', 'Receita de Bens/Imóveis Adquiridos de Terceiros', 'Descontos Concedidos (Unidades Imobiliárias)', 'xxxxxReceita de Aluguel (Locação)', 'Permuta Externa', 'Receita de Cliente Desconhecido', 'Receita de Administração (Taxa Administrativa)', 'Receita Empreitada Só Mão de Obra', 'Receita de Projeto', 'Receita de Locação (Aluguel)', 'Entrada de Financiamento para Construção', 'Entrada de Capital de Giro', 'Receita de Aplicações Financeiras', 'Receita de Empréstimos', 'Aporte Capital de Sócio', 'Descontos Obtidos', 'Receita de Venda de Imobilizado', 'Receita Aluguel PCS 35', 'Estoque de Material', 'Receita Energia Solar Locatários', 'Venda de Passivos', '(-) Anulação de Custos', '(-) Anulação de Custos Mão de Obra', '(-) Retenção Caução/Sinal', '(-) Retenção de INSS', '(-) Retenção de ISS', '(-) Retenção de PIS', '(-) Retenção de CSLL', '(-) Retenção de COFINS', '(-) Retenção de IR', '(-) Retenção (PIS/COFINS/CSLL - 4,65%)', '(-) Retenção de Permuta', '(-) Transf. Materiais Estoque Laurentino P/ Finan', '(-) Transf. Materiais Estoque Laurentino P/ Bom J.', '(-) Transf. Mat. Estoque P/ Obras da Laurentino', '(-) Reembolso de Despesas Gerais (Obra)', '(-) Divisão de muro', '(-) Retenção Contribuição Sindical (Escritório)', '(-) Reembolso de Despesas Administrativas', '(-) Restituição IPTU Imóveis Alugados (Escritório)', '(-) Reembolso de Despesas Financeiras', '(-) Reembolso de Despesas Tributárias', '(-) Abatimento de Adiantamento', '(-) Restituição Condomínio', '(-) Restituição água'],
+    planoFinanceiro: ['Receita de Incorporação de Imóveis', 'Receita de Bens/Imóveis Adquiridos de Terceiros', 'Descontos Concedidos (Unidades Imobiliárias)', 'xxxxxReceita de Aluguel (Locação)', 'Permuta Externa', 'Receita de Cliente Desconhecido', 'Receita de Administração (Taxa Administrativa)', 'Receita Empreitada Só Mão de Obra', 'Receita de Projeto', 'Receita de Locação (Aluguel)', 'Entrada de Financiamento para Construção', 'Entrada de Capital de Giro', 'Receita de Aplicações Financeiras', 'Receita de Empréstimos', 'Aporte Capital de Sócio', 'Descontos Obtidos', 'Receita de Venda de Imobilizado', 'Receita Aluguel PCS 35', 'Estoque de Material', 'Receita Energia Solar Locatários', 'Venda de Passivos', '(-) Anulação de Custos', '(-) Anulação de Custos Mão de Obra', '(-) Retenção Caução/Sinal', '(-) Retenção de INSS', '(-) Retenção de ISS', '(-) Retenção de PIS', '(-) Retenção de CSLL', '(-) Retenção de COFINS', '(-) Retenção de IR', '(-) Retenção (PIS/COFINS/CSLL -  4,65%)', '(-) Retenção de Permuta', '(-) Transf. Materiais Estoque Laurentino P/ Finan', '(-) Transf. Materiais Estoque Laurentino P/ Bom J.', '(-) Transf. Mat. Estoque P/ Obras da Laurentino', '(-) Reembolso de Despesas Gerais (Obra)', '(-) Divisão de muro', '(-) Retenção Contribuição Sindical (Escritório)', '(-) Reembolso de Despesas Administrativas', '(-) Restituição IPTU Imóveis Alugados (Escritório)', '(-) Reembolso de Despesas Financeiras', '(-) Reembolso de Despesas Tributárias', '(-) Abatimento de Adiantamento', '(-) Restituição Condomínio', '(-) Restituição água'],
     planoFinanceiroExcecao: [''],
     documentos: ['CONTRATO'],
     condicoesPagamento: [
@@ -403,7 +403,7 @@ const REPORT_DEFINITIONS = [
   {
     sheetName: 'Receita Aluguel',
     pdfName: 'Receita Aluguel',
-    planoFinanceiro: ['Receita de Incorporação de Imóveis', 'Receita de Bens/Imóveis Adquiridos de Terceiros', 'Descontos Concedidos (Unidades Imobiliárias)', 'xxxxxReceita de Aluguel (Locação)', 'Permuta Externa', 'Receita de Cliente Desconhecido', 'Receita de Administração (Taxa Administrativa)', 'Receita Empreitada Só Mão de Obra', 'Receita de Projeto', 'Receita de Locação (Aluguel)', 'Entrada de Financiamento para Construção', 'Entrada de Capital de Giro', 'Receita de Aplicações Financeiras', 'Receita de Empréstimos', 'Aporte Capital de Sócio', 'Descontos Obtidos', 'Receita de Venda de Imobilizado', 'Receita Aluguel PCS 35', 'Estoque de Material', 'Receita Energia Solar Locatários', 'Venda de Passivos', '(-) Anulação de Custos', '(-) Anulação de Custos Mão de Obra', '(-) Retenção Caução/Sinal', '(-) Retenção de INSS', '(-) Retenção de ISS', '(-) Retenção de PIS', '(-) Retenção de CSLL', '(-) Retenção de COFINS', '(-) Retenção de IR', '(-) Retenção (PIS/COFINS/CSLL - 4,65%)', '(-) Retenção de Permuta', '(-) Transf. Materiais Estoque Laurentino P/ Finan', '(-) Transf. Materiais Estoque Laurentino P/ Bom J.', '(-) Transf. Mat. Estoque P/ Obras da Laurentino', '(-) Reembolso de Despesas Gerais (Obra)', '(-) Divisão de muro', '(-) Retenção Contribuição Sindical (Escritório)', '(-) Reembolso de Despesas Administrativas', '(-) Restituição IPTU Imóveis Alugados (Escritório)', '(-) Reembolso de Despesas Financeiras', '(-) Reembolso de Despesas Tributárias', '(-) Abatimento de Adiantamento', '(-) Restituição Condomínio', '(-) Restituição água'],
+    planoFinanceiro: ['Receita de Incorporação de Imóveis', 'Receita de Bens/Imóveis Adquiridos de Terceiros', 'Descontos Concedidos (Unidades Imobiliárias)', 'xxxxxReceita de Aluguel (Locação)', 'Permuta Externa', 'Receita de Cliente Desconhecido', 'Receita de Administração (Taxa Administrativa)', 'Receita Empreitada Só Mão de Obra', 'Receita de Projeto', 'Receita de Locação (Aluguel)', 'Entrada de Financiamento para Construção', 'Entrada de Capital de Giro', 'Receita de Aplicações Financeiras', 'Receita de Empréstimos', 'Aporte Capital de Sócio', 'Descontos Obtidos', 'Receita de Venda de Imobilizado', 'Receita Aluguel PCS 35', 'Estoque de Material', 'Receita Energia Solar Locatários', 'Venda de Passivos', '(-) Anulação de Custos', '(-) Anulação de Custos Mão de Obra', '(-) Retenção Caução/Sinal', '(-) Retenção de INSS', '(-) Retenção de ISS', '(-) Retenção de PIS', '(-) Retenção de CSLL', '(-) Retenção de COFINS', '(-) Retenção de IR', '(-) Retenção (PIS/COFINS/CSLL -  4,65%)', '(-) Retenção de Permuta', '(-) Transf. Materiais Estoque Laurentino P/ Finan', '(-) Transf. Materiais Estoque Laurentino P/ Bom J.', '(-) Transf. Mat. Estoque P/ Obras da Laurentino', '(-) Reembolso de Despesas Gerais (Obra)', '(-) Divisão de muro', '(-) Retenção Contribuição Sindical (Escritório)', '(-) Reembolso de Despesas Administrativas', '(-) Restituição IPTU Imóveis Alugados (Escritório)', '(-) Reembolso de Despesas Financeiras', '(-) Reembolso de Despesas Tributárias', '(-) Abatimento de Adiantamento', '(-) Restituição Condomínio', '(-) Restituição água'],
     planoFinanceiroExcecao: [],
     documentos: [
       "Adiantamento",
@@ -741,7 +741,7 @@ const REPORT_DEFINITIONS = [
       "PERMUTA TERRENO HENRIQUE KUNEN EST. AREA",
       "PERMUTA TOMIO GREEN GARDEN LOTE 46"
     ],
-    planoFinanceiro: ['Receita de Incorporação de Imóveis', 'Receita de Bens/Imóveis Adquiridos de Terceiros', 'Descontos Concedidos (Unidades Imobiliárias)', 'xxxxxReceita de Aluguel (Locação)', 'Permuta Externa', 'Receita de Cliente Desconhecido', 'Receita de Administração (Taxa Administrativa)', 'Receita Empreitada Só Mão de Obra', 'Receita de Projeto', 'Receita de Locação (Aluguel)', 'Entrada de Financiamento para Construção', 'Entrada de Capital de Giro', 'Receita de Aplicações Financeiras', 'Receita de Empréstimos', 'Aporte Capital de Sócio', 'Descontos Obtidos', 'Receita de Venda de Imobilizado', 'Receita Aluguel PCS 35', 'Estoque de Material', 'Receita Energia Solar Locatários', 'Venda de Passivos', '(-) Anulação de Custos', '(-) Anulação de Custos Mão de Obra', '(-) Retenção Caução/Sinal', '(-) Retenção de INSS', '(-) Retenção de ISS', '(-) Retenção de PIS', '(-) Retenção de CSLL', '(-) Retenção de COFINS', '(-) Retenção de IR', '(-) Retenção (PIS/COFINS/CSLL - 4,65%)', '(-) Retenção de Permuta', '(-) Transf. Materiais Estoque Laurentino P/ Finan', '(-) Transf. Materiais Estoque Laurentino P/ Bom J.', '(-) Transf. Mat. Estoque P/ Obras da Laurentino', '(-) Reembolso de Despesas Gerais (Obra)', '(-) Divisão de muro', '(-) Retenção Contribuição Sindical (Escritório)', '(-) Reembolso de Despesas Administrativas', '(-) Restituição IPTU Imóveis Alugados (Escritório)', '(-) Reembolso de Despesas Financeiras', '(-) Reembolso de Despesas Tributárias', '(-) Abatimento de Adiantamento', '(-) Restituição Condomínio', '(-) Restituição água'],
+    planoFinanceiro: ['Receita de Incorporação de Imóveis', 'Receita de Bens/Imóveis Adquiridos de Terceiros', 'Descontos Concedidos (Unidades Imobiliárias)', 'xxxxxReceita de Aluguel (Locação)', 'Permuta Externa', 'Receita de Cliente Desconhecido', 'Receita de Administração (Taxa Administrativa)', 'Receita Empreitada Só Mão de Obra', 'Receita de Projeto', 'Receita de Locação (Aluguel)', 'Entrada de Financiamento para Construção', 'Entrada de Capital de Giro', 'Receita de Aplicações Financeiras', 'Receita de Empréstimos', 'Aporte Capital de Sócio', 'Descontos Obtidos', 'Receita de Venda de Imobilizado', 'Receita Aluguel PCS 35', 'Estoque de Material', 'Receita Energia Solar Locatários', 'Venda de Passivos', '(-) Anulação de Custos', '(-) Anulação de Custos Mão de Obra', '(-) Retenção Caução/Sinal', '(-) Retenção de INSS', '(-) Retenção de ISS', '(-) Retenção de PIS', '(-) Retenção de CSLL', '(-) Retenção de COFINS', '(-) Retenção de IR', '(-) Retenção (PIS/COFINS/CSLL -  4,65%)', '(-) Retenção de Permuta', '(-) Transf. Materiais Estoque Laurentino P/ Finan', '(-) Transf. Materiais Estoque Laurentino P/ Bom J.', '(-) Transf. Mat. Estoque P/ Obras da Laurentino', '(-) Reembolso de Despesas Gerais (Obra)', '(-) Divisão de muro', '(-) Retenção Contribuição Sindical (Escritório)', '(-) Reembolso de Despesas Administrativas', '(-) Restituição IPTU Imóveis Alugados (Escritório)', '(-) Reembolso de Despesas Financeiras', '(-) Reembolso de Despesas Tributárias', '(-) Abatimento de Adiantamento', '(-) Restituição Condomínio', '(-) Restituição água'],
     planoFinanceiroExcecao: [''],
     documentos: ['CONTRATO'],
     condicoesPagamento: [
@@ -761,7 +761,7 @@ const REPORT_DEFINITIONS = [
   {
     sheetName: 'Venda a Vista',
     pdfName: 'Venda a Vista',
-    planoFinanceiro: ['Receita de Incorporação de Imóveis', 'Receita de Bens/Imóveis Adquiridos de Terceiros', 'Descontos Concedidos (Unidades Imobiliárias)', 'xxxxxReceita de Aluguel (Locação)', 'Permuta Externa', 'Receita de Cliente Desconhecido', 'Receita de Administração (Taxa Administrativa)', 'Receita Empreitada Só Mão de Obra', 'Receita de Projeto', 'Receita de Locação (Aluguel)', 'Entrada de Financiamento para Construção', 'Entrada de Capital de Giro', 'Receita de Aplicações Financeiras', 'Receita de Empréstimos', 'Aporte Capital de Sócio', 'Descontos Obtidos', 'Receita de Venda de Imobilizado', 'Receita Aluguel PCS 35', 'Estoque de Material', 'Receita Energia Solar Locatários', 'Venda de Passivos', '(-) Anulação de Custos', '(-) Anulação de Custos Mão de Obra', '(-) Retenção Caução/Sinal', '(-) Retenção de INSS', '(-) Retenção de ISS', '(-) Retenção de PIS', '(-) Retenção de CSLL', '(-) Retenção de COFINS', '(-) Retenção de IR', '(-) Retenção (PIS/COFINS/CSLL - 4,65%)', '(-) Retenção de Permuta', '(-) Transf. Materiais Estoque Laurentino P/ Finan', '(-) Transf. Materiais Estoque Laurentino P/ Bom J.', '(-) Transf. Mat. Estoque P/ Obras da Laurentino', '(-) Reembolso de Despesas Gerais (Obra)', '(-) Divisão de muro', '(-) Retenção Contribuição Sindical (Escritório)', '(-) Reembolso de Despesas Administrativas', '(-) Restituição IPTU Imóveis Alugados (Escritório)', '(-) Reembolso de Despesas Financeiras', '(-) Reembolso de Despesas Tributárias', '(-) Abatimento de Adiantamento', '(-) Restituição Condomínio', '(-) Restituição água'],
+    planoFinanceiro: ['Receita de Incorporação de Imóveis', 'Receita de Bens/Imóveis Adquiridos de Terceiros', 'Descontos Concedidos (Unidades Imobiliárias)', 'xxxxxReceita de Aluguel (Locação)', 'Permuta Externa', 'Receita de Cliente Desconhecido', 'Receita de Administração (Taxa Administrativa)', 'Receita Empreitada Só Mão de Obra', 'Receita de Projeto', 'Receita de Locação (Aluguel)', 'Entrada de Financiamento para Construção', 'Entrada de Capital de Giro', 'Receita de Aplicações Financeiras', 'Receita de Empréstimos', 'Aporte Capital de Sócio', 'Descontos Obtidos', 'Receita de Venda de Imobilizado', 'Receita Aluguel PCS 35', 'Estoque de Material', 'Receita Energia Solar Locatários', 'Venda de Passivos', '(-) Anulação de Custos', '(-) Anulação de Custos Mão de Obra', '(-) Retenção Caução/Sinal', '(-) Retenção de INSS', '(-) Retenção de ISS', '(-) Retenção de PIS', '(-) Retenção de CSLL', '(-) Retenção de COFINS', '(-) Retenção de IR', '(-) Retenção (PIS/COFINS/CSLL -  4,65%)', '(-) Retenção de Permuta', '(-) Transf. Materiais Estoque Laurentino P/ Finan', '(-) Transf. Materiais Estoque Laurentino P/ Bom J.', '(-) Transf. Mat. Estoque P/ Obras da Laurentino', '(-) Reembolso de Despesas Gerais (Obra)', '(-) Divisão de muro', '(-) Retenção Contribuição Sindical (Escritório)', '(-) Reembolso de Despesas Administrativas', '(-) Restituição IPTU Imóveis Alugados (Escritório)', '(-) Reembolso de Despesas Financeiras', '(-) Reembolso de Despesas Tributárias', '(-) Abatimento de Adiantamento', '(-) Restituição Condomínio', '(-) Restituição água'],
     planoFinanceiroExcecao: [],
     documentos: ['CONTRATO'],
     condicoesPagamento: [
@@ -1053,7 +1053,7 @@ const REPORT_DEFINITIONS = [
       "PERMUTA TERRENO HENRIQUE KUNEN EST. AREA",
       "PERMUTA TOMIO GREEN GARDEN LOTE 46"
     ],
-    planoFinanceiro: ['Receita de Incorporação de Imóveis', 'Receita de Bens/Imóveis Adquiridos de Terceiros', 'Descontos Concedidos (Unidades Imobiliárias)', 'xxxxxReceita de Aluguel (Locação)', 'Permuta Externa', 'Receita de Cliente Desconhecido', 'Receita de Administração (Taxa Administrativa)', 'Receita Empreitada Só Mão de Obra', 'Receita de Projeto', 'Receita de Locação (Aluguel)', 'Entrada de Financiamento para Construção', 'Entrada de Capital de Giro', 'Receita de Aplicações Financeiras', 'Receita de Empréstimos', 'Aporte Capital de Sócio', 'Descontos Obtidos', 'Receita de Venda de Imobilizado', 'Receita Aluguel PCS 35', 'Estoque de Material', 'Receita Energia Solar Locatários', 'Venda de Passivos', '(-) Anulação de Custos', '(-) Anulação de Custos Mão de Obra', '(-) Retenção Caução/Sinal', '(-) Retenção de INSS', '(-) Retenção de ISS', '(-) Retenção de PIS', '(-) Retenção de CSLL', '(-) Retenção de COFINS', '(-) Retenção de IR', '(-) Retenção (PIS/COFINS/CSLL - 4,65%)', '(-) Retenção de Permuta', '(-) Transf. Materiais Estoque Laurentino P/ Finan', '(-) Transf. Materiais Estoque Laurentino P/ Bom J.', '(-) Transf. Mat. Estoque P/ Obras da Laurentino', '(-) Reembolso de Despesas Gerais (Obra)', '(-) Divisão de muro', '(-) Retenção Contribuição Sindical (Escritório)', '(-) Reembolso de Despesas Administrativas', '(-) Restituição IPTU Imóveis Alugados (Escritório)', '(-) Reembolso de Despesas Financeiras', '(-) Reembolso de Despesas Tributárias', '(-) Abatimento de Adiantamento', '(-) Restituição Condomínio', '(-) Restituição água'],
+    planoFinanceiro: ['Receita de Incorporação de Imóveis', 'Receita de Bens/Imóveis Adquiridos de Terceiros', 'Descontos Concedidos (Unidades Imobiliárias)', 'xxxxxReceita de Aluguel (Locação)', 'Permuta Externa', 'Receita de Cliente Desconhecido', 'Receita de Administração (Taxa Administrativa)', 'Receita Empreitada Só Mão de Obra', 'Receita de Projeto', 'Receita de Locação (Aluguel)', 'Entrada de Financiamento para Construção', 'Entrada de Capital de Giro', 'Receita de Aplicações Financeiras', 'Receita de Empréstimos', 'Aporte Capital de Sócio', 'Descontos Obtidos', 'Receita de Venda de Imobilizado', 'Receita Aluguel PCS 35', 'Estoque de Material', 'Receita Energia Solar Locatários', 'Venda de Passivos', '(-) Anulação de Custos', '(-) Anulação de Custos Mão de Obra', '(-) Retenção Caução/Sinal', '(-) Retenção de INSS', '(-) Retenção de ISS', '(-) Retenção de PIS', '(-) Retenção de CSLL', '(-) Retenção de COFINS', '(-) Retenção de IR', '(-) Retenção (PIS/COFINS/CSLL -  4,65%)', '(-) Retenção de Permuta', '(-) Transf. Materiais Estoque Laurentino P/ Finan', '(-) Transf. Materiais Estoque Laurentino P/ Bom J.', '(-) Transf. Mat. Estoque P/ Obras da Laurentino', '(-) Reembolso de Despesas Gerais (Obra)', '(-) Divisão de muro', '(-) Retenção Contribuição Sindical (Escritório)', '(-) Reembolso de Despesas Administrativas', '(-) Restituição IPTU Imóveis Alugados (Escritório)', '(-) Reembolso de Despesas Financeiras', '(-) Reembolso de Despesas Tributárias', '(-) Abatimento de Adiantamento', '(-) Restituição Condomínio', '(-) Restituição água'],
     documentos: ['CONTRATO'],
     condicoesPagamento: [
       'Novo Financiamento', 
@@ -1120,7 +1120,6 @@ const REPORT_DEFINITIONS = [
       "TAXAS"
     ],
     condicoesPagamento: [
-      "PM",
       "Parcelas Mensais",
       "Parcelas Semestrais",
       "Parcelas Bimestrais",
@@ -1481,7 +1480,6 @@ const REPORT_DEFINITIONS = [
       "TAXAS"
   ],
     condicoesPagamento: [
-      "PM",
       "Parcelas Mensais",
       "Parcelas Semestrais",
       "Parcelas Bimestrais",
@@ -1705,7 +1703,6 @@ const REPORT_DEFINITIONS = [
       "TAXAS"
     ],
     condicoesPagamento: [
-      "PM",
       "Parcelas Mensais",
       "Parcelas Semestrais",
       "Parcelas Bimestrais",
@@ -1879,7 +1876,7 @@ const REPORT_DEFINITIONS = [
       "PERMUTA TERRENO HENRIQUE KUNEN EST. AREA",
       "PERMUTA TOMIO GREEN GARDEN LOTE 46"
     ],
-    planoFinanceiro: ['Receita de Incorporação de Imóveis', 'Receita de Bens/Imóveis Adquiridos de Terceiros', 'Descontos Concedidos (Unidades Imobiliárias)', 'xxxxxReceita de Aluguel (Locação)', 'Permuta Externa', 'Receita de Cliente Desconhecido', 'Receita de Administração (Taxa Administrativa)', 'Receita Empreitada Só Mão de Obra', 'Receita de Projeto', 'Receita de Locação (Aluguel)', 'Entrada de Financiamento para Construção', 'Entrada de Capital de Giro', 'Receita de Aplicações Financeiras', 'Descontos Obtidos', 'Receita de Venda de Imobilizado', 'Receita Aluguel PCS 35', 'Estoque de Material', 'Receita Energia Solar Locatários', '(-) Anulação de Custos', '(-) Anulação de Custos Mão de Obra', '(-) Retenção Caução/Sinal', '(-) Retenção de INSS', '(-) Retenção de ISS', '(-) Retenção de PIS', '(-) Retenção de CSLL', '(-) Retenção de COFINS', '(-) Retenção de IR', '(-) Retenção (PIS/COFINS/CSLL - 4,65%)', '(-) Retenção de Permuta', '(-) Transf. Materiais Estoque Laurentino P/ Finan', '(-) Transf. Materiais Estoque Laurentino P/ Bom J.', '(-) Transf. Mat. Estoque P/ Obras da Laurentino', '(-) Reembolso de Despesas Gerais (Obra)', '(-) Divisão de muro', '(-) Retenção Contribuição Sindical (Escritório)', '(-) Reembolso de Despesas Administrativas', '(-) Restituição IPTU Imóveis Alugados (Escritório)', '(-) Reembolso de Despesas Financeiras', '(-) Reembolso de Despesas Tributárias', '(-) Abatimento de Adiantamento', '(-) Restituição Condomínio', '(-) Restituição água'],
+    planoFinanceiro: ['Receita de Incorporação de Imóveis', 'Receita de Bens/Imóveis Adquiridos de Terceiros', 'Descontos Concedidos (Unidades Imobiliárias)', 'xxxxxReceita de Aluguel (Locação)', 'Permuta Externa', 'Receita de Cliente Desconhecido', 'Receita de Administração (Taxa Administrativa)', 'Receita Empreitada Só Mão de Obra', 'Receita de Projeto', 'Receita de Locação (Aluguel)', 'Entrada de Financiamento para Construção', 'Entrada de Capital de Giro', 'Receita de Aplicações Financeiras', 'Descontos Obtidos', 'Receita de Venda de Imobilizado', 'Receita Aluguel PCS 35', 'Estoque de Material', 'Receita Energia Solar Locatários', '(-) Anulação de Custos', '(-) Anulação de Custos Mão de Obra', '(-) Retenção Caução/Sinal', '(-) Retenção de INSS', '(-) Retenção de ISS', '(-) Retenção de PIS', '(-) Retenção de CSLL', '(-) Retenção de COFINS', '(-) Retenção de IR', '(-) Retenção (PIS/COFINS/CSLL -  4,65%)', '(-) Retenção de Permuta', '(-) Transf. Materiais Estoque Laurentino P/ Finan', '(-) Transf. Materiais Estoque Laurentino P/ Bom J.', '(-) Transf. Mat. Estoque P/ Obras da Laurentino', '(-) Reembolso de Despesas Gerais (Obra)', '(-) Divisão de muro', '(-) Retenção Contribuição Sindical (Escritório)', '(-) Reembolso de Despesas Administrativas', '(-) Restituição IPTU Imóveis Alugados (Escritório)', '(-) Reembolso de Despesas Financeiras', '(-) Reembolso de Despesas Tributárias', '(-) Abatimento de Adiantamento', '(-) Restituição Condomínio', '(-) Restituição água'],
     planoFinanceiroExcecao: [],
       documentos: [
       "Adiantamento",
@@ -1929,7 +1926,6 @@ const REPORT_DEFINITIONS = [
     ],
     documentosExcecao: [],
     condicoesPagamento: [
-      "PM",
       "Parcelas Mensais",
       "Parcelas Semestrais",
       "Parcelas Bimestrais",
@@ -2732,9 +2728,6 @@ async function selectContasCorrente({
     
     // campo "Nome"
     searchInputSelector: [
-      // usa os seletores reais do modal de contas correntes
-      'input[name="entity.contaCorrentePK.nuConta"]',
-      '#entity.contaCorrentePK.nuConta',
       'input[name="entity.nmConta"]',
       '#entity.nmConta',
       
@@ -4541,24 +4534,14 @@ async function findRowByText(
               return { frame, cell: el };
             }
             
-            // partial (substring)
-            if (normalizedContent.includes(normalizedText)) {
-              logEvent({ level: 'debug', message: `Linha encontrada (PARTIAL) em ${sel}: ${text}`, frameUrl: frame.url(), index: i });
-              return { frame, cell: el };
-            }
-            
-            // token match: split search into tokens and ensure each token exists in content
-            const tokens = normalizedText.split(' ').filter(Boolean);
-            if (tokens.length > 1) {
-              let all = true;
-              for (const t of tokens) {
-                if (!normalizedContent.includes(t)) { all = false; break; }
-              }
-              if (all) {
-                logEvent({ level: 'debug', message: `Linha encontrada (TOKENS) em ${sel}: ${text}`, frameUrl: frame.url(), index: i });
+            // relaxed fallback: allow contains when exact match fails
+            try {
+              if (normalizedContent.includes(normalizedText) && normalizedText.length > 2) {
+                try { await el.waitFor({ state: 'visible', timeout: 3000 }).catch(() => {}); } catch (_) {}
+                logEvent({ level: 'debug', message: `Linha encontrada (CONTAINS) em ${sel}: ${text}`, frameUrl: frame.url(), index: i });
                 return { frame, cell: el };
               }
-            }
+            } catch (_) {}
           }
         }
       } catch (_) {}
@@ -4573,7 +4556,7 @@ async function findRowByText(
           }
           const rows = Array.from(document.querySelectorAll('tr'));
           for (let i = 0; i < rows.length; i++) {
-            if (normalize(rows[i].innerText).includes(search.toLowerCase())) return i + 1;
+            if (normalize(rows[i].innerText).trim() === search) return i + 1;
           }
           return null;
         }, normalizedText).catch(() => null);
@@ -4757,33 +4740,28 @@ async function findSelectionRow(
         normalizeSelectionText(
           await row.innerText().catch(() => '')
         );
-        
-        if (
-          rowText === normalizedValue
-        ) {
-          return row;
-        }
-        
+        // 1) exact equality
+        if (rowText === normalizedValue) return row;
+
+        // 2) exact match on any configured cell selectors
         for (const selector of selectors) {
           const cell = row.locator(selector).first();
-          const cellCount =
-          await cell.count().catch(() => 0);
-          
-          if (!cellCount) {
-            continue;
-          }
-          
-          const cellText =
-          normalizeSelectionText(
-            await cell.innerText().catch(() => '')
-          );
-          
-          if (
-            cellText === normalizedValue
-          ) {
-            return row;
-          }
+          const cellCount = await cell.count().catch(() => 0);
+          if (!cellCount) continue;
+          const cellText = normalizeSelectionText(await cell.innerText().catch(() => ''));
+          if (cellText === normalizedValue) return row;
         }
+
+        // 3) relaxed match: contains (helps when row has multiple columns concatenated)
+        if (rowText.includes(normalizedValue)) return row;
+        for (const selector of selectors) {
+          const cell = row.locator(selector).first();
+          const cellCount = await cell.count().catch(() => 0);
+          if (!cellCount) continue;
+          const cellText = normalizeSelectionText(await cell.innerText().catch(() => ''));
+          if (cellText.includes(normalizedValue)) return row;
+        }
+        // no relaxed matching: only exact equality is accepted
       } catch (_) {}
     }
     
@@ -4799,27 +4777,61 @@ async function ensureCheckboxChecked(
   rowLocator,
   checkboxSelector = 'input[type="checkbox"][name="rowSelect"]'
 ) {
-  
-  const checkbox =
-  rowLocator.locator(checkboxSelector).first();
-  
-  const checked =
-  await checkbox.isChecked().catch(() => false);
-  
-  if (checked) {
-    return true;
-  }
-  
-  try {
-    await checkbox.check();
-  } catch (_) {
+  const attempts = 4;
+  const selector = checkboxSelector || 'input[type="checkbox"]';
+
+  for (let i = 0; i < attempts; i++) {
     try {
-      await checkbox.click({ force: true });
-    } catch (_) {
-      await checkbox.evaluate(el => el.click()).catch(() => {});
+      const checkbox = rowLocator.locator(selector).first();
+      const exists = await checkbox.count().catch(() => 0);
+      if (!exists) {
+        // try to find a checkbox anywhere inside the row
+        const any = rowLocator.locator('input[type="checkbox"]').first();
+        if (await any.count().catch(() => 0)) {
+          try { await any.check(); } catch (_) { try { await any.click({ force: true }); } catch (_) { await any.evaluate(el => el.click()).catch(() => {}); } }
+        }
+      } else {
+        const checked = await checkbox.isChecked().catch(() => false);
+        if (checked) return true;
+        try {
+          await checkbox.check();
+        } catch (_) {
+          try { await checkbox.click({ force: true }); } catch (_) {
+            // last resort: evaluate and click the DOM element
+            try {
+              await rowLocator.evaluate((r, sel) => {
+                const cb = r.querySelector(sel) || r.querySelector('input[type="checkbox"]');
+                if (cb && !cb.checked) {
+                  cb.click();
+                  cb.checked = true;
+                  cb.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+              }, selector).catch(() => {});
+            } catch (_) {}
+          }
+        }
+      }
+
+      // verify
+      const final = rowLocator.locator(selector).first();
+      const isNow = await final.isChecked().catch(() => false);
+      if (isNow) return true;
+    } catch (e) {
+      // ignore and retry
     }
+
+    // small delay before retrying
+    await rowLocator.page().waitForTimeout(250 + i * 100).catch(() => {});
   }
-  
+
+  // final attempt: try evaluating across the frame to find and click by text
+  try {
+    await rowLocator.evaluate(r => {
+      const cb = r.querySelector('input[type="checkbox"]');
+      if (cb && !cb.checked) { cb.click(); cb.checked = true; cb.dispatchEvent(new Event('change', { bubbles: true })); }
+    }).catch(() => {});
+  } catch (_) {}
+
   return true;
 }
 
@@ -4972,6 +4984,36 @@ async function selectViaModal({
     `${triggerSelector}[src*="botProcurar.png"]`
   ).first();
   
+  // =====================================================
+  // MITIGAÇÃO DEFENSIVA: limpar estado de modal entre relatórios
+  // - reseta cache em memória e em disco
+  // - limpa listas e contadores temporários que podem vazar entre modais
+  // =====================================================
+  try {
+    MODAL_CACHE = {};
+    try { await saveModalCache(); } catch (_) {}
+  } catch (_) {}
+
+  try {
+    await mainFrame.evaluate(() => {
+      try {
+        // limpa elementos que armazenam listas selecionadas
+        Array.from(document.querySelectorAll('[id$="SelectedEntitiesList"], [class*="SelectedEntitiesList"]')).forEach(el => {
+          if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') el.value = '';
+          else el.innerHTML = '';
+        });
+
+        // zera contadores auxiliares que o modal pode usar
+        Array.from(document.querySelectorAll('[id*="contador"], [name*="contador"]')).forEach(el => {
+          if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') el.value = '0';
+          else el.textContent = '0';
+        });
+      } catch (e) {
+        // não fatal
+      }
+    }).catch(() => {});
+  } catch (_) {}
+  
   await trigger.click({
     force: true,
   });
@@ -5085,25 +5127,25 @@ async function selectViaModal({
       
       const matched = await modalFrame.evaluate((normalizedEntries) => {
         function normalize(s) {
-          return (s || '').normalize('NFD').replace(/\p{M}/gu, '').replace(/\s+/g, ' ').trim().toLowerCase();
+          try { return (s || '').normalize('NFD').replace(/\p{M}/gu, '').replace(/\s+/g, ' ').trim().toLowerCase(); } catch (e) { return (s || '').replace(/\s+/g, ' ').trim().toLowerCase(); }
         }
         const rows = Array.from(document.querySelectorAll('tr'));
         let found = 0;
         const seen = new Set();
-        const tokensList = normalizedEntries.map(e => e.split(/\s+/).filter(Boolean));
         for (const row of rows) {
-          const textRaw = row.innerText || '';
-          const text = normalize(textRaw);
+          const rowText = normalize(row.innerText || '');
+          // collect cell texts too
+          const cells = Array.from(row.querySelectorAll('td,th')).map(c => normalize(c.innerText || ''));
           for (let i = 0; i < normalizedEntries.length; i++) {
             const ne = normalizedEntries[i];
             if (!ne || seen.has(ne)) continue;
-            const tokens = tokensList[i];
-            // match if all tokens exist in row text (loose AND)
-            const ok = tokens.every(t => text.indexOf(t) !== -1);
+            // exact match: either entire row text equals or any cell equals
+            const ok = (rowText === ne) || cells.some(ct => ct === ne);
             if (ok) {
               const checkbox = row.querySelector('input[type="checkbox"]');
               if (checkbox && !checkbox.checked) {
-                try { checkbox.click(); } catch (e) { /* ignore */ }
+                try { checkbox.click(); } catch (e) { try { checkbox.checked = true; checkbox.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {} }
+                try { checkbox.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {}
               }
               seen.add(ne);
               found++;
@@ -5175,6 +5217,16 @@ async function selectViaModal({
     
     await modalInput.press('Enter')
     .catch(() => {});
+
+    // Some modals use a server-side paginated search that only runs when
+    // the "Procurar" button is clicked. Click it if present to ensure
+    // the searched value appears on the first page.
+    try {
+      const procurarBtn = modalFrame.locator('#pbProcurar, input[name="pbProcurar"], input[id*="Procurar"], input[value*="Procurar"]');
+      if (await procurarBtn.count().catch(() => 0)) {
+        await procurarBtn.first().click({ force: true }).catch(() => {});
+      }
+    } catch (e) {}
     
     // Aguarda reatividade do modal: procura o texto de forma normalizada usando waitForFunction
     const normalizedToken = String(currentValue || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
@@ -5202,7 +5254,7 @@ async function selectViaModal({
           const norm = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
           const rows = Array.from(document.querySelectorAll('tr'));
           for (let i = 0; i < rows.length; i++) {
-            if (norm(rows[i].innerText).includes(needle)) return i + 1;
+            if (norm(rows[i].innerText).trim() === needle) return i + 1;
           }
         } catch (e) {}
         return null;
@@ -5296,9 +5348,9 @@ async function selectViaModal({
                 await (cellFrame || modalFrame).evaluate((needle) => {
                   const norm = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
                   for (const r of document.querySelectorAll('tr')) {
-                    if (norm(r.innerText).includes(needle)) {
+                    if (norm(r.innerText).trim() === needle) {
                       const cb = r.querySelector('input[type="checkbox"]');
-                      if (cb && !cb.checked) cb.click();
+                      if (cb && !cb.checked) { cb.click(); cb.dispatchEvent(new Event('change', { bubbles: true })); }
                       break;
                     }
                   }
@@ -5368,6 +5420,35 @@ async function selectViaModal({
     modalTitle,
   });
   try { await setReportProgress(reportName, 25, { lastMessage: 'modal_finished', step: 'modal_done' }); } catch (_) {}
+
+  // =====================================================
+  // MITIGAÇÃO DEFENSIVA: limpar possíveis estados remanescentes após fechar modal
+  // =====================================================
+  try {
+    // reseta cache em memória e grava
+    MODAL_CACHE = {};
+    try { await saveModalCache(); } catch (_) {}
+  } catch (_) {}
+
+  try {
+    // tenta limpar contadores/listas no frame principal para evitar vazamento entre relatórios
+    const iframeLocator2 = page.locator('iframe#iFramePage');
+    const mainFrame2 = await iframeLocator2.contentFrame().catch(() => null);
+    if (mainFrame2) {
+      await mainFrame2.evaluate(() => {
+        try {
+          Array.from(document.querySelectorAll('[id$="SelectedEntitiesList"], [class*="SelectedEntitiesList"]')).forEach(el => {
+            if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') el.value = '';
+            else el.innerHTML = '';
+          });
+          Array.from(document.querySelectorAll('[id*="contador"], [name*="contador"]')).forEach(el => {
+            if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') el.value = '0';
+            else el.textContent = '0';
+          });
+        } catch (e) {}
+      }).catch(() => {});
+    }
+  } catch (_) {}
 }
 
 async function selectViaModalByGrid({
@@ -5501,6 +5582,13 @@ async function selectViaModalByGrid({
     
     await fillLegacyInput(modalInput, currentValue);
     await modalInput.press('Enter').catch(() => {});
+    // Click 'Procurar' inside the modal to trigger paginated/server search
+    try {
+      const procurarBtn = modalFrame.locator('#pbProcurar, input[name="pbProcurar"], input[id*="Procurar"], input[value*="Procurar"]');
+      if (await procurarBtn.count().catch(() => 0)) {
+        await procurarBtn.first().click({ force: true }).catch(() => {});
+      }
+    } catch (e) {}
     await page.waitForTimeout(2200);
     
     await modalFrame.locator('#tabelaResultado').waitFor({ state: 'visible', timeout: 7000 }).catch(() => {});
@@ -5803,6 +5891,8 @@ async function generateSingleReport(
   const __genMeasure = startMeasure('generateSingleReport', { report: report.sheetName });
   
   try {
+    // Isola cache de modais e estado por relatório para evitar cross-talk
+    try { MODAL_CACHE = {}; } catch (_) {}
     
     await openReportsPage(page);
     
