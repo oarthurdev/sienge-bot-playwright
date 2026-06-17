@@ -5222,10 +5222,42 @@ async function selectViaModal({
     // the "Procurar" button is clicked. Click it if present to ensure
     // the searched value appears on the first page.
     try {
-      const procurarBtn = modalFrame.locator('#pbProcurar, input[name="pbProcurar"], input[id*="Procurar"], input[value*="Procurar"]');
-      if (await procurarBtn.count().catch(() => 0)) {
-        await procurarBtn.first().click({ force: true }).catch(() => {});
+      const prevFirst = await modalFrame.evaluate(() => {
+        try { const t = document.querySelector('tr'); return t ? t.innerText : ''; } catch (e) { return ''; }
+      }).catch(() => '');
+
+      // try to click a 'procurar' control by searching common elements and matching text (case-insensitive)
+      const clicked = await modalFrame.evaluate(() => {
+        try {
+          const nodes = Array.from(document.querySelectorAll('input,button,a'));
+          for (const n of nodes) {
+            const txt = ((n.value || '') + ' ' + (n.innerText || '')).trim();
+            if (/procurar/i.test(txt)) { try { n.click(); } catch(e){ try{ n.dispatchEvent(new MouseEvent('click',{bubbles:true})); }catch(_){} } return true; }
+          }
+        } catch (e) {}
+        return false;
+      }).catch(() => false);
+
+      if (!clicked) {
+        const procurarBtn = modalFrame.locator('#pbProcurar, input[name="pbProcurar"], input[id*="Procurar"], input[value*="Procurar"]');
+        if (await procurarBtn.count().catch(() => 0)) {
+          await procurarBtn.first().click({ force: true }).catch(() => {});
+        }
       }
+
+      // Aguarda a tabela atualizar — ou mudança no primeiro <tr> ou presença do token
+      try {
+        await modalFrame.waitForFunction((needle, prev) => {
+          try {
+            const norm = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+            const first = document.querySelector('tr');
+            const text = first ? norm(first.innerText) : '';
+            if (!text) return false;
+            if (prev && text !== prev) return true;
+            return text.includes(needle);
+          } catch (e) { return false; }
+        }, {}, normalizedToken, prevFirst.normalize ? prevFirst.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase() : prevFirst).catch(() => {});
+      } catch (e) {}
     } catch (e) {}
     
     // Aguarda reatividade do modal: procura o texto de forma normalizada usando waitForFunction
@@ -5251,10 +5283,27 @@ async function selectViaModal({
     try {
       const idx = await modalFrame.evaluate((needle) => {
         try {
-          const norm = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+          function normalize(s) {
+            try {
+              return String(s || '')
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/[^\w\s]/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim()
+                .toLowerCase();
+            } catch (e) {
+              return String(s || '').replace(/\s+/g, ' ').trim().toLowerCase();
+            }
+          }
+
           const rows = Array.from(document.querySelectorAll('tr'));
           for (let i = 0; i < rows.length; i++) {
-            if (norm(rows[i].innerText).trim() === needle) return i + 1;
+            const text = normalize(rows[i].innerText || '');
+            if (!text) continue;
+            // permissive match first: contains (helps when row has prefixes/indices)
+            if (text.includes(needle)) return i + 1;
+            if (text === needle) return i + 1;
           }
         } catch (e) {}
         return null;
@@ -5506,6 +5555,27 @@ async function selectViaModalByGrid({
   }
   
   const trigger = mainFrame.locator(`${triggerSelector}[src*="botProcurar.png"]`).first();
+  // MITIGAÇÃO DEFENSIVA: limpar estado modal antes de abrir (evita vazamento entre modais)
+  try {
+    MODAL_CACHE = {};
+    try { await saveModalCache(); } catch (_) {}
+  } catch (_) {}
+
+  try {
+    await mainFrame.evaluate(() => {
+      try {
+        Array.from(document.querySelectorAll('[id$="SelectedEntitiesList"], [class*="SelectedEntitiesList"]')).forEach(el => {
+          if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') el.value = '';
+          else el.innerHTML = '';
+        });
+        Array.from(document.querySelectorAll('[id*="contador"], [name*="contador"]')).forEach(el => {
+          if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') el.value = '0';
+          else el.textContent = '0';
+        });
+      } catch (e) {}
+    }).catch(() => {});
+  } catch (_) {}
+
   await trigger.click({ force: true });
   
   let modalFrame = await findSelectionModalFrame(page, modalTitle, 30000);
@@ -5584,14 +5654,41 @@ async function selectViaModalByGrid({
     await modalInput.press('Enter').catch(() => {});
     // Click 'Procurar' inside the modal to trigger paginated/server search
     try {
-      const procurarBtn = modalFrame.locator('#pbProcurar, input[name="pbProcurar"], input[id*="Procurar"], input[value*="Procurar"]');
-      if (await procurarBtn.count().catch(() => 0)) {
-        await procurarBtn.first().click({ force: true }).catch(() => {});
+      const prevFirst = await modalFrame.evaluate(() => {
+        try { const t = document.querySelector('tr'); return t ? t.innerText : ''; } catch (e) { return ''; }
+      }).catch(() => '');
+
+      const clicked = await modalFrame.evaluate(() => {
+        try {
+          const nodes = Array.from(document.querySelectorAll('input,button,a'));
+          for (const n of nodes) {
+            const txt = ((n.value || '') + ' ' + (n.innerText || '')).trim();
+            if (/procurar/i.test(txt)) { try { n.click(); } catch(e){ try{ n.dispatchEvent(new MouseEvent('click',{bubbles:true})); }catch(_){} } return true; }
+          }
+        } catch (e) {}
+        return false;
+      }).catch(() => false);
+
+      if (!clicked) {
+        const procurarBtn = modalFrame.locator('#pbProcurar, input[name="pbProcurar"], input[id*="Procurar"], input[value*="Procurar"]');
+        if (await procurarBtn.count().catch(() => 0)) {
+          await procurarBtn.first().click({ force: true }).catch(() => {});
+        }
       }
+
+      try {
+        await modalFrame.waitForFunction((needle, prev) => {
+          try {
+            const norm = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+            const first = document.querySelector('tr');
+            const text = first ? norm(first.innerText) : '';
+            if (!text) return false;
+            if (prev && text !== prev) return true;
+            return text.includes(needle);
+          } catch (e) { return false; }
+        }, {}, (String(currentValue || '').normalize ? String(currentValue || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase() : String(currentValue || '').toLowerCase(), prevFirst.normalize ? prevFirst.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase() : prevFirst).catch(() => {}));
+      } catch (e) {}
     } catch (e) {}
-    await page.waitForTimeout(2200);
-    
-    await modalFrame.locator('#tabelaResultado').waitFor({ state: 'visible', timeout: 7000 }).catch(() => {});
     
     let rowLocator;
     try {
