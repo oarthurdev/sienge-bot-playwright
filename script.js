@@ -24,6 +24,28 @@ const TASK_MODE = (process.env.TASK_MODE || 'authorize').toLowerCase();
 const SAVE_SHOTS = (process.env.SAVE_SHOTS ?? 'false').toLowerCase() === 'true' || DEBUG_HTML;
 const MODAL_CACHE_PATH = process.env.MODAL_CACHE_PATH || path.resolve(process.cwd(), `.modal-cache-${INSTANCE_ID}.json`);
 let MODAL_CACHE = {};
+// Simple in-process semaphore to serialize modal interactions and avoid
+// concurrent modals stepping on each other when multiple reports run
+// in the same Node process.
+const _modalSemaphore = { taken: false, queue: [] };
+function acquireModalLock() {
+  return new Promise(resolve => {
+    if (!_modalSemaphore.taken) {
+      _modalSemaphore.taken = true;
+      resolve();
+      return;
+    }
+    _modalSemaphore.queue.push(resolve);
+  });
+}
+function releaseModalLock() {
+  const next = _modalSemaphore.queue.shift();
+  if (next) {
+    try { next(); } catch (_) {}
+    return;
+  }
+  _modalSemaphore.taken = false;
+}
 
 async function loadModalCache() {
   try {
@@ -1158,7 +1180,6 @@ const REPORT_DEFINITIONS = [
       "Aplicação Sicredi Laurentino",
       "ADIANTAMENTO CASA DA LAJE 175K",
       "ADIANTAMENTO CASA DA LAJE 200K",
-      "ADIANTAMENTO CASA DA LAJE 250K",
       "ADIANTAMENTO 95K PORTARIS",
       "CAIXA Laurentino",
       "Conta Babi - Não Conciliar",
@@ -5209,7 +5230,21 @@ async function selectViaModal({
     // ================================================
     // DIGITA NOVO VALOR
     // ================================================
-    
+    // try clicking any 'Limpar' control first to ensure previous filters are cleared
+    try {
+      const clickedClear = await modalFrame.evaluate(() => {
+        try {
+          const nodes = Array.from(document.querySelectorAll('input,button,a'));
+          for (const n of nodes) {
+            const txt = ((n.value || '') + ' ' + (n.innerText || '')).trim();
+            if (/^\s*limpar\b/i.test(txt)) { try { n.click(); } catch(e){ try{ n.dispatchEvent(new MouseEvent('click',{bubbles:true})); }catch(_){} } return true; }
+          }
+        } catch (e) {}
+        return false;
+      }).catch(() => false);
+      if (clickedClear) logEvent({ level: 'debug', message: 'Limpar clicado antes de digitar novo valor', modalTitle });
+    } catch (_) {}
+
     await fillLegacyInput(
       modalInput,
       currentValue
@@ -5576,9 +5611,12 @@ async function selectViaModalByGrid({
     }).catch(() => {});
   } catch (_) {}
 
-  await trigger.click({ force: true });
-  
-  let modalFrame = await findSelectionModalFrame(page, modalTitle, 30000);
+  await acquireModalLock();
+  let _modalLockHeld = true;
+  try {
+    await trigger.click({ force: true });
+
+    let modalFrame = await findSelectionModalFrame(page, modalTitle, 30000);
   if (!modalFrame) {
     modalFrame = await findModalFrame(page, modalTitle, 30000);
   }
@@ -5649,7 +5687,21 @@ async function selectViaModalByGrid({
       }).catch(() => {});
       await page.waitForTimeout(200);
     }
-    
+    // try clicking any 'Limpar' control first to ensure previous filters are cleared
+    try {
+      const clickedClear = await modalFrame.evaluate(() => {
+        try {
+          const nodes = Array.from(document.querySelectorAll('input,button,a'));
+          for (const n of nodes) {
+            const txt = ((n.value || '') + ' ' + (n.innerText || '')).trim();
+            if (/^\s*limpar\b/i.test(txt)) { try { n.click(); } catch(e){ try{ n.dispatchEvent(new MouseEvent('click',{bubbles:true})); }catch(_){} } return true; }
+          }
+        } catch (e) {}
+        return false;
+      }).catch(() => false);
+      if (clickedClear) logEvent({ level: 'debug', message: 'Limpar clicado antes de digitar novo valor', modalTitle });
+    } catch (_) {}
+
     await fillLegacyInput(modalInput, currentValue);
     await modalInput.press('Enter').catch(() => {});
     // Click 'Procurar' inside the modal to trigger paginated/server search
@@ -5724,6 +5776,12 @@ async function selectViaModalByGrid({
     message: `Modal finalizado: ${entries.join(', ')}`,
     modalTitle,
   });
+  } finally {
+    if (typeof _modalLockHeld !== 'undefined' && _modalLockHeld) {
+      try { releaseModalLock(); } catch (_) {}
+      _modalLockHeld = false;
+    }
+  }
 }
 
 selectViaModal = selectViaModalByGrid;
