@@ -4782,13 +4782,69 @@ async function findSelectionRow(
           const cellText = normalizeSelectionText(await cell.innerText().catch(() => ''));
           if (cellText.includes(normalizedValue)) return row;
         }
+        // 4) token match: all tokens from the search value appear in the row (order-insensitive)
+        try {
+          const tokens = normalizedValue.split(/\s+/).filter(Boolean);
+          if (tokens.length > 0) {
+            const all = tokens.every(t => rowText.includes(t));
+            if (all) return row;
+            for (const selector of selectors) {
+              try {
+                const cell = row.locator(selector).first();
+                const cellCount = await cell.count().catch(() => 0);
+                if (!cellCount) continue;
+                const cellText = normalizeSelectionText(await cell.innerText().catch(() => ''));
+                const allCell = tokens.every(t => cellText.includes(t));
+                if (allCell) return row;
+              } catch (_) {}
+            }
+          }
+        } catch (_) {}
         // no relaxed matching: only exact equality is accepted
       } catch (_) {}
     }
     
     await modalFrame.page().waitForTimeout(500);
   }
-  
+  try {
+    const preview = await modalFrame.evaluate(() => {
+      try {
+        return Array.from(document.querySelectorAll('tr')).slice(0,20).map(r => r.innerText || '').slice(0,10);
+      } catch (e) { return []; }
+    }).catch(() => []);
+    logEvent({ level: 'debug', message: `findSelectionRow final preview (first rows): ${preview.map(p => p.slice(0,200)).join(' || ')}`, frameUrl: modalFrame.url() });
+  } catch (_) {}
+
+  // Final fallback: try a DOM-level scan of all <tr> for tokens (order-insensitive)
+  try {
+    const normalized = normalizedValue;
+    const idx = await modalFrame.evaluate((search) => {
+      function normalize(s) {
+        try { return String(s || '').normalize('NFD').replace(/[ -\u036f]/g, '').replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase(); } catch (e) { return String(s || '').replace(/\s+/g, ' ').trim().toLowerCase(); }
+      }
+      const tokens = String(search).split(/\s+/).filter(Boolean);
+      const rows = Array.from(document.querySelectorAll('tr'));
+      for (let i = 0; i < rows.length; i++) {
+        try {
+          const txt = normalize(rows[i].innerText || '');
+          if (!txt) continue;
+          // direct contains
+          if (txt.includes(search)) return i + 1;
+          // token all present
+          let all = true;
+          for (const t of tokens) { if (!txt.includes(t)) { all = false; break; } }
+          if (all) return i + 1;
+        } catch (e) {}
+      }
+      return null;
+    }, normalized).catch(() => null);
+
+    if (idx) {
+      logEvent({ level: 'debug', message: `findSelectionRow fallback DOM matched tr index=${idx}`, frameUrl: modalFrame.url() });
+      return modalFrame.locator(`xpath=(//tr)[${idx}]`);
+    }
+  } catch (_) {}
+
   throw new Error(
     `Linha não encontrada no modal: ${value}`
   );
@@ -4798,26 +4854,33 @@ async function ensureCheckboxChecked(
   rowLocator,
   checkboxSelector = 'input[type="checkbox"][name="rowSelect"]'
 ) {
-  const attempts = 4;
+  const attempts = 6;
   const selector = checkboxSelector || 'input[type="checkbox"]';
-
   for (let i = 0; i < attempts; i++) {
     try {
+      const snippet = (await rowLocator.innerText().catch(() => '')).slice(0, 200);
+      logEvent({ level: 'debug', message: `ensureCheckboxChecked attempt=${i + 1}/${attempts} row-snippet='${snippet}' selector='${selector}'` });
       const checkbox = rowLocator.locator(selector).first();
       const exists = await checkbox.count().catch(() => 0);
+      logEvent({ level: 'debug', message: `ensureCheckboxChecked: checkbox exists=${exists}` });
       if (!exists) {
         // try to find a checkbox anywhere inside the row
         const any = rowLocator.locator('input[type="checkbox"]').first();
-        if (await any.count().catch(() => 0)) {
-          try { await any.check(); } catch (_) { try { await any.click({ force: true }); } catch (_) { await any.evaluate(el => el.click()).catch(() => {}); } }
+        const anyCount = await any.count().catch(() => 0);
+        logEvent({ level: 'debug', message: `ensureCheckboxChecked: any checkbox inside row count=${anyCount}` });
+        if (anyCount) {
+          try { await any.check(); } catch (err) { logEvent({ level: 'debug', message: `any.check() failed: ${String(err && err.message || err)}` }); try { await any.click({ force: true }); } catch (e) { logEvent({ level: 'debug', message: `any.click() failed: ${String(e && e.message || e)}` }); await any.evaluate(el => el.click()).catch(() => {}); } }
         }
       } else {
         const checked = await checkbox.isChecked().catch(() => false);
+        logEvent({ level: 'debug', message: `ensureCheckboxChecked: already checked=${checked}` });
         if (checked) return true;
         try {
           await checkbox.check();
-        } catch (_) {
-          try { await checkbox.click({ force: true }); } catch (_) {
+        } catch (err) {
+          logEvent({ level: 'debug', message: `checkbox.check() failed: ${String(err && err.message || err)}` });
+          try { await checkbox.click({ force: true }); } catch (e) {
+            logEvent({ level: 'debug', message: `checkbox.click() failed: ${String(e && e.message || e)}` });
             // last resort: evaluate and click the DOM element
             try {
               await rowLocator.evaluate((r, sel) => {
@@ -4828,7 +4891,7 @@ async function ensureCheckboxChecked(
                   cb.dispatchEvent(new Event('change', { bubbles: true }));
                 }
               }, selector).catch(() => {});
-            } catch (_) {}
+            } catch (__) { logEvent({ level: 'debug', message: 'evaluate click fallback failed' }); }
           }
         }
       }
@@ -4836,13 +4899,17 @@ async function ensureCheckboxChecked(
       // verify
       const final = rowLocator.locator(selector).first();
       const isNow = await final.isChecked().catch(() => false);
+      logEvent({ level: 'debug', message: `ensureCheckboxChecked: isNow=${isNow}` });
       if (isNow) return true;
     } catch (e) {
+      logEvent({ level: 'debug', message: `ensureCheckboxChecked: attempt error: ${String(e && e.message || e)}` });
       // ignore and retry
     }
 
-    // small delay before retrying
-    await rowLocator.page().waitForTimeout(250 + i * 100).catch(() => {});
+    // small delay before retrying (increase wait to allow UI to update)
+    await rowLocator.page().waitForTimeout(300 + i * 200).catch(() => {});
+    // try a gentle click on the row to trigger selection widgets that don't expose checkboxes directly
+    try { await rowLocator.click({ force: true }).catch(() => {}); } catch (_) {}
   }
 
   // final attempt: try evaluating across the frame to find and click by text
@@ -5688,19 +5755,19 @@ async function selectViaModalByGrid({
       await page.waitForTimeout(200);
     }
     // try clicking any 'Limpar' control first to ensure previous filters are cleared
-    try {
-      const clickedClear = await modalFrame.evaluate(() => {
-        try {
-          const nodes = Array.from(document.querySelectorAll('input,button,a'));
-          for (const n of nodes) {
-            const txt = ((n.value || '') + ' ' + (n.innerText || '')).trim();
-            if (/^\s*limpar\b/i.test(txt)) { try { n.click(); } catch(e){ try{ n.dispatchEvent(new MouseEvent('click',{bubbles:true})); }catch(_){} } return true; }
-          }
-        } catch (e) {}
-        return false;
-      }).catch(() => false);
-      if (clickedClear) logEvent({ level: 'debug', message: 'Limpar clicado antes de digitar novo valor', modalTitle });
-    } catch (_) {}
+    // try {
+    //   const clickedClear = await modalFrame.evaluate(() => {
+    //     try {
+    //       const nodes = Array.from(document.querySelectorAll('input,button,a'));
+    //       for (const n of nodes) {
+    //         const txt = ((n.value || '') + ' ' + (n.innerText || '')).trim();
+    //         if (/^\s*limpar\b/i.test(txt)) { try { n.click(); } catch(e){ try{ n.dispatchEvent(new MouseEvent('click',{bubbles:true})); }catch(_){} } return true; }
+    //       }
+    //     } catch (e) {}
+    //     return false;
+    //   }).catch(() => false);
+    //   if (clickedClear) logEvent({ level: 'debug', message: 'Limpar clicado antes de digitar novo valor', modalTitle });
+    // } catch (_) {}
 
     await fillLegacyInput(modalInput, currentValue);
     await modalInput.press('Enter').catch(() => {});
@@ -6175,6 +6242,7 @@ async function generateSingleReport(
     });
     console.log(`Relatório "${report.sheetName}": acionando Visualizar (aguardando popup)...`);
     
+    saveShot(page, 'visualizar_click').catch(() => {});
     const btnFiltrar =
     reportFrame.locator(
       '#btFiltrar, input[name="btFiltrar"]'
