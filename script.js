@@ -162,7 +162,6 @@ const REPORT_DEFINITIONS = [
       "PERMUTA DAINOX SALA 7 SEVEN POINT",
       "PERMUTA DAINOX GOLDEN PARK LOT A DEF.",
       "PERMUTA DAMACENO",
-      "PERMUTA DAMACENO ASFALTO GREEN GARDEN",
       "PERMUTA DAMACENO LAND DO ALMIR",
       "PERMUTA DISBRACON ACÁCIA POMERODE LOTE16",
       "PERMUTA DISBRACON ACÁCIA POMERODE LOTE17",
@@ -314,7 +313,6 @@ const REPORT_DEFINITIONS = [
       "PERMUTA DAINOX SALA 7 SEVEN POINT",
       "PERMUTA DAINOX GOLDEN PARK LOT A DEF.",
       "PERMUTA DAMACENO",
-      "PERMUTA DAMACENO ASFALTO GREEN GARDEN",
       "PERMUTA DAMACENO LAND DO ALMIR",
       "PERMUTA DISBRACON ACÁCIA POMERODE LOTE16",
       "PERMUTA DISBRACON ACÁCIA POMERODE LOTE17",
@@ -528,7 +526,6 @@ const REPORT_DEFINITIONS = [
       "PERMUTA DAINOX SALA 7 SEVEN POINT",
       "PERMUTA DAINOX GOLDEN PARK LOT A DEF.",
       "PERMUTA DAMACENO",
-      "PERMUTA DAMACENO ASFALTO GREEN GARDEN",
       "PERMUTA DAMACENO LAND DO ALMIR",
       "PERMUTA DISBRACON ACÁCIA POMERODE LOTE16",
       "PERMUTA DISBRACON ACÁCIA POMERODE LOTE17",
@@ -676,7 +673,6 @@ const REPORT_DEFINITIONS = [
       "PERMUTA DAINOX SALA 7 SEVEN POINT",
       "PERMUTA DAINOX GOLDEN PARK LOT A DEF.",
       "PERMUTA DAMACENO",
-      "PERMUTA DAMACENO ASFALTO GREEN GARDEN",
       "PERMUTA DAMACENO LAND DO ALMIR",
       "PERMUTA DISBRACON ACÁCIA POMERODE LOTE16",
       "PERMUTA DISBRACON ACÁCIA POMERODE LOTE17",
@@ -840,7 +836,6 @@ const REPORT_DEFINITIONS = [
       "PERMUTA DAINOX SALA 7 SEVEN POINT",
       "PERMUTA DAINOX GOLDEN PARK LOT A DEF.",
       "PERMUTA DAMACENO",
-      "PERMUTA DAMACENO ASFALTO GREEN GARDEN",
       "PERMUTA DAMACENO LAND DO ALMIR",
       "PERMUTA DISBRACON ACÁCIA POMERODE LOTE16",
       "PERMUTA DISBRACON ACÁCIA POMERODE LOTE17",
@@ -988,7 +983,6 @@ const REPORT_DEFINITIONS = [
       "PERMUTA DAINOX SALA 7 SEVEN POINT",
       "PERMUTA DAINOX GOLDEN PARK LOT A DEF.",
       "PERMUTA DAMACENO",
-      "PERMUTA DAMACENO ASFALTO GREEN GARDEN",
       "PERMUTA DAMACENO LAND DO ALMIR",
       "PERMUTA DISBRACON ACÁCIA POMERODE LOTE16",
       "PERMUTA DISBRACON ACÁCIA POMERODE LOTE17",
@@ -1216,7 +1210,6 @@ const REPORT_DEFINITIONS = [
       "PERMUTA DAINOX SALA 7 SEVEN POINT",
       "PERMUTA DAINOX GOLDEN PARK LOT A DEF.",
       "PERMUTA DAMACENO",
-      "PERMUTA DAMACENO ASFALTO GREEN GARDEN",
       "PERMUTA DAMACENO LAND DO ALMIR",
       "PERMUTA DISBRACON ACÁCIA POMERODE LOTE16",
       "PERMUTA DISBRACON ACÁCIA POMERODE LOTE17",
@@ -1366,7 +1359,6 @@ const REPORT_DEFINITIONS = [
       "PERMUTA DAINOX SALA 7 SEVEN POINT",
       "PERMUTA DAINOX GOLDEN PARK LOT A DEF.",
       "PERMUTA DAMACENO",
-      "PERMUTA DAMACENO ASFALTO GREEN GARDEN",
       "PERMUTA DAMACENO LAND DO ALMIR",
       "PERMUTA DISBRACON ACÁCIA POMERODE LOTE16",
       "PERMUTA DISBRACON ACÁCIA POMERODE LOTE17",
@@ -1586,7 +1578,6 @@ const REPORT_DEFINITIONS = [
       "PERMUTA DAINOX SALA 7 SEVEN POINT",
       "PERMUTA DAINOX GOLDEN PARK LOT A DEF.",
       "PERMUTA DAMACENO",
-      "PERMUTA DAMACENO ASFALTO GREEN GARDEN",
       "PERMUTA DAMACENO LAND DO ALMIR",
       "PERMUTA DISBRACON ACÁCIA POMERODE LOTE16",
       "PERMUTA DISBRACON ACÁCIA POMERODE LOTE17",
@@ -1810,7 +1801,6 @@ const REPORT_DEFINITIONS = [
       "PERMUTA DAINOX SALA 7 SEVEN POINT",
       "PERMUTA DAINOX GOLDEN PARK LOT A DEF.",
       "PERMUTA DAMACENO",
-      "PERMUTA DAMACENO ASFALTO GREEN GARDEN",
       "PERMUTA DAMACENO LAND DO ALMIR",
       "PERMUTA DISBRACON ACÁCIA POMERODE LOTE16",
       "PERMUTA DISBRACON ACÁCIA POMERODE LOTE17",
@@ -4919,8 +4909,14 @@ async function ensureCheckboxChecked(
       if (cb && !cb.checked) { cb.click(); cb.checked = true; cb.dispatchEvent(new Event('change', { bubbles: true })); }
     }).catch(() => {});
   } catch (_) {}
-
-  return true;
+  // final verification: return whether the checkbox is now checked
+  try {
+    const final = rowLocator.locator(checkboxSelector).first();
+    const nowChecked = await final.isChecked().catch(() => false);
+    return !!nowChecked;
+  } catch (_) {
+    return false;
+  }
 }
 
 async function selectViaModal({
@@ -5358,7 +5354,7 @@ async function selectViaModal({
             if (prev && text !== prev) return true;
             return text.includes(needle);
           } catch (e) { return false; }
-        }, {}, normalizedToken, prevFirst.normalize ? prevFirst.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase() : prevFirst).catch(() => {});
+        }, { timeout: 10000 }, normalizedToken, prevFirst.normalize ? prevFirst.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase() : prevFirst).catch(() => {});
       } catch (e) {}
     } catch (e) {}
     
@@ -5371,7 +5367,7 @@ async function selectViaModal({
           const norm = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
           return document.body && norm(document.body.innerText).includes(t);
         } catch (e) { return false; }
-      }, {}, normalizedToken).catch(() => {});
+      }, { timeout: 10000 }, normalizedToken).catch(() => {});
     } catch (_) {}
     
     // espera a tabela aparecer minimamente
@@ -5403,8 +5399,7 @@ async function selectViaModal({
           for (let i = 0; i < rows.length; i++) {
             const text = normalize(rows[i].innerText || '');
             if (!text) continue;
-            // permissive match first: contains (helps when row has prefixes/indices)
-            if (text.includes(needle)) return i + 1;
+            // strict match: exact normalized equality
             if (text === needle) return i + 1;
           }
         } catch (e) {}
@@ -5497,11 +5492,14 @@ async function selectViaModal({
               // último recurso: marcar via evaluate no contexto do frame (único roundtrip)
               try {
                 await (cellFrame || modalFrame).evaluate((needle) => {
-                  const norm = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+                  const norm = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
                   for (const r of document.querySelectorAll('tr')) {
-                    if (norm(r.innerText).trim() === needle) {
+                    const txt = norm(r.innerText || '');
+                    if (!txt) continue;
+                    // strict match: require exact normalized equality
+                    if (txt === needle) {
                       const cb = r.querySelector('input[type="checkbox"]');
-                      if (cb && !cb.checked) { cb.click(); cb.dispatchEvent(new Event('change', { bubbles: true })); }
+                      if (cb && !cb.checked) { try { cb.click(); } catch(e) { cb.checked = true; } cb.dispatchEvent(new Event('change', { bubbles: true })); }
                       break;
                     }
                   }
@@ -5511,25 +5509,81 @@ async function selectViaModal({
           }
         }
         
-        logEvent({ level: 'info', message: `Checkbox marcado: ${currentValue}`, modalTitle });
+        // aguarda confirmação de seleção por até 10s
         try {
-          const pct = 8 + Math.round(((vi + 1) / entries.length) * 15);
-          await setReportProgress(reportName, Math.min(25, pct), { lastMessage: `selected:${currentValue}`, step: 'modal_select' });
-        } catch (_) {}
+          const startSel = Date.now();
+          let confirmed = false;
+          while (Date.now() - startSel < 10000) {
+            confirmed = await (cellFrame || modalFrame).evaluate((needle) => {
+              const norm = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+              for (const r of document.querySelectorAll('tr')) {
+                if (norm(r.innerText || '') === needle) {
+                  const cb = r.querySelector('input[type="checkbox"]');
+                  return !!(cb && cb.checked);
+                }
+              }
+              return false;
+            }, normalizedToken).catch(() => false);
+            if (confirmed) break;
+            await page.waitForTimeout(250);
+          }
+
+          if (!confirmed) {
+            await saveDebugState('checkbox-timeout').catch(() => {});
+            logEvent({ level: 'warn', message: `Timeout ao selecionar valor no modal, pulando: ${currentValue}`, modalTitle });
+            continue;
+          }
+
+          logEvent({ level: 'info', message: `Checkbox marcado: ${currentValue}`, modalTitle });
+          try {
+            const pct = 8 + Math.round(((vi + 1) / entries.length) * 15);
+            await setReportProgress(reportName, Math.min(25, pct), { lastMessage: `selected:${currentValue}`, step: 'modal_select' });
+          } catch (_) {}
+        } catch (e) {
+          // em caso de erro durante a confirmação, registra e tenta continuar
+          logEvent({ level: 'warn', message: `Erro ao confirmar seleção para ${currentValue}, pulando: ${String(e && e.message || e)}`, modalTitle });
+          continue;
+        }
       } else {
         // se não encontrou checkbox via locators, tenta fallback evaluate para marcar
         await (cellFrame || modalFrame).evaluate((needle) => {
           const norm = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
           for (const r of document.querySelectorAll('tr')) {
-            if (norm(r.innerText).includes(needle)) {
-              const cb = r.querySelector('input[type="checkbox"]');
-              if (cb && !cb.checked) cb.click();
-              break;
+              if (norm(r.innerText) === needle) {
+                const cb = r.querySelector('input[type="checkbox"]');
+                if (cb && !cb.checked) cb.click();
+                break;
+              }
             }
-          }
         }, normalizedToken).catch(() => {});
-        
-        logEvent({ level: 'info', message: `Checkbox marcado via fallback evaluate: ${currentValue}`, modalTitle });
+        // confirma seleção por até 10s
+        try {
+          const startSelFb = Date.now();
+          let confirmedFb = false;
+          while (Date.now() - startSelFb < 10000) {
+            confirmedFb = await (cellFrame || modalFrame).evaluate((needle) => {
+              const norm = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+              for (const r of document.querySelectorAll('tr')) {
+                if (norm(r.innerText || '') === needle) {
+                  const cb = r.querySelector('input[type="checkbox"]');
+                  return !!(cb && cb.checked);
+                }
+              }
+              return false;
+            }, normalizedToken).catch(() => false);
+            if (confirmedFb) break;
+            await page.waitForTimeout(250);
+          }
+          if (!confirmedFb) {
+            await saveDebugState('checkbox-timeout').catch(() => {});
+            logEvent({ level: 'warn', message: `Timeout ao selecionar valor no modal (fallback), pulando: ${currentValue}`, modalTitle });
+            continue;
+          }
+          logEvent({ level: 'info', message: `Checkbox marcado via fallback evaluate: ${currentValue}`, modalTitle });
+        } catch (e) {
+          logEvent({ level: 'warn', message: `Erro ao confirmar seleção via fallback para ${currentValue}, pulando: ${String(e && e.message || e)}`, modalTitle });
+          continue;
+        }
       }
     } catch (err) {
       await saveDebugState('checkbox-error');
@@ -5805,7 +5859,7 @@ async function selectViaModalByGrid({
             if (prev && text !== prev) return true;
             return text.includes(needle);
           } catch (e) { return false; }
-        }, {}, (String(currentValue || '').normalize ? String(currentValue || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase() : String(currentValue || '').toLowerCase(), prevFirst.normalize ? prevFirst.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase() : prevFirst).catch(() => {}));
+        }, { timeout: 10000 }, (String(currentValue || '').normalize ? String(currentValue || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase() : String(currentValue || '').toLowerCase(), prevFirst.normalize ? prevFirst.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase() : prevFirst).catch(() => {}));
       } catch (e) {}
     } catch (e) {}
     
@@ -5814,11 +5868,21 @@ async function selectViaModalByGrid({
       rowLocator = await findSelectionRow(modalFrame, currentValue, modalDefinition.rowValueSelectors, 25000);
     } catch (err) {
       await saveDebugState('row-not-found').catch(() => {});
-      throw err;
+      logEvent({ level: 'warn', message: `Linha não encontrada no modal, pulando: ${currentValue}`, detail: String(err && err.message || err), modalTitle });
+      // não interrompe a geração do relatório — pula para o próximo valor
+      continue;
     }
     
     try {
-      await ensureCheckboxChecked(rowLocator, modalDefinition.rowCheckboxSelector);
+      // tenta marcar e aguarda até 10s por confirmação
+      const selPromise = ensureCheckboxChecked(rowLocator, modalDefinition.rowCheckboxSelector);
+      const selOk = await Promise.race([selPromise, new Promise(res => setTimeout(() => res(false), 10000))]);
+      if (!selOk) {
+        await saveDebugState('checkbox-timeout').catch(() => {});
+        logEvent({ level: 'warn', message: `Timeout ao selecionar valor no modal, pulando: ${currentValue}`, modalTitle });
+        // não lançar erro — apenas pula para o próximo valor
+        continue;
+      }
       logEvent({ level: 'info', message: `Checkbox marcado: ${currentValue}`, modalTitle });
     } catch (err) {
       await saveDebugState('checkbox-error').catch(() => {});
@@ -6117,6 +6181,7 @@ async function generateSingleReport(
     try { MODAL_CACHE = {}; } catch (_) {}
     
     await openReportsPage(page);
+    await saveShot(page, `reports-opened-${sanitizeFileName(report.sheetName)}`).catch(() => {});
     
     // =====================================================
     // CONFIGURA FILTROS
@@ -6125,6 +6190,7 @@ async function generateSingleReport(
       page,
       report
     });
+    await saveShot(page, `filters-configured-${sanitizeFileName(report.sheetName)}`).catch(() => {});
     
     const reportFrame =
     await getReportFilterFrame(page);
@@ -6235,14 +6301,10 @@ async function generateSingleReport(
     // CLICK VISUALIZAR
     // =====================================================
     
-    logEvent({
-      level: 'info',
-      message:
-      `Relatório "${report.sheetName}": clicando Visualizar.`,
-    });
+    logEvent({ level: 'info', message: `Relatório "${report.sheetName}": clicando Visualizar.`, });
     console.log(`Relatório "${report.sheetName}": acionando Visualizar (aguardando popup)...`);
     
-    saveShot(page, 'visualizar_click').catch(() => {});
+    await saveShot(page, `visualizar_click-${sanitizeFileName(report.sheetName)}`).catch(() => {});
     const btnFiltrar =
     reportFrame.locator(
       '#btFiltrar, input[name="btFiltrar"]'
@@ -6306,6 +6368,8 @@ async function generateSingleReport(
     await popup.waitForTimeout(
       12000
     );
+    // debug: captura do popup assim que carregado
+    try { await saveShot(popup, `popup-loaded-${sanitizeFileName(report.sheetName)}`); } catch (_) {}
     
     try { await setReportProgress(report.sheetName, 30, { lastMessage: 'popup_loaded', step: 'popup_loaded' }); } catch (_) {}
     
@@ -6439,6 +6503,7 @@ async function generateSingleReport(
       message: 'URL final do relatório resolvida.',
       reportUrl,
     });
+    try { await saveShot(popup, `reporturl-resolved-${sanitizeFileName(report.sheetName)}`); } catch (_) {}
     
     // report: URL resolved
     try {
@@ -6481,6 +6546,7 @@ async function generateSingleReport(
       await popup.content()
       .catch(() => '');
       
+      try { await saveShot(popup, `error-no-url-${sanitizeFileName(report.sheetName)}`); } catch (_) {}
       console.log(
         html.substring(0, 5000)
       );
@@ -6502,6 +6568,7 @@ async function generateSingleReport(
     });
     console.log(`Relatório "${report.sheetName}": iniciando download do PDF...`);
     
+    await saveShot(popup, `before-download-${sanitizeFileName(report.sheetName)}`).catch(() => {});
     try {
       await updateReportStatusSerialized({ perReportEntry: { report: report.sheetName, props: { progress: 70, lastMessage: 'downloading', step: 'download', stepStartedAt: nowIso() } } });
     } catch (_) {}
@@ -6551,6 +6618,8 @@ async function generateSingleReport(
     await fs.promises.writeFile(finalPdfPath, buffer).catch((e) => { throw e; });
     
     try { await setReportProgress(report.sheetName, 95, { lastMessage: 'saved_tmp', step: 'saving' }); } catch (_) {}
+    // captura final após salvar PDF
+    try { await saveShot(page, `pdf-saved-${sanitizeFileName(report.sheetName)}`); } catch (_) {}
     
     const stats =
     fs.statSync(finalPdfPath);
@@ -6563,6 +6632,7 @@ async function generateSingleReport(
     } catch (_) {}
     
     if (stats.size < 5000) {
+      try { await saveShot(page, `pdf-invalid-${sanitizeFileName(report.sheetName)}-${stats.size}`); } catch (_) {}
       throw new Error(`PDF inválido (${stats.size} bytes).`);
     }
     
