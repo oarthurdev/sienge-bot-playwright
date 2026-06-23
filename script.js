@@ -20,6 +20,7 @@ const STATE_PATH = process.env.STATE_PATH || path.resolve(process.cwd(), `sienge
 const SCREENSHOT_DIR = process.env.SCREENSHOT_DIR || path.resolve(process.cwd(), `screenshots-${INSTANCE_ID}`);
 const LOG_PATH = process.env.LOG_PATH || path.resolve(process.cwd(), `sienge-authorize-log-${INSTANCE_ID}.json`);
 const DEBUG_HTML = (process.env.DEBUG_HTML ?? 'false').toLowerCase() === 'true';
+const BLOCK_RESOURCES = (process.env.BLOCK_RESOURCES ?? 'true').toLowerCase() !== 'false';
 const TASK_MODE = (process.env.TASK_MODE || 'authorize').toLowerCase();
 const SAVE_SHOTS = (process.env.SAVE_SHOTS ?? 'false').toLowerCase() === 'true' || DEBUG_HTML;
 const MODAL_CACHE_PATH = process.env.MODAL_CACHE_PATH || path.resolve(process.cwd(), `.modal-cache-${INSTANCE_ID}.json`);
@@ -62,6 +63,23 @@ async function saveModalCache() {
   try {
     await fs.promises.writeFile(MODAL_CACHE_PATH, JSON.stringify(MODAL_CACHE, null, 2)).catch(() => {});
   } catch (e) {}
+}
+
+// Global helper: retry actions that fail due to transient frame detach / execution context errors
+async function withFrameRetry(actionFn, { retries = 2, name = 'action' } = {}) {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      return await actionFn();
+    } catch (err) {
+      const msg = String(err && (err.message || err));
+      if (/Frame was detached|Execution context was destroyed|Cannot find context|Cannot find object/i.test(msg) && attempt < retries) {
+        logEvent({ level: 'warn', message: `${name}: quadro foi recriado; refazendo tentativa - detail=${msg}` });
+        await new Promise(r => setTimeout(r, 250 * attempt));
+        continue;
+      }
+      throw err;
+    }
+  }
 }
 function getCliArg(name) {
   const idx = process.argv.indexOf(name);
@@ -2827,15 +2845,18 @@ async function configureReportFilters({
   
   const __configureMeasure = startMeasure('configureReportFilters', { report: report.sheetName });
   
-  const reportFrame = await getReportFilterFrame(page);
-  
-  // =====================================================
-  // RESET
-  // =====================================================
-  
-  await resetSomenteCamposEditaveis(
-    reportFrame
-  );
+  let __lastConfigureError = null;
+  let attemptConfigure = 0;
+  // retry once if frame was detached / execution context destroyed
+  while (attemptConfigure < 2) {
+    let reportFrame = null;
+    try {
+      reportFrame = await withFrameRetry(async () => await getReportFilterFrame(page), { name: 'getReportFilterFrame', retries: 2 });
+
+      // =====================================================
+      // RESET
+      // =====================================================
+      await withFrameRetry(async () => await resetSomenteCamposEditaveis(reportFrame), { name: 'resetSomenteCamposEditaveis', retries: 2 }).catch(() => {});
   
   // =====================================================
   // DATAS
@@ -3399,7 +3420,32 @@ async function configureReportFilters({
   });
   try { await setReportProgress(report.sheetName, 30, { lastMessage: 'filters_finished', step: 'filters_done' }); } catch (_) {}
   
-  await stopMeasure(__configureMeasure, { phase: 'configureFilters' }).catch(() => {});
+      await stopMeasure(__configureMeasure, { phase: 'configureFilters' }).catch(() => {});
+      // success
+      __lastConfigureError = null;
+      break;
+    } catch (err) {
+      __lastConfigureError = err;
+      const msg = String(err && err.message || err);
+      // retry only for frame-related transient errors
+      if (attemptConfigure === 0 && (
+        msg.includes('Frame was detached') ||
+        msg.includes('Execution context was destroyed') ||
+        msg.includes('Target closed')
+      )) {
+        logEvent({ level: 'warn', message: 'configureReportFilters: quadro foi recriado; refazendo tentativa', detail: msg });
+        attemptConfigure++;
+        await page.waitForTimeout(1500);
+        continue;
+      }
+      // non-recoverable or second failure: rethrow
+      throw err;
+    }
+  }
+  if (__lastConfigureError) {
+    // surface the last error if we exhausted retries
+    throw __lastConfigureError;
+  }
 }
 
 function uniqueNonEmpty(values = []) {
@@ -3564,10 +3610,13 @@ async function setSelectFast(page, selector, labelOrValue) {
 async function addMultiSelectValue(page, selector, value) {
   const locator = page.locator(selector).first();
   await locator.click({ timeout: 6000 }).catch(() => {});
-  await locator.fill('').catch(() => {});
-  await locator.type(String(value), { delay: 15 }).catch(async () => {
-    await locator.fill(String(value));
-  });
+  // Não limpar o campo para preservar valores já selecionados; apenas foca e digita o novo valor
+  try { await locator.focus(); } catch (_) {}
+  try {
+    await locator.type(String(value), { delay: 15 });
+  } catch (_) {
+    try { await locator.fill(String(value)); } catch (_) {}
+  }
   await locator.press('Enter').catch(() => {});
   await locator.press('Tab').catch(() => {});
   await page.waitForTimeout(400);
@@ -5117,6 +5166,8 @@ async function selectViaModal({
       30000
     );
   }
+
+  
   
   if (!modalFrame) {
     
@@ -5168,10 +5219,9 @@ async function selectViaModal({
   // Aguarda o conteúdo do modal estar pronto
   for (const selector of searchSelectors) {
     try {
-      await modalFrame.locator(selector).first().waitFor({
-        state: 'attached',
-        timeout: 5000
-      }).catch(() => {});
+      await withFrameRetry(async () => {
+        await modalFrame.locator(selector).first().waitFor({ state: 'attached', timeout: 5000 }).catch(() => {});
+      }, { name: `waitFor:${selector}` }).catch(() => {});
     } catch (_) {}
   }
   
@@ -5198,18 +5248,20 @@ async function selectViaModal({
     const normalizedEntries = entries.map(e => String(e || '').trim().toLowerCase()).filter(Boolean);
     if (normalizedEntries.length) {
       // scroll modal to render virtualized rows before matching
-      await modalFrame.evaluate(() => {
-        const scroller = document.querySelector('.ui-table') || document.querySelector('.modal-body') || document.scrollingElement || document.documentElement;
-        if (!scroller) return;
-        const height = scroller.scrollHeight || (document.body && document.body.scrollHeight) || 0;
-        let y = 0;
-        while (y < height) {
-          scroller.scrollTop = y;
-          y += 400;
-        }
-      }).catch(() => {});
+      await withFrameRetry(async () => {
+        await modalFrame.evaluate(() => {
+          const scroller = document.querySelector('.ui-table') || document.querySelector('.modal-body') || document.scrollingElement || document.documentElement;
+          if (!scroller) return;
+          const height = scroller.scrollHeight || (document.body && document.body.scrollHeight) || 0;
+          let y = 0;
+          while (y < height) {
+            scroller.scrollTop = y;
+            y += 400;
+          }
+        }).catch(() => {});
+      }, { name: 'bulk-scroll' }).catch(() => {});
       
-      const matched = await modalFrame.evaluate((normalizedEntries) => {
+      const matched = await withFrameRetry(async () => await modalFrame.evaluate((normalizedEntries) => {
         function normalize(s) {
           try { return (s || '').normalize('NFD').replace(/\p{M}/gu, '').replace(/\s+/g, ' ').trim().toLowerCase(); } catch (e) { return (s || '').replace(/\s+/g, ' ').trim().toLowerCase(); }
         }
@@ -5237,7 +5289,7 @@ async function selectViaModal({
           }
         }
         return { found, expected: normalizedEntries.length, matched: Array.from(seen) };
-      }, normalizedEntries).catch(() => null);
+      }, normalizedEntries), { name: 'bulk-evaluate' }).catch(() => null);
       
       if (matched && matched.found >= matched.expected) {
         logEvent({ level: 'info', message: `Bulk modal selection succeeded: ${matched.matched.join(', ')}`, modalTitle });
@@ -5269,32 +5321,20 @@ async function selectViaModal({
       modalTitle,
     });
     
-    // ================================================
-    // LIMPA FILTRO ANTERIOR
-    // ================================================
-    
-    await modalInput.fill('')
-    .catch(() => {});
-    
-    // Aguarda e garante que o input foi realmente limpo
-    await page.waitForTimeout(500);
-    
-    // Verifica se foi realmente limpo
-    const inputValue = await modalInput.inputValue().catch(() => '');
-    if (inputValue && inputValue.trim()) {
-      // Se ainda tem valor, tenta novamente
-      await modalInput.evaluate((el) => {
-        el.value = '';
-        el.dispatchEvent(new Event('input', { bubbles: true }));
-      });
-      await page.waitForTimeout(300);
-    }
-    
-    // ================================================
-    // DIGITA NOVO VALOR
-    // ================================================
-    // try clicking any 'Limpar' control first to ensure previous filters are cleared
-    try {
+    // Wrap selection attempt in a frame-retry to recover from detached-frame errors
+    const _withFrameResult = await withFrameRetry(async () => {
+      // re-resolve modalInput fresh for this attempt
+      const modalInputLocal = await resolveInput(modalFrame, searchSelectors, 4).catch(() => null);
+      // LIMPA FILTRO ANTERIOR
+      if (modalInputLocal) await modalInputLocal.fill('').catch(() => {});
+      await page.waitForTimeout(500);
+      const inputValue = modalInputLocal ? await modalInputLocal.inputValue().catch(() => '') : '';
+      if (inputValue && inputValue.trim() && modalInputLocal) {
+        await modalInputLocal.evaluate((el) => { el.value = ''; el.dispatchEvent(new Event('input', { bubbles: true })); });
+        await page.waitForTimeout(300);
+      }
+
+      // DIGITA NOVO VALOR
       const clickedClear = await modalFrame.evaluate(() => {
         try {
           const nodes = Array.from(document.querySelectorAll('input,button,a'));
@@ -5306,25 +5346,12 @@ async function selectViaModal({
         return false;
       }).catch(() => false);
       if (clickedClear) logEvent({ level: 'debug', message: 'Limpar clicado antes de digitar novo valor', modalTitle });
-    } catch (_) {}
 
-    await fillLegacyInput(
-      modalInput,
-      currentValue
-    );
-    
-    await modalInput.press('Enter')
-    .catch(() => {});
+      if (modalInputLocal) await fillLegacyInput(modalInputLocal, currentValue);
+      if (modalInputLocal) await modalInputLocal.press('Enter').catch(() => {});
 
-    // Some modals use a server-side paginated search that only runs when
-    // the "Procurar" button is clicked. Click it if present to ensure
-    // the searched value appears on the first page.
-    try {
-      const prevFirst = await modalFrame.evaluate(() => {
-        try { const t = document.querySelector('tr'); return t ? t.innerText : ''; } catch (e) { return ''; }
-      }).catch(() => '');
+      const prevFirst = await modalFrame.evaluate(() => { try { const t = document.querySelector('tr'); return t ? t.innerText : ''; } catch (e) { return ''; } }).catch(() => '');
 
-      // try to click a 'procurar' control by searching common elements and matching text (case-insensitive)
       const clicked = await modalFrame.evaluate(() => {
         try {
           const nodes = Array.from(document.querySelectorAll('input,button,a'));
@@ -5343,37 +5370,11 @@ async function selectViaModal({
         }
       }
 
-      // Aguarda a tabela atualizar — ou mudança no primeiro <tr> ou presença do token
-      try {
-        await modalFrame.waitForFunction((needle, prev) => {
-          try {
-            const norm = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-            const first = document.querySelector('tr');
-            const text = first ? norm(first.innerText) : '';
-            if (!text) return false;
-            if (prev && text !== prev) return true;
-            return text.includes(needle);
-          } catch (e) { return false; }
-        }, { timeout: 10000 }, normalizedToken, prevFirst.normalize ? prevFirst.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase() : prevFirst).catch(() => {});
-      } catch (e) {}
-    } catch (e) {}
-    
-    // Aguarda reatividade do modal: procura o texto de forma normalizada usando waitForFunction
-    const normalizedToken = String(currentValue || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-    
-    try {
-      await modalFrame.waitForFunction((t) => {
-        try {
-          const norm = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-          return document.body && norm(document.body.innerText).includes(t);
-        } catch (e) { return false; }
-      }, { timeout: 10000 }, normalizedToken).catch(() => {});
-    } catch (_) {}
-    
-    // espera a tabela aparecer minimamente
-    try { await modalFrame.locator('tr').first().waitFor({ timeout: 7000 }); } catch (_) {}
-    
-    // Primeiro: busca o índice da <tr> no DOM via evaluate (um roundtrip único, rápido)
+      const normalizedToken = String(currentValue || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+      try { await modalFrame.waitForFunction((t) => { try { const norm = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); return document.body && norm(document.body.innerText).includes(t); } catch (e) { return false; } }, { timeout: 10000 }, normalizedToken).catch(() => {}); } catch (_) {}
+      try { await modalFrame.locator('tr').first().waitFor({ timeout: 7000 }); } catch (_) {}
+
+      // Primeiro: busca o índice da <tr> no DOM via evaluate (um roundtrip único, rápido)
     let cell = null;
     let cellFrame = null;
     let rowLocator = null;
@@ -5484,11 +5485,22 @@ async function selectViaModal({
       if (checkbox && (await checkbox.count().catch(() => 0))) {
         const checked = await checkbox.isChecked().catch(() => false);
         if (!checked) {
+          // attempt to check with frame-retry, re-resolving locator each attempt
           try {
-            await checkbox.check();
+            await withFrameRetry(async () => {
+              const freshChk = (rowLocator || cell).locator('input[type="checkbox"]').first();
+              if (await freshChk.count().catch(() => 0)) {
+                await freshChk.check();
+              } else {
+                throw new Error('checkbox-not-found');
+              }
+            }, { name: `check-checkbox:${currentValue}`, retries: 2 });
           } catch (_) {
             // fallback: try click forced
-            try { await checkbox.click({ force: true }); } catch (_) {
+            try {
+              const freshChk2 = (rowLocator || cell).locator('input[type="checkbox"]').first();
+              await freshChk2.click({ force: true }).catch(() => {});
+            } catch (_) {
               // último recurso: marcar via evaluate no contexto do frame (único roundtrip)
               try {
                 await (cellFrame || modalFrame).evaluate((needle) => {
@@ -5531,7 +5543,7 @@ async function selectViaModal({
           if (!confirmed) {
             await saveDebugState('checkbox-timeout').catch(() => {});
             logEvent({ level: 'warn', message: `Timeout ao selecionar valor no modal, pulando: ${currentValue}`, modalTitle });
-            continue;
+            return { skipped: true };
           }
 
           logEvent({ level: 'info', message: `Checkbox marcado: ${currentValue}`, modalTitle });
@@ -5542,7 +5554,7 @@ async function selectViaModal({
         } catch (e) {
           // em caso de erro durante a confirmação, registra e tenta continuar
           logEvent({ level: 'warn', message: `Erro ao confirmar seleção para ${currentValue}, pulando: ${String(e && e.message || e)}`, modalTitle });
-          continue;
+          return { skipped: true };
         }
       } else {
         // se não encontrou checkbox via locators, tenta fallback evaluate para marcar
@@ -5577,19 +5589,23 @@ async function selectViaModal({
           if (!confirmedFb) {
             await saveDebugState('checkbox-timeout').catch(() => {});
             logEvent({ level: 'warn', message: `Timeout ao selecionar valor no modal (fallback), pulando: ${currentValue}`, modalTitle });
-            continue;
+            return { skipped: true };
           }
           logEvent({ level: 'info', message: `Checkbox marcado via fallback evaluate: ${currentValue}`, modalTitle });
         } catch (e) {
           logEvent({ level: 'warn', message: `Erro ao confirmar seleção via fallback para ${currentValue}, pulando: ${String(e && e.message || e)}`, modalTitle });
-          continue;
+          return { skipped: true };
         }
       }
+    
     } catch (err) {
       await saveDebugState('checkbox-error');
       logEvent({ level: 'error', message: `Erro ao manipular checkbox para ${currentValue}: ${err.message}` });
       throw err;
     }
+    }, { name: `selectViaModal:${currentValue}`, retries: 2 });
+
+    if (_withFrameResult && _withFrameResult.skipped) continue;
     
     saveShot(page, `checkbox-${sanitizeFileName(currentValue)}`).catch(() => {});
     await page.waitForTimeout(200);
@@ -5666,6 +5682,7 @@ async function selectViaModalByGrid({
 }) {
   const entries = uniqueNonEmpty(values || [value]);
   if (!entries.length) return;
+  const MODAL_SELECT_TIMEOUT_MS = Number(process.env.MODAL_SELECT_TIMEOUT_MS || 10000);
   
   const modalDefinition = getModalSelectionDefinition(modalTitle);
   const searchSelectors = uniqueNonEmpty([
@@ -5795,7 +5812,7 @@ async function selectViaModalByGrid({
   }
   
   for (const currentValue of entries) {
-    logEvent({ level: 'info', message: `Selecionando no modal: ${currentValue}`, modalTitle });
+    logEvent({ level: 'info', message: `Entry start: selecionando no modal: ${currentValue}`, modalTitle });
     
     await modalInput.fill('').catch(() => {});
     await page.waitForTimeout(300);
@@ -5824,6 +5841,8 @@ async function selectViaModalByGrid({
     // } catch (_) {}
 
     await fillLegacyInput(modalInput, currentValue);
+    // garante foco após preencher
+    try { await modalInput.focus(); } catch (_) {}
     await modalInput.press('Enter').catch(() => {});
     // Click 'Procurar' inside the modal to trigger paginated/server search
     try {
@@ -5865,23 +5884,58 @@ async function selectViaModalByGrid({
     
     let rowLocator;
     try {
-      rowLocator = await findSelectionRow(modalFrame, currentValue, modalDefinition.rowValueSelectors, 25000);
+      rowLocator = await withFrameRetry(async () => await findSelectionRow(modalFrame, currentValue, modalDefinition.rowValueSelectors, 25000), { name: 'findSelectionRow', retries: 2 });
     } catch (err) {
       await saveDebugState('row-not-found').catch(() => {});
       logEvent({ level: 'warn', message: `Linha não encontrada no modal, pulando: ${currentValue}`, detail: String(err && err.message || err), modalTitle });
-      // não interrompe a geração do relatório — pula para o próximo valor
       continue;
     }
     
     try {
-      // tenta marcar e aguarda até 10s por confirmação
-      const selPromise = ensureCheckboxChecked(rowLocator, modalDefinition.rowCheckboxSelector);
-      const selOk = await Promise.race([selPromise, new Promise(res => setTimeout(() => res(false), 10000))]);
+      // tenta marcar e aguarda até MODAL_SELECT_TIMEOUT_MS por confirmação
+      const selPromise = async () => await ensureCheckboxChecked(rowLocator, modalDefinition.rowCheckboxSelector);
+      const selOk = await Promise.race([withFrameRetry(selPromise, { name: `ensureCheckboxChecked:${currentValue}`, retries: 2 }), new Promise(res => setTimeout(() => res(false), MODAL_SELECT_TIMEOUT_MS))]);
       if (!selOk) {
+        // tentativa de retry: tenta reabrir modal (fecha e reabre) uma vez
         await saveDebugState('checkbox-timeout').catch(() => {});
-        logEvent({ level: 'warn', message: `Timeout ao selecionar valor no modal, pulando: ${currentValue}`, modalTitle });
-        // não lançar erro — apenas pula para o próximo valor
-        continue;
+        logEvent({ level: 'warn', message: `Timeout ao selecionar valor no modal, tentando retry: ${currentValue}`, modalTitle });
+        try {
+          // tenta fechar modal se possível
+          try { await modalFrame.locator('#pbFechar, input[id*="pbFechar"]').first().click({ force: true }); } catch (_) {}
+          await page.waitForTimeout(400);
+          // reabrir
+          await trigger.click({ force: true }).catch(() => {});
+          modalFrame = await findSelectionModalFrame(page, modalTitle, 15000).catch(() => null);
+          if (!modalFrame) modalFrame = await findModalFrame(page, modalTitle, 15000).catch(() => null);
+          if (modalFrame) {
+            // recria o input e rowLocator para tentar novamente
+            const newModalInput = await findVisibleInput(modalFrame, searchSelectors).catch(() => null);
+            if (newModalInput) {
+              await fillLegacyInput(newModalInput, currentValue);
+              try { await newModalInput.focus(); } catch (_) {}
+            }
+            try {
+              rowLocator = await findSelectionRow(modalFrame, currentValue, modalDefinition.rowValueSelectors, 25000);
+              const selPromise2 = ensureCheckboxChecked(rowLocator, modalDefinition.rowCheckboxSelector);
+              const selOk2 = await Promise.race([selPromise2, new Promise(res => setTimeout(() => res(false), MODAL_SELECT_TIMEOUT_MS))]);
+              if (!selOk2) {
+                await saveDebugState('checkbox-timeout-retry').catch(() => {});
+                logEvent({ level: 'warn', message: `Retry falhou, pulando: ${currentValue}`, modalTitle });
+                continue;
+              }
+            } catch (e) {
+              await saveDebugState('checkbox-timeout-retry-error').catch(() => {});
+              logEvent({ level: 'warn', message: `Erro no retry para ${currentValue}: ${String(e && e.message || e)}`, modalTitle });
+              continue;
+            }
+          } else {
+            logEvent({ level: 'warn', message: `Não foi possível reabrir modal para retry, pulando: ${currentValue}`, modalTitle });
+            continue;
+          }
+        } catch (e) {
+          logEvent({ level: 'warn', message: `Erro durante retry para ${currentValue}: ${String(e && e.message || e)}`, modalTitle });
+          continue;
+        }
       }
       logEvent({ level: 'info', message: `Checkbox marcado: ${currentValue}`, modalTitle });
     } catch (err) {
@@ -7889,6 +7943,23 @@ async function closeLegacyPopups(page) {
       await ensureDir(REPORT_OUTPUT_DIR);
       const browser = await chromium.launch({ headless: HEADLESS });
       const context = await browser.newContext(fs.existsSync(STATE_PATH) ? { storageState: STATE_PATH } : {});
+      if (BLOCK_RESOURCES) {
+        try {
+          // Abort images and fonts to reduce chance of resource failures and frame reloads
+          await context.route('**/*', (route) => {
+            try {
+              const req = route.request();
+              const type = req.resourceType();
+              if (type === 'image' || type === 'font') {
+                return route.abort();
+              }
+            } catch (e) {}
+            try { return route.continue(); } catch (e) { try { route.abort(); } catch (_) {} }
+          });
+        } catch (e) {
+          logEvent({ level: 'warn', message: `Não foi possível ativar bloqueio de recursos: ${e.message}` });
+        }
+      }
       const page = await context.newPage();
       page.setDefaultTimeout(120000);
       page.setDefaultNavigationTimeout(120000);

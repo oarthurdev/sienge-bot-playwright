@@ -1,0 +1,136 @@
+{
+  "cookies": [
+    {
+      "name": "JSESSIONID",
+      "value": "gNq15X46fM2cvNU0q2k5yf4r1vZaW3Qam_gI4ClP.43-sienge-maya-app-cp-107",
+      "domain": "laurentino.sienge.com.br",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "MVNBF3W3pfUQa7XvMVyUFlph8Q",
+      "value": "89c7604f351ba83d0444bc3e03905a11e7b802d17ebaf6bffbb9a1b8441dc32e--8eceaadf-e4e3-40bb-ad7d-9f7dfeb6e5ef--2026-06-23",
+      "domain": ".sienge.com.br",
+      "path": "/",
+      "expires": 1816734134.085289,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "X-AUDIT_LOGIN-ID",
+      "value": "adb394f4-837a-49c4-b108-61614edf7574",
+      "domain": "login.sienge.com.br",
+      "path": "/",
+      "expires": 1783383736.319665,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "__cf_bm",
+      "value": "USJ3g1TK9J7TXt9HZiGVZzJbr7jDNWo5.FBT63Y78Xw-1782174137.7984886-1.0.1.1-_OV2qcAyjkcsnO.ZEFpNbddofN4aUPx0OViVRDcCmzHfMhFbdlXJBlR2RwmlgALnx9jnDVemlSS17wCdY7EvQEjiVpykPytGdmTm.tUqdQX6jwF3Sse1VUIdWLcUpUXq",
+      "domain": ".sienge.com.br",
+      "path": "/",
+      "expires": 1782175937.802566,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "SESSION",
+      "value": "YTIwY2JiMTYtZDNhMC00YzMyLTkxYzAtYWYzNWI4ZjNlYWIx",
+      "domain": "login.sienge.com.br",
+      "path": "/",
+      "expires": 1783383742.773192,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "mp_3b0398edc8eaee107948aec46f3bafd4_mixpanel",
+      "value": "%7B%22distinct_id%22%3A%20%22common%22%2C%22%24device_id%22%3A%20%2219ef1db3d547f1-0b2823d463ba6-397c0c7a-e1000-19ef1db3d557f1%22%2C%22%24initial_referrer%22%3A%20%22https%3A%2F%2Flaurentino.sienge.com.br%2F%22%2C%22%24initial_referring_domain%22%3A%20%22laurentino.sienge.com.br%22%2C%22__mps%22%3A%20%7B%7D%2C%22__mpso%22%3A%20%7B%7D%2C%22__mpus%22%3A%20%7B%7D%2C%22__mpa%22%3A%20%7B%7D%2C%22__mpu%22%3A%20%7B%7D%2C%22__mpr%22%3A%20%5B%5D%2C%22__mpap%22%3A%20%5B%5D%2C%22%24user_id%22%3A%20%22common%22%7D",
+      "domain": ".sienge.com.br",
+      "path": "/",
+      "expires": 1813710144,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "skinCss",
+      "value": "softblue",
+      "domain": "laurentino.sienge.com.br",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "mp_12f07d7d76c676668dd9faed4ba8c58a_mixpanel",
+      "value": "%7B%22distinct_id%22%3A%22LAURENTINO%20CONSTRUTORA%20E%20INCORPORADORA%20LTDA%7CAutoma%C3%A7%C3%A3o%20-%20Autorizar%20Parcela%20Automaticamente%22%2C%22%24device_id%22%3A%22925be650-92c9-43a5-b48f-f7e739318205%22%2C%22%24initial_referrer%22%3A%22https%3A%2F%2Flaurentino.sienge.com.br%2Fsienge%2F%22%2C%22%24initial_referring_domain%22%3A%22laurentino.sienge.com.br%22%2C%22__mps%22%3A%7B%7D%2C%22__mpso%22%3A%7B%7D%2C%22__mpus%22%3A%7B%7D%2C%22__mpa%22%3A%7B%7D%2C%22__mpu%22%3A%7B%7D%2C%22__mpr%22%3A%5B%5D%2C%22__mpap%22%3A%5B%5D%2C%22%24user_id%22%3A%22LAURENTINO%20CONSTRUTORA%20E%20INCORPORADORA%20LTDA%7CAutoma%C3%A7%C3%A3o%20-%20Autorizar%20Parcela%20Automaticamente%22%2C%22client%22%3A%5B%227453%22%5D%7D",
+      "domain": ".sienge.com.br",
+      "path": "/",
+      "expires": 1813710157,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "Lax"
+    }
+  ],
+  "origins": [
+    {
+      "origin": "https://laurentino.sienge.com.br",
+      "localStorage": [
+        {
+          "name": "__mpq_12f07d7d76c676668dd9faed4ba8c58a_ev",
+          "value": "[]"
+        },
+        {
+          "name": "sienge-information-tooltip",
+          "value": "{\"data\":[{\"id\":\"ajudaContextual\",\"disabledUntil\":\"indeterminate\"}]}"
+        },
+        {
+          "name": "sienge-recently-accessed",
+          "value": "[{\"href\":\"/common/page/1777\",\"path\":\"Financeiro / Contas a Pagar / Autorização de Pagamento / Autorização de Pagamento\",\"action_code\":\"1777\",\"favorite_name\":\"Autorização de Pagamento\",\"moduleInitials\":\"FIN\"}]"
+        },
+        {
+          "name": "__mpq_12f07d7d76c676668dd9faed4ba8c58a_gr",
+          "value": "[]"
+        },
+        {
+          "name": "sienge-feedback-widget-passive-data",
+          "value": "{\"passiveData\":[{\"pathname\":\"/\",\"clickCount\":1}]}"
+        },
+        {
+          "name": "__mpq_12f07d7d76c676668dd9faed4ba8c58a_pp",
+          "value": "[]"
+        },
+        {
+          "name": "sienge-sidebar-data",
+          "value": "{\"selectedSubModule\":{\"expandedNodes\":[],\"data\":null},\"open\":false,\"viewMode\":null,\"selectedModule\":{\"expandedNodes\":[]},\"modulesOrder\":{\"fixed\":[\"ENG\",\"SUP\",\"FIN\",\"NFE\",\"CTB\",\"COM\",\"GER\"],\"unfixed\":[\"ADM\",\"SGQ\",\"GAT\",\"PRT\",\"MOB\",\"SEG\",\"CAD\"]}}"
+        }
+      ]
+    },
+    {
+      "origin": "https://login.sienge.com.br",
+      "localStorage": [
+        {
+          "name": "__mpq_3b0398edc8eaee107948aec46f3bafd4_ev",
+          "value": "[]"
+        },
+        {
+          "name": "remembered-logins",
+          "value": "[{\"email\":\"oarthurdev@gmail.com\"}]"
+        },
+        {
+          "name": "__mpq_3b0398edc8eaee107948aec46f3bafd4_pp",
+          "value": "[{\"id\":\"9njufz2f8aqlnegb\",\"flushAfter\":1782174153340,\"payload\":{\"$set_once\":{\"$initial_referrer\":\"https://laurentino.sienge.com.br/\",\"$initial_referring_domain\":\"laurentino.sienge.com.br\"},\"$token\":\"3b0398edc8eaee107948aec46f3bafd4\",\"$distinct_id\":\"common\",\"$device_id\":\"19ef1db3d547f1-0b2823d463ba6-397c0c7a-e1000-19ef1db3d557f1\",\"$user_id\":\"common\"}},{\"id\":\"un9qfjumperym20k\",\"flushAfter\":1782174154342,\"payload\":{\"$set_once\":{\"$initial_referrer\":\"https://laurentino.sienge.com.br/\",\"$initial_referring_domain\":\"laurentino.sienge.com.br\"},\"$token\":\"3b0398edc8eaee107948aec46f3bafd4\",\"$distinct_id\":\"common\",\"$device_id\":\"19ef1db3d547f1-0b2823d463ba6-397c0c7a-e1000-19ef1db3d557f1\",\"$user_id\":\"common\"}}]"
+        }
+      ]
+    }
+  ]
+}
