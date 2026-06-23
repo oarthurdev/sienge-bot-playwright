@@ -65,7 +65,7 @@
       "value": "%7B%22distinct_id%22%3A%22LAURENTINO%20CONSTRUTORA%20E%20INCORPORADORA%20LTDA%7CAutoma%C3%A7%C3%A3o%20-%20Autorizar%20Parcela%20Automaticamente%22%2C%22%24device_id%22%3A%2268e52ee9-a6b7-4dbc-9af1-ce674bcc794e%22%2C%22%24initial_referrer%22%3A%22https%3A%2F%2Flaurentino.sienge.com.br%2Fsienge%2F%22%2C%22%24initial_referring_domain%22%3A%22laurentino.sienge.com.br%22%2C%22__mps%22%3A%7B%7D%2C%22__mpso%22%3A%7B%7D%2C%22__mpus%22%3A%7B%7D%2C%22__mpa%22%3A%7B%7D%2C%22__mpu%22%3A%7B%7D%2C%22__mpr%22%3A%5B%5D%2C%22__mpap%22%3A%5B%5D%2C%22%24user_id%22%3A%22LAURENTINO%20CONSTRUTORA%20E%20INCORPORADORA%20LTDA%7CAutoma%C3%A7%C3%A3o%20-%20Autorizar%20Parcela%20Automaticamente%22%2C%22client%22%3A%5B%227453%22%5D%7D",
       "domain": ".sienge.com.br",
       "path": "/",
-      "expires": 1813758128,
+      "expires": 1813761848,
       "httpOnly": false,
       "secure": true,
       "sameSite": "Lax"

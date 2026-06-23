@@ -21,10 +21,31 @@ const SCREENSHOT_DIR = process.env.SCREENSHOT_DIR || path.resolve(process.cwd(),
 const LOG_PATH = process.env.LOG_PATH || path.resolve(process.cwd(), `solo_sienge-authorize-log-${INSTANCE_ID}.json`);
 const DEBUG_HTML = (process.env.DEBUG_HTML ?? 'false').toLowerCase() === 'true';
 const BLOCK_RESOURCES = (process.env.BLOCK_RESOURCES ?? 'true').toLowerCase() !== 'false';
+const REPORT_OUTPUT_DIR = process.env.REPORT_OUTPUT_DIR || path.resolve(process.cwd(), 'reports');
 const TASK_MODE = (process.env.TASK_MODE || 'authorize').toLowerCase();
+const TARGET_PAGE_URL = `${BASE_URL}/sienge/8/index.html#/common/page/1777`;
+const REPORT_FILTER_PAGE_URL = `${BASE_URL}/sienge/8/index.html#/common/page/4929`;
 const SAVE_SHOTS = (process.env.SAVE_SHOTS ?? 'false').toLowerCase() === 'true' || DEBUG_HTML;
 const MODAL_CACHE_PATH = process.env.MODAL_CACHE_PATH || path.resolve(process.cwd(), `.modal-cache-${INSTANCE_ID}.json`);
+
+const TARGET_END_DATE = '31/12/2040';
+const REPORT_PERIOD_START = '01/04/2026';
+const REPORT_PERIOD_END = '30/04/2026';
+
+
+const STATE_REVALIDATE_TIMEOUT_MS = Number(process.env.STATE_REVALIDATE_TIMEOUT_MS || 15000);
+const STATE_REVALIDATE_POLL_MS = Number(process.env.STATE_REVALIDATE_POLL_MS || 2000);
+
+const SINGLE_REPORT_ARG = (process.env.SINGLE_REPORT || getCliArg('--single') || getCliArg('-s')) || null;
+
 let MODAL_CACHE = {};
+
+function getCliArg(name) {
+  const idx = process.argv.indexOf(name);
+  if (idx >= 0 && process.argv.length > idx + 1) return process.argv[idx + 1];
+  return null;
+}
+
 // Simple in-process semaphore to serialize modal interactions and avoid
 // concurrent modals stepping on each other when multiple reports run
 // in the same Node process.
@@ -80,26 +101,32 @@ async function withFrameRetry(actionFn, { retries = 2, name = 'action' } = {}) {
       throw err;
     }
   }
-}
-function getCliArg(name) {
-  const idx = process.argv.indexOf(name);
-  if (idx >= 0 && process.argv.length > idx + 1) return process.argv[idx + 1];
-  return null;
-}
-
-const SINGLE_REPORT_ARG = (process.env.SINGLE_REPORT || getCliArg('--single') || getCliArg('-s')) || null;
-const REPORT_OUTPUT_DIR = process.env.REPORT_OUTPUT_DIR || path.resolve(process.cwd(), 'reports');
-const TARGET_PAGE_URL = `${BASE_URL}/sienge/8/index.html#/common/page/1777`;
-const REPORT_FILTER_PAGE_URL = `${BASE_URL}/sienge/8/index.html#/common/page/4929`;
-const TARGET_END_DATE = '31/12/2040';
-const REPORT_PERIOD_START = '01/04/2026';
-const REPORT_PERIOD_END = '30/04/2026';
-const STATE_REVALIDATE_TIMEOUT_MS = Number(process.env.STATE_REVALIDATE_TIMEOUT_MS || 15000);
-const STATE_REVALIDATE_POLL_MS = Number(process.env.STATE_REVALIDATE_POLL_MS || 2000);
-
-if (!BASE_URL) {
-  console.error('Falta variável: SIENGE_BASE_URL');
-  process.exit(1);
+        // Optional: post-modal cleanup of SelectedEntitiesList can interfere with app behavior
+        // Enable explicitly via env var ENABLE_POST_MODAL_CLEANUP=1 when needed.
+        try {
+          if (process.env.ENABLE_POST_MODAL_CLEANUP === '1') {
+            try {
+              const iframeLocator2 = page.locator('iframe#iFramePage');
+              const mainFrame2 = await iframeLocator2.contentFrame().catch(() => null);
+              if (mainFrame2) {
+                await mainFrame2.evaluate(() => {
+                  try {
+                    Array.from(document.querySelectorAll('[id$="SelectedEntitiesList"], [class*="SelectedEntitiesList"]')).forEach(el => {
+                      if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') el.value = '';
+                      else el.innerHTML = '';
+                    });
+                    Array.from(document.querySelectorAll('[id*="contador"], [name*="contador"]')).forEach(el => {
+                      if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') el.value = '0';
+                      else el.textContent = '0';
+                    });
+                  } catch (e) {}
+                }).catch(() => {});
+              }
+            } catch (_) {}
+          } else {
+            logEvent({ level: 'debug', message: 'Skipping post-modal cleanup (ENABLE_POST_MODAL_CLEANUP!=1)', modalTitle });
+          }
+        } catch (_) {}
 }
 
 function nowIso() { return new Date().toISOString(); }
@@ -1320,7 +1347,7 @@ const REPORT_DEFINITIONS = [
   {
     sheetName: 'Empréstimo',
     pdfName: 'Empréstimo',
-    planoFinanceiro: ['Receita de Empréstimos'],
+    planoFinanceiro: ['Receita de Empréstimos', 'Receita de Incorporação de Imóveis'],
     
     contasCorrente: [
       "Viacredi Laurentino",
@@ -5065,13 +5092,66 @@ async function selectViaModal({
         
         try { await setReportProgress(reportName, 20, { lastMessage: 'bulk_selected', step: 'modal_bulk' }); } catch (_) {}
         
+        // Antes de finalizar, captura lista de rows marcadas no modal para diagnóstico
+        try {
+          const modalChecked = await modalFrame.evaluate(() => Array.from(document.querySelectorAll('tr')).filter(r => { try { const cb = r.querySelector('input[type="checkbox"]'); return !!(cb && cb.checked); } catch(e){return false;} }).map(r => r.innerText.trim()).slice(0,200)).catch(() => []);
+          logEvent({ level: 'info', message: `Modal checked rows (pre-select): ${modalChecked.length}`, detail: modalChecked.slice(0,10), modalTitle });
+        } catch (_) {}
+
         // Clica no botão selecionar e finaliza o modal
         const { locator: selecionarBtn } = await findVisibleLocatorInFrames(page, '#pbSelecionar');
         await selecionarBtn.click({ force: true });
-        await page.waitForTimeout(200);
-        
+        await page.waitForTimeout(300);
+
+        // Após fechar modal, tenta ler o input próximo ao trigger no mainFrame e quaisquer listas SelectedEntitiesList
+        try {
+          const iframeLocator2 = page.locator('iframe#iFramePage');
+          const mainFrame2 = await iframeLocator2.contentFrame().catch(() => null);
+          if (mainFrame2) {
+            // tenta extrair input visível associado ao triggerSelector
+            try {
+              const nearValue = await mainFrame2.locator(`${triggerSelector}`).evaluate((el) => {
+                try {
+                  // procura input text mais próximo subindo/descendo na arvore
+                  function findNearInput(node) {
+                    if (!node) return null;
+                    if (node.tagName && node.tagName.toLowerCase() === 'input') return node;
+                    for (const child of Array.from(node.childNodes || [])) {
+                      if (child.tagName && child.tagName.toLowerCase() === 'input') return child;
+                    }
+                    return null;
+                  }
+                  let parent = el.parentElement;
+                  while (parent) {
+                    const inp = findNearInput(parent);
+                    if (inp) return (inp.value || inp.innerText || '').toString();
+                    parent = parent.parentElement;
+                  }
+                  return null;
+                } catch (e) { return null; }
+              }).catch(() => null);
+              logEvent({ level: 'info', message: `Main input near trigger after select: ${String(nearValue).slice(0,200)}`, modalTitle });
+            } catch (e) {}
+
+            try {
+              const selectedLists = await mainFrame2.evaluate(() => {
+                try {
+                  const out = [];
+                  Array.from(document.querySelectorAll('[id$="SelectedEntitiesList"], [class*="SelectedEntitiesList"]')).forEach(el => {
+                    if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') out.push(el.value || '');
+                    else out.push(el.innerText || '');
+                  });
+                  return out;
+                } catch (e) { return []; }
+              }).catch(() => []);
+              logEvent({ level: 'info', message: `Main SelectedEntitiesList after select: ${selectedLists.length}`, detail: selectedLists.slice(0,10), modalTitle });
+            } catch (e) {}
+          }
+        } catch (_) {}
+
         logEvent({ level: 'info', message: `Modal finalizado (bulk): ${entries.join(', ')}`, modalTitle });
         try { await setReportProgress(reportName, 25, { lastMessage: 'modal_finished', step: 'modal_done' }); } catch (_) {}
+        try { await saveShot(page, `modal-selected-${sanitizeFileName(modalTitle)}`); } catch (_) {}
         return;
       }
     }
@@ -5106,6 +5186,32 @@ async function selectViaModal({
         }
 
         // perform the selection using existing robust logic
+        // Try quick DOM-only selection first to avoid triggering searches that may re-render
+        // and clear previously checked items. If quick selection succeeds, skip typing.
+        const normalizedToken = String(currentValue || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+        const quickMarked = await modalFrame.evaluate((needle) => {
+          try {
+            const norm = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+            for (const r of document.querySelectorAll('tr')) {
+              if (norm(r.innerText || '') === needle) {
+                const cb = r.querySelector('input[type="checkbox"]');
+                if (cb && !cb.checked) {
+                  try { cb.click(); } catch (e) { try { cb.checked = true; } catch(_){} }
+                  try { cb.dispatchEvent(new Event('change', { bubbles: true })); } catch(_){}
+                }
+                return !!(cb && cb.checked);
+              }
+            }
+          } catch (e) {}
+          return false;
+        }, normalizedToken).catch(() => false);
+
+        if (quickMarked) {
+          logEvent({ level: 'info', message: `Checkbox marcado (quick DOM): ${currentValue}`, modalTitle });
+          _selSuccess = true;
+          break;
+        }
+
         _withFrameResult = await withFrameRetry(async () => {
       // re-resolve modalInput fresh for this attempt
       const modalInputLocal = await resolveInput(modalFrame, searchSelectors, 4).catch(() => null);
@@ -5119,17 +5225,18 @@ async function selectViaModal({
       }
 
       // DIGITA NOVO VALOR
+      // Detect presence of any 'Limpar' control but DO NOT click it (clicking clears existing selections)
       const clickedClear = await modalFrame.evaluate(() => {
         try {
           const nodes = Array.from(document.querySelectorAll('input,button,a'));
           for (const n of nodes) {
             const txt = ((n.value || '') + ' ' + (n.innerText || '')).trim();
-            if (/^\s*limpar\b/i.test(txt)) { try { n.click(); } catch(e){ try{ n.dispatchEvent(new MouseEvent('click',{bubbles:true})); }catch(_){} } return true; }
+            if (/^\s*limpar\b/i.test(txt)) { return true; }
           }
         } catch (e) {}
         return false;
       }).catch(() => false);
-      if (clickedClear) logEvent({ level: 'debug', message: 'Limpar clicado antes de digitar novo valor', modalTitle });
+      if (clickedClear) logEvent({ level: 'debug', message: 'Limpar encontrado (não clicado) antes de digitar novo valor', modalTitle });
 
       if (modalInputLocal) await fillLegacyInput(modalInputLocal, currentValue);
       if (modalInputLocal) await modalInputLocal.press('Enter').catch(() => {});
@@ -5413,10 +5520,8 @@ async function selectViaModal({
     // ================================================
     // LIMPA FILTRO PARA PRÓXIMA SELEÇÃO
     // ================================================
-    try {
-      await modalInput.fill('');
-      await page.waitForTimeout(300);
-    } catch (_) {}
+    // don't clear the modal input here; clearing can reset previous selections in some modals
+    try { await page.waitForTimeout(300); } catch (_) {}
   }
   
   // =====================================================
@@ -5424,15 +5529,59 @@ async function selectViaModal({
   // =====================================================
   
   const { locator: selecionarBtn } = await findVisibleLocatorInFrames( page, '#pbSelecionar' ); 
+  // Antes de clicar em Selecionar, captura linhas marcadas no modal
+  try {
+    const modalChecked = await modalFrame.evaluate(() => Array.from(document.querySelectorAll('tr')).filter(r => { try { const cb = r.querySelector('input[type="checkbox"]'); return !!(cb && cb.checked); } catch(e){return false;} }).map(r => r.innerText.trim()).slice(0,200)).catch(() => []);
+    logEvent({ level: 'info', message: `Modal checked rows (pre-select): ${modalChecked.length}`, detail: modalChecked.slice(0,10), modalTitle });
+  } catch (_) {}
+
   await selecionarBtn.click({ force: true, });
-  
-  await page.waitForTimeout(
-    2000
-  );
-  
-  await page.waitForTimeout(
-    2000
-  );
+
+  await page.waitForTimeout(300);
+
+  // Após fechar modal, tenta ler o input próximo ao trigger no mainFrame e quaisquer listas SelectedEntitiesList
+  try {
+    const iframeLocator2 = page.locator('iframe#iFramePage');
+    const mainFrame2 = await iframeLocator2.contentFrame().catch(() => null);
+    if (mainFrame2) {
+      try {
+        const nearValue = await mainFrame2.locator(`${triggerSelector}`).evaluate((el) => {
+          try {
+            function findNearInput(node) {
+              if (!node) return null;
+              if (node.tagName && node.tagName.toLowerCase() === 'input') return node;
+              for (const child of Array.from(node.childNodes || [])) {
+                if (child.tagName && child.tagName.toLowerCase() === 'input') return child;
+              }
+              return null;
+            }
+            let parent = el.parentElement;
+            while (parent) {
+              const inp = findNearInput(parent);
+              if (inp) return (inp.value || inp.innerText || '').toString();
+              parent = parent.parentElement;
+            }
+            return null;
+          } catch (e) { return null; }
+        }).catch(() => null);
+        logEvent({ level: 'info', message: `Main input near trigger after select: ${String(nearValue).slice(0,200)}`, modalTitle });
+      } catch (e) {}
+
+      try {
+        const selectedLists = await mainFrame2.evaluate(() => {
+          try {
+            const out = [];
+            Array.from(document.querySelectorAll('[id$="SelectedEntitiesList"], [class*="SelectedEntitiesList"]')).forEach(el => {
+              if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') out.push(el.value || '');
+              else out.push(el.innerText || '');
+            });
+            return out;
+          } catch (e) { return []; }
+        }).catch(() => []);
+        logEvent({ level: 'info', message: `Main SelectedEntitiesList after select: ${selectedLists.length}`, detail: selectedLists.slice(0,10), modalTitle });
+      } catch (e) {}
+    }
+  } catch (_) {}
   
   logEvent({
     level: 'info',
@@ -5441,6 +5590,7 @@ async function selectViaModal({
     modalTitle,
   });
   try { await setReportProgress(reportName, 25, { lastMessage: 'modal_finished', step: 'modal_done' }); } catch (_) {}
+  try { await saveShot(page, `modal-selected-${sanitizeFileName(modalTitle)}`); } catch (_) {}
 
   // =====================================================
   // MITIGAÇÃO DEFENSIVA: limpar possíveis estados remanescentes após fechar modal
@@ -5450,24 +5600,30 @@ async function selectViaModal({
     MODAL_CACHE = {};
     try { await saveModalCache(); } catch (_) {}
   } catch (_) {}
-
+  // Optional: post-modal cleanup of SelectedEntitiesList can interfere with app behavior
+  // Enable explicitly via env var ENABLE_POST_MODAL_CLEANUP=1 when needed.
   try {
-    // tenta limpar contadores/listas no frame principal para evitar vazamento entre relatórios
-    const iframeLocator2 = page.locator('iframe#iFramePage');
-    const mainFrame2 = await iframeLocator2.contentFrame().catch(() => null);
-    if (mainFrame2) {
-      await mainFrame2.evaluate(() => {
-        try {
-          Array.from(document.querySelectorAll('[id$="SelectedEntitiesList"], [class*="SelectedEntitiesList"]')).forEach(el => {
-            if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') el.value = '';
-            else el.innerHTML = '';
-          });
-          Array.from(document.querySelectorAll('[id*="contador"], [name*="contador"]')).forEach(el => {
-            if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') el.value = '0';
-            else el.textContent = '0';
-          });
-        } catch (e) {}
-      }).catch(() => {});
+    if (process.env.ENABLE_POST_MODAL_CLEANUP === '1') {
+      try {
+        const iframeLocator2 = page.locator('iframe#iFramePage');
+        const mainFrame2 = await iframeLocator2.contentFrame().catch(() => null);
+        if (mainFrame2) {
+          await mainFrame2.evaluate(() => {
+            try {
+              Array.from(document.querySelectorAll('[id$="SelectedEntitiesList"], [class*="SelectedEntitiesList"]')).forEach(el => {
+                if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') el.value = '';
+                else el.innerHTML = '';
+              });
+              Array.from(document.querySelectorAll('[id*="contador"], [name*="contador"]')).forEach(el => {
+                if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') el.value = '0';
+                else el.textContent = '0';
+              });
+            } catch (e) {}
+          }).catch(() => {});
+        }
+      } catch (_) {}
+    } else {
+      logEvent({ level: 'debug', message: 'Skipping post-modal cleanup (ENABLE_POST_MODAL_CLEANUP!=1)', modalTitle });
     }
   } catch (_) {}
 }
@@ -5635,6 +5791,33 @@ async function selectViaModalByGrid({
           throw new Error('input-not-found');
         }
 
+        // Try quick DOM-only selection first to avoid triggering searches that may re-render
+        // and clear previously checked items. If quick selection succeeds, skip typing.
+        let qnorm;
+        try { qnorm = String(currentValue || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); } catch (e) { qnorm = String(currentValue || '').toLowerCase(); }
+        const quickMarked = await modalFrame.evaluate((needle) => {
+          try {
+            const norm = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+            for (const r of document.querySelectorAll('tr')) {
+              if (norm(r.innerText || '') === needle) {
+                const cb = r.querySelector('input[type="checkbox"]');
+                if (cb && !cb.checked) {
+                  try { cb.click(); } catch (e) { try { cb.checked = true; } catch(_){} }
+                  try { cb.dispatchEvent(new Event('change', { bubbles: true })); } catch(_){}
+                }
+                return !!(cb && cb.checked);
+              }
+            }
+          } catch (e) {}
+          return false;
+        }, qnorm).catch(() => false);
+
+        if (quickMarked) {
+          logEvent({ level: 'info', message: `Entry quick-mark succeeded: ${currentValue}`, modalTitle });
+          succeeded = true;
+          break;
+        }
+
         // limpa e digita
         await modalInputLocal.fill('').catch(() => {});
         await page.waitForTimeout(300);
@@ -5751,7 +5934,8 @@ async function selectViaModalByGrid({
 
     saveShot(page, `checkbox-${sanitizeFileName(currentValue)}`).catch(() => {});
     await page.waitForTimeout(700);
-    try { await modalInput.fill('').catch(() => {}); } catch (_) {}
+    // don't clear the modal input here; clearing can reset previous selections in some modals
+    // keep input as-is and move to next iteration which will set new value explicitly
     await page.waitForTimeout(200);
   }
   
@@ -5766,6 +5950,7 @@ async function selectViaModalByGrid({
     message: `Modal finalizado: ${entries.join(', ')}`,
     modalTitle,
   });
+  try { await saveShot(page, `modal-selected-${sanitizeFileName(modalTitle)}`); } catch (_) {}
   } finally {
     if (typeof _modalLockHeld !== 'undefined' && _modalLockHeld) {
       try { releaseModalLock(); } catch (_) {}
