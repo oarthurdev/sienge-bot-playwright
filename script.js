@@ -131,7 +131,7 @@ const REPORT_DEFINITIONS = [
     sheetName: 'Receita Parcelas Mensal',
     pdfName: 'Receita Parcelas Mensal',
     planoFinanceiro: ['Receita de Incorporação de Imóveis', 'Receita de Bens/Imóveis Adquiridos de Terceiros', 'Descontos Concedidos (Unidades Imobiliárias)', 'xxxxxReceita de Aluguel (Locação)', 'Permuta Externa', 'Receita de Cliente Desconhecido', 'Receita de Administração (Taxa Administrativa)', 'Receita Empreitada Só Mão de Obra', 'Receita de Projeto', 'Receita de Locação (Aluguel)', 'Entrada de Financiamento para Construção', 'Entrada de Capital de Giro', 'Receita de Aplicações Financeiras', 'Receita de Empréstimos', 'Aporte Capital de Sócio', 'Descontos Obtidos', 'Receita de Venda de Imobilizado', 'Receita Aluguel PCS 35', 'Estoque de Material', 'Receita Energia Solar Locatários', 'Venda de Passivos', '(-) Anulação de Custos', '(-) Anulação de Custos Mão de Obra', '(-) Retenção Caução/Sinal', '(-) Retenção de INSS', '(-) Retenção de ISS', '(-) Retenção de PIS', '(-) Retenção de CSLL', '(-) Retenção de COFINS', '(-) Retenção de IR', '(-) Retenção (PIS/COFINS/CSLL -  4,65%)', '(-) Retenção de Permuta', '(-) Transf. Materiais Estoque Laurentino P/ Finan', '(-) Transf. Materiais Estoque Laurentino P/ Bom J.', '(-) Transf. Mat. Estoque P/ Obras da Laurentino', '(-) Reembolso de Despesas Gerais (Obra)', '(-) Divisão de muro', '(-) Retenção Contribuição Sindical (Escritório)', '(-) Reembolso de Despesas Administrativas', '(-) Restituição IPTU Imóveis Alugados (Escritório)', '(-) Reembolso de Despesas Financeiras', '(-) Reembolso de Despesas Tributárias', '(-) Abatimento de Adiantamento', '(-) Restituição Condomínio', '(-) Restituição água'],
-    planoFinanceiroExcecao: [''],
+    
     contasCorrente: [
       "Viacredi Laurentino",
       "CEF Laurentino",
@@ -151,7 +151,6 @@ const REPORT_DEFINITIONS = [
       "Conta Babi - Não Conciliar",
       "Conta Doca",
       "Conta Equilíbrio",
-      "Emissao de Cheques",
       "ESTOQUE",
       "PERMUTA INDAPAV BP1 LOTE 13 CASA 1",
       "Lançamentos Passados",
@@ -269,9 +268,9 @@ const REPORT_DEFINITIONS = [
       "PERMUTA TOMIO GREEN GARDEN LOTE 46"
     ],
     documentos: ['CONTRATO'],
-    documentosExcecao: [''],
+    
     condicoesPagamento: ['Parcelas Mensais', 'Novo Parcelas Mensais'],
-    condicoesPagamentoExcecao: [''],
+    
     flags: {
       imprimirParcelasReparceladas: false,
     },
@@ -302,7 +301,6 @@ const REPORT_DEFINITIONS = [
       "Conta Babi - Não Conciliar",
       "Conta Doca",
       "Conta Equilíbrio",
-      "Emissao de Cheques",
       "ESTOQUE",
       "PERMUTA INDAPAV BP1 LOTE 13 CASA 1",
       "Lançamentos Passados",
@@ -420,7 +418,7 @@ const REPORT_DEFINITIONS = [
       "PERMUTA TOMIO GREEN GARDEN LOTE 46"
     ],
     planoFinanceiro: ['Receita de Incorporação de Imóveis', 'Receita de Bens/Imóveis Adquiridos de Terceiros', 'Descontos Concedidos (Unidades Imobiliárias)', 'xxxxxReceita de Aluguel (Locação)', 'Permuta Externa', 'Receita de Cliente Desconhecido', 'Receita de Administração (Taxa Administrativa)', 'Receita Empreitada Só Mão de Obra', 'Receita de Projeto', 'Receita de Locação (Aluguel)', 'Entrada de Financiamento para Construção', 'Entrada de Capital de Giro', 'Receita de Aplicações Financeiras', 'Receita de Empréstimos', 'Aporte Capital de Sócio', 'Descontos Obtidos', 'Receita de Venda de Imobilizado', 'Receita Aluguel PCS 35', 'Estoque de Material', 'Receita Energia Solar Locatários', 'Venda de Passivos', '(-) Anulação de Custos', '(-) Anulação de Custos Mão de Obra', '(-) Retenção Caução/Sinal', '(-) Retenção de INSS', '(-) Retenção de ISS', '(-) Retenção de PIS', '(-) Retenção de CSLL', '(-) Retenção de COFINS', '(-) Retenção de IR', '(-) Retenção (PIS/COFINS/CSLL -  4,65%)', '(-) Retenção de Permuta', '(-) Transf. Materiais Estoque Laurentino P/ Finan', '(-) Transf. Materiais Estoque Laurentino P/ Bom J.', '(-) Transf. Mat. Estoque P/ Obras da Laurentino', '(-) Reembolso de Despesas Gerais (Obra)', '(-) Divisão de muro', '(-) Retenção Contribuição Sindical (Escritório)', '(-) Reembolso de Despesas Administrativas', '(-) Restituição IPTU Imóveis Alugados (Escritório)', '(-) Reembolso de Despesas Financeiras', '(-) Reembolso de Despesas Tributárias', '(-) Abatimento de Adiantamento', '(-) Restituição Condomínio', '(-) Restituição água'],
-    planoFinanceiroExcecao: [''],
+    
     documentos: ['CONTRATO'],
     condicoesPagamento: [
       'Parcelas Semestrais',
@@ -444,7 +442,7 @@ const REPORT_DEFINITIONS = [
     sheetName: 'Receita Aluguel',
     pdfName: 'Receita Aluguel',
     planoFinanceiro: ['Receita de Incorporação de Imóveis', 'Receita de Bens/Imóveis Adquiridos de Terceiros', 'Descontos Concedidos (Unidades Imobiliárias)', 'xxxxxReceita de Aluguel (Locação)', 'Permuta Externa', 'Receita de Cliente Desconhecido', 'Receita de Administração (Taxa Administrativa)', 'Receita Empreitada Só Mão de Obra', 'Receita de Projeto', 'Receita de Locação (Aluguel)', 'Entrada de Financiamento para Construção', 'Entrada de Capital de Giro', 'Receita de Aplicações Financeiras', 'Receita de Empréstimos', 'Aporte Capital de Sócio', 'Descontos Obtidos', 'Receita de Venda de Imobilizado', 'Receita Aluguel PCS 35', 'Estoque de Material', 'Receita Energia Solar Locatários', 'Venda de Passivos', '(-) Anulação de Custos', '(-) Anulação de Custos Mão de Obra', '(-) Retenção Caução/Sinal', '(-) Retenção de INSS', '(-) Retenção de ISS', '(-) Retenção de PIS', '(-) Retenção de CSLL', '(-) Retenção de COFINS', '(-) Retenção de IR', '(-) Retenção (PIS/COFINS/CSLL -  4,65%)', '(-) Retenção de Permuta', '(-) Transf. Materiais Estoque Laurentino P/ Finan', '(-) Transf. Materiais Estoque Laurentino P/ Bom J.', '(-) Transf. Mat. Estoque P/ Obras da Laurentino', '(-) Reembolso de Despesas Gerais (Obra)', '(-) Divisão de muro', '(-) Retenção Contribuição Sindical (Escritório)', '(-) Reembolso de Despesas Administrativas', '(-) Restituição IPTU Imóveis Alugados (Escritório)', '(-) Reembolso de Despesas Financeiras', '(-) Reembolso de Despesas Tributárias', '(-) Abatimento de Adiantamento', '(-) Restituição Condomínio', '(-) Restituição água'],
-    planoFinanceiroExcecao: [],
+    
     documentos: [
       "Adiantamento",
       "APORTE DE CAPITAL",
@@ -515,7 +513,6 @@ const REPORT_DEFINITIONS = [
       "Conta Babi - Não Conciliar",
       "Conta Doca",
       "Conta Equilíbrio",
-      "Emissao de Cheques",
       "ESTOQUE",
       "PERMUTA INDAPAV BP1 LOTE 13 CASA 1",
       "Lançamentos Passados",
@@ -662,7 +659,6 @@ const REPORT_DEFINITIONS = [
       "Conta Babi - Não Conciliar",
       "Conta Doca",
       "Conta Equilíbrio",
-      "Emissao de Cheques",
       "ESTOQUE",
       "PERMUTA INDAPAV BP1 LOTE 13 CASA 1",
       "Lançamentos Passados",
@@ -780,7 +776,7 @@ const REPORT_DEFINITIONS = [
       "PERMUTA TOMIO GREEN GARDEN LOTE 46"
     ],
     planoFinanceiro: ['Receita de Incorporação de Imóveis', 'Receita de Bens/Imóveis Adquiridos de Terceiros', 'Descontos Concedidos (Unidades Imobiliárias)', 'xxxxxReceita de Aluguel (Locação)', 'Permuta Externa', 'Receita de Cliente Desconhecido', 'Receita de Administração (Taxa Administrativa)', 'Receita Empreitada Só Mão de Obra', 'Receita de Projeto', 'Receita de Locação (Aluguel)', 'Entrada de Financiamento para Construção', 'Entrada de Capital de Giro', 'Receita de Aplicações Financeiras', 'Receita de Empréstimos', 'Aporte Capital de Sócio', 'Descontos Obtidos', 'Receita de Venda de Imobilizado', 'Receita Aluguel PCS 35', 'Estoque de Material', 'Receita Energia Solar Locatários', 'Venda de Passivos', '(-) Anulação de Custos', '(-) Anulação de Custos Mão de Obra', '(-) Retenção Caução/Sinal', '(-) Retenção de INSS', '(-) Retenção de ISS', '(-) Retenção de PIS', '(-) Retenção de CSLL', '(-) Retenção de COFINS', '(-) Retenção de IR', '(-) Retenção (PIS/COFINS/CSLL -  4,65%)', '(-) Retenção de Permuta', '(-) Transf. Materiais Estoque Laurentino P/ Finan', '(-) Transf. Materiais Estoque Laurentino P/ Bom J.', '(-) Transf. Mat. Estoque P/ Obras da Laurentino', '(-) Reembolso de Despesas Gerais (Obra)', '(-) Divisão de muro', '(-) Retenção Contribuição Sindical (Escritório)', '(-) Reembolso de Despesas Administrativas', '(-) Restituição IPTU Imóveis Alugados (Escritório)', '(-) Reembolso de Despesas Financeiras', '(-) Reembolso de Despesas Tributárias', '(-) Abatimento de Adiantamento', '(-) Restituição Condomínio', '(-) Restituição água'],
-    planoFinanceiroExcecao: [''],
+    
     documentos: ['CONTRATO'],
     condicoesPagamento: [
       'Parcela na Escritura', 
@@ -800,7 +796,7 @@ const REPORT_DEFINITIONS = [
     sheetName: 'Venda a Vista',
     pdfName: 'Venda a Vista',
     planoFinanceiro: ['Receita de Incorporação de Imóveis', 'Receita de Bens/Imóveis Adquiridos de Terceiros', 'Descontos Concedidos (Unidades Imobiliárias)', 'xxxxxReceita de Aluguel (Locação)', 'Permuta Externa', 'Receita de Cliente Desconhecido', 'Receita de Administração (Taxa Administrativa)', 'Receita Empreitada Só Mão de Obra', 'Receita de Projeto', 'Receita de Locação (Aluguel)', 'Entrada de Financiamento para Construção', 'Entrada de Capital de Giro', 'Receita de Aplicações Financeiras', 'Receita de Empréstimos', 'Aporte Capital de Sócio', 'Descontos Obtidos', 'Receita de Venda de Imobilizado', 'Receita Aluguel PCS 35', 'Estoque de Material', 'Receita Energia Solar Locatários', 'Venda de Passivos', '(-) Anulação de Custos', '(-) Anulação de Custos Mão de Obra', '(-) Retenção Caução/Sinal', '(-) Retenção de INSS', '(-) Retenção de ISS', '(-) Retenção de PIS', '(-) Retenção de CSLL', '(-) Retenção de COFINS', '(-) Retenção de IR', '(-) Retenção (PIS/COFINS/CSLL -  4,65%)', '(-) Retenção de Permuta', '(-) Transf. Materiais Estoque Laurentino P/ Finan', '(-) Transf. Materiais Estoque Laurentino P/ Bom J.', '(-) Transf. Mat. Estoque P/ Obras da Laurentino', '(-) Reembolso de Despesas Gerais (Obra)', '(-) Divisão de muro', '(-) Retenção Contribuição Sindical (Escritório)', '(-) Reembolso de Despesas Administrativas', '(-) Restituição IPTU Imóveis Alugados (Escritório)', '(-) Reembolso de Despesas Financeiras', '(-) Reembolso de Despesas Tributárias', '(-) Abatimento de Adiantamento', '(-) Restituição Condomínio', '(-) Restituição água'],
-    planoFinanceiroExcecao: [],
+    
     documentos: ['CONTRATO'],
     condicoesPagamento: [
       'Venda a Vista', 
@@ -825,7 +821,6 @@ const REPORT_DEFINITIONS = [
       "Conta Babi - Não Conciliar",
       "Conta Doca",
       "Conta Equilíbrio",
-      "Emissao de Cheques",
       "ESTOQUE",
       "PERMUTA INDAPAV BP1 LOTE 13 CASA 1",
       "Lançamentos Passados",
@@ -972,7 +967,6 @@ const REPORT_DEFINITIONS = [
       "Conta Babi - Não Conciliar",
       "Conta Doca",
       "Conta Equilíbrio",
-      "Emissao de Cheques",
       "ESTOQUE",
       "PERMUTA INDAPAV BP1 LOTE 13 CASA 1",
       "Lançamentos Passados",
@@ -1107,7 +1101,7 @@ const REPORT_DEFINITIONS = [
     sheetName: 'Venda Lote',
     pdfName: 'Venda Lote',
     planoFinanceiro: ['Receita de Estoque de Terrenos'],
-    planoFinanceiroExcecao: [],
+    
     documentos: [
       "Adiantamento",
       "APORTE DE CAPITAL",
@@ -1199,7 +1193,6 @@ const REPORT_DEFINITIONS = [
       "Conta Babi - Não Conciliar",
       "Conta Doca",
       "Conta Equilíbrio",
-      "Emissao de Cheques",
       "ESTOQUE",
       "PERMUTA INDAPAV BP1 LOTE 13 CASA 1",
       "Lançamentos Passados",
@@ -1328,7 +1321,7 @@ const REPORT_DEFINITIONS = [
     sheetName: 'Empréstimo',
     pdfName: 'Empréstimo',
     planoFinanceiro: ['Receita de Empréstimos'],
-    planoFinanceiroExcecao: [''],
+    
     contasCorrente: [
       "Viacredi Laurentino",
       "CEF Laurentino",
@@ -1348,7 +1341,6 @@ const REPORT_DEFINITIONS = [
       "Conta Babi - Não Conciliar",
       "Conta Doca",
       "Conta Equilíbrio",
-      "Emissao de Cheques",
       "ESTOQUE",
       "PERMUTA INDAPAV BP1 LOTE 13 CASA 1",
       "Lançamentos Passados",
@@ -1567,7 +1559,6 @@ const REPORT_DEFINITIONS = [
       "Conta Babi - Não Conciliar",
       "Conta Doca",
       "Conta Equilíbrio",
-      "Emissao de Cheques",
       "ESTOQUE",
       "PERMUTA INDAPAV BP1 LOTE 13 CASA 1",
       "Lançamentos Passados",
@@ -1686,7 +1677,7 @@ const REPORT_DEFINITIONS = [
     ],
     pdfName: 'Venda de Passivo',
     planoFinanceiro: ['Venda de Passivos'],
-    planoFinanceiroExcecao: [],
+    
     documentos: [
       "Adiantamento",
       "APORTE DE CAPITAL",
@@ -1790,7 +1781,6 @@ const REPORT_DEFINITIONS = [
       "Conta Babi - Não Conciliar",
       "Conta Doca",
       "Conta Equilíbrio",
-      "Emissao de Cheques",
       "ESTOQUE",
       "PERMUTA INDAPAV BP1 LOTE 13 CASA 1",
       "Lançamentos Passados",
@@ -1908,7 +1898,7 @@ const REPORT_DEFINITIONS = [
       "PERMUTA TOMIO GREEN GARDEN LOTE 46"
     ],
     planoFinanceiro: ['Receita de Incorporação de Imóveis', 'Receita de Bens/Imóveis Adquiridos de Terceiros', 'Descontos Concedidos (Unidades Imobiliárias)', 'xxxxxReceita de Aluguel (Locação)', 'Permuta Externa', 'Receita de Cliente Desconhecido', 'Receita de Administração (Taxa Administrativa)', 'Receita Empreitada Só Mão de Obra', 'Receita de Projeto', 'Receita de Locação (Aluguel)', 'Entrada de Financiamento para Construção', 'Entrada de Capital de Giro', 'Receita de Aplicações Financeiras', 'Descontos Obtidos', 'Receita de Venda de Imobilizado', 'Receita Aluguel PCS 35', 'Estoque de Material', 'Receita Energia Solar Locatários', '(-) Anulação de Custos', '(-) Anulação de Custos Mão de Obra', '(-) Retenção Caução/Sinal', '(-) Retenção de INSS', '(-) Retenção de ISS', '(-) Retenção de PIS', '(-) Retenção de CSLL', '(-) Retenção de COFINS', '(-) Retenção de IR', '(-) Retenção (PIS/COFINS/CSLL -  4,65%)', '(-) Retenção de Permuta', '(-) Transf. Materiais Estoque Laurentino P/ Finan', '(-) Transf. Materiais Estoque Laurentino P/ Bom J.', '(-) Transf. Mat. Estoque P/ Obras da Laurentino', '(-) Reembolso de Despesas Gerais (Obra)', '(-) Divisão de muro', '(-) Retenção Contribuição Sindical (Escritório)', '(-) Reembolso de Despesas Administrativas', '(-) Restituição IPTU Imóveis Alugados (Escritório)', '(-) Reembolso de Despesas Financeiras', '(-) Reembolso de Despesas Tributárias', '(-) Abatimento de Adiantamento', '(-) Restituição Condomínio', '(-) Restituição água'],
-    planoFinanceiroExcecao: [],
+    
       documentos: [
       "Adiantamento",
       "APORTE DE CAPITAL",
@@ -1955,7 +1945,7 @@ const REPORT_DEFINITIONS = [
       "TRANSF. DE MATERIAIS POR SOLICITAÇÃO",
       "TAXAS"
     ],
-    documentosExcecao: [],
+    
     condicoesPagamento: [
       "Parcelas Mensais",
       "Parcelas Semestrais",
@@ -1980,7 +1970,6 @@ const REPORT_DEFINITIONS = [
       "Provisionado",
       "Financiamento"
     ],
-    condicoesPagamentoExcecao: [],
     flags: {
       imprimirParcelasReparceladas: false,
     },
@@ -2771,61 +2760,7 @@ async function selectContasCorrente({
   try { await setReportProgress(reportName, 28, { lastMessage: 'plano_financeiro_selected', step: 'filter_plano' }); } catch (_) {}
 }
 
-// =========================================================
-// PLANO FINANCEIRO EXCEÇÃO
-// =========================================================
-async function selectPlanoFinanceiroExcecao(
-  page,
-  values = [],
-  reportName,
-) {
-  
-  if (!values?.length) {
-    return;
-  }
-  
-  logEvent({
-    level: 'info',
-    message:
-    'Configurando exceção plano financeiro.',
-    values,
-  });
-  
-  await selectPlanoFinanceiro({
-    page,
-    values,
-    reportName,
-  });
-  
-  // marca exceção
-  const checkbox = page.locator(
-    'input[type="checkbox"][name*="Exc"], input[type="checkbox"][name*="exc"]'
-  );
-  
-  if (await checkbox.count()) {
-    
-    const checked =
-    await checkbox.first().isChecked();
-    
-    if (!checked) {
-      
-      await checkbox.first().check()
-      .catch(async () => {
-        
-        await checkbox.first().click({
-          force: true
-        });
-        
-      });
-    }
-    
-    logEvent({
-      level: 'info',
-      message:
-      'Flag de exceção marcada.',
-    });
-  }
-}
+
 
 // =========================================================
 // CONFIGURADOR PRINCIPAL
@@ -3171,241 +3106,73 @@ async function configureReportFilters({
   // =====================================================
   // PLANO FINANCEIRO
   // =====================================================
-  
-  let planos =
-  normalizeValues(
-    report.planoFinanceiro
-  );
-  
-  const planosExcecao =
-  normalizeValues(
-    report.planoFinanceiroExcecao
-  );
-  
-  const selecionarTodosPlanos =
-  
-  !planos.length
-  || planos.includes('*');
-  
-  if (
-    !selecionarTodosPlanos
-  ) {
-    
-    planos =
-    removeExcecoes(
-      planos,
-      planosExcecao
-    );
-    
+
+  let planos = normalizeValues(report.planoFinanceiro);
+
+  const selecionarTodosPlanos = !planos.length || planos.includes('*');
+
+  if (!selecionarTodosPlanos) {
     if (planos.length) {
-      
-      logEvent({
-        level: 'info',
-        message:
-        `[${report.sheetName}] Selecionando plano financeiro`,
-        planos,
-      });
-      
+      logEvent({ level: 'info', message: `[${report.sheetName}] Selecionando plano financeiro`, planos });
       try { await setReportProgress(report.sheetName, 10, { lastMessage: 'selecting_plano_financeiro', step: 'plano_start' }); } catch (_) {}
-      await selectPlanoFinanceiro({
-        
-        page,
-        
-        values: planos,
-        
-        reportName: report.sheetName,
-        
-      });
+      await selectPlanoFinanceiro({ page, values: planos, reportName: report.sheetName });
     }
-    
   } else {
-    
-    logEvent({
-      level: 'info',
-      message:
-      `[${report.sheetName}] Plano financeiro = TODOS`,
-      excecoes: planosExcecao,
-    });
+    logEvent({ level: 'info', message: `[${report.sheetName}] Plano financeiro = TODOS` });
   }
   
   // =====================================================
   // CONTAS CORRENTE
   // =====================================================
-  
-  let contas =
-  normalizeValues(
-    report.contasCorrente
-  );
-  
-  const contasExcecao =
-  normalizeValues(
-    report.contasCorrenteExcecao
-  );
-  
-  const selecionarTodasContas =
-  
-  !contas.length
-  || contas.includes('*');
-  
-  if (
-    !selecionarTodasContas
-  ) {
-    
-    contas =
-    removeExcecoes(
-      contas,
-      contasExcecao
-    );
-    
+
+  let contas = normalizeValues(report.contasCorrente);
+
+  const selecionarTodasContas = !contas.length || contas.includes('*');
+
+  if (!selecionarTodasContas) {
     if (contas.length) {
-      
-      logEvent({
-        level: 'info',
-        message:
-        `[${report.sheetName}] Selecionando contas corrente`,
-        contas,
-      });
-      
+      logEvent({ level: 'info', message: `[${report.sheetName}] Selecionando contas corrente`, contas });
       try { await setReportProgress(report.sheetName, 15, { lastMessage: 'selecting_contas', step: 'contas_start' }); } catch (_) {}
-      await selectContasCorrente({
-        
-        page,
-        
-        values: contas,
-        
-        reportName: report.sheetName,
-        
-      });
+      await selectContasCorrente({ page, values: contas, reportName: report.sheetName });
     }
-    
   } else {
-    
-    logEvent({
-      level: 'info',
-      message:
-      `[${report.sheetName}] Contas corrente = TODAS`,
-      excecoes: contasExcecao,
-    });
+    logEvent({ level: 'info', message: `[${report.sheetName}] Contas corrente = TODAS` });
   }
   
   // =====================================================
   // DOCUMENTOS
   // =====================================================
-  
-  let documentos =
-  normalizeValues(
-    report.documentos
-  );
-  
-  const documentosExcecao =
-  normalizeValues(
-    report.documentosExcecao
-  );
-  
-  const selecionarTodosDocs =
-  
-  !documentos.length
-  || documentos.includes('*');
-  
-  if (
-    !selecionarTodosDocs
-  ) {
-    
-    documentos =
-    removeExcecoes(
-      documentos,
-      documentosExcecao
-    );
-    
+
+  let documentos = normalizeValues(report.documentos);
+
+  const selecionarTodosDocs = !documentos.length || documentos.includes('*');
+
+  if (!selecionarTodosDocs) {
     if (documentos.length) {
-      
-      logEvent({
-        level: 'info',
-        message:
-        `[${report.sheetName}] Selecionando documentos`,
-        documentos,
-      });
-      
+      logEvent({ level: 'info', message: `[${report.sheetName}] Selecionando documentos`, documentos });
       try { await setReportProgress(report.sheetName, 20, { lastMessage: 'selecting_documentos', step: 'documentos_start' }); } catch (_) {}
-      await selectDocumentos({
-        
-        page,
-        
-        values: documentos,
-        
-        reportName: report.sheetName,
-        
-      });
+      await selectDocumentos({ page, values: documentos, reportName: report.sheetName });
     }
-    
   } else {
-    
-    logEvent({
-      level: 'info',
-      message:
-      `[${report.sheetName}] Documentos = TODOS`,
-      excecoes: documentosExcecao,
-    });
+    logEvent({ level: 'info', message: `[${report.sheetName}] Documentos = TODOS` });
   }
   
   // =====================================================
   // CONDIÇÕES PAGAMENTO
   // =====================================================
-  
-  let condicoes =
-  normalizeValues(
-    report.condicoesPagamento
-  );
-  
-  const condicoesExcecao =
-  normalizeValues(
-    report.condicoesPagamentoExcecao
-  );
-  
-  const selecionarTodasCondicoes =
-  
-  !condicoes.length
-  || condicoes.includes('*');
-  
-  if (
-    !selecionarTodasCondicoes
-  ) {
-    
-    condicoes =
-    removeExcecoes(
-      condicoes,
-      condicoesExcecao
-    );
-    
+
+  let condicoes = normalizeValues(report.condicoesPagamento);
+
+  const selecionarTodasCondicoes = !condicoes.length || condicoes.includes('*');
+
+  if (!selecionarTodasCondicoes) {
     if (condicoes.length) {
-      
-      logEvent({
-        level: 'info',
-        message:
-        `[${report.sheetName}] Selecionando condições`,
-        condicoes,
-      });
-      
+      logEvent({ level: 'info', message: `[${report.sheetName}] Selecionando condições`, condicoes });
       try { await setReportProgress(report.sheetName, 25, { lastMessage: 'selecting_condicoes', step: 'condicoes_start' }); } catch (_) {}
-      await selectCondicoesPagamento({
-        
-        page,
-        
-        values: condicoes,
-        
-        reportName: report.sheetName,
-        
-      });
+      await selectCondicoesPagamento({ page, values: condicoes, reportName: report.sheetName });
     }
-    
   } else {
-    
-    logEvent({
-      level: 'info',
-      message:
-      `[${report.sheetName}] Condições pagamento = TODAS`,
-      excecoes: condicoesExcecao,
-    });
+    logEvent({ level: 'info', message: `[${report.sheetName}] Condições pagamento = TODAS` });
   }
   
   // =====================================================
@@ -5263,9 +5030,9 @@ async function selectViaModal({
         }).catch(() => {});
       }, { name: 'bulk-scroll' }).catch(() => {});
       
-      const matched = await withFrameRetry(async () => await modalFrame.evaluate((normalizedEntries) => {
+        const matched = await withFrameRetry(async () => await modalFrame.evaluate((normalizedEntries) => {
         function normalize(s) {
-          try { return (s || '').normalize('NFD').replace(/\p{M}/gu, '').replace(/\s+/g, ' ').trim().toLowerCase(); } catch (e) { return (s || '').replace(/\s+/g, ' ').trim().toLowerCase(); }
+          try { return (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim().toLowerCase(); } catch (e) { return (s || '').replace(/\s+/g, ' ').trim().toLowerCase(); }
         }
         const rows = Array.from(document.querySelectorAll('tr'));
         let found = 0;
@@ -5277,8 +5044,8 @@ async function selectViaModal({
           for (let i = 0; i < normalizedEntries.length; i++) {
             const ne = normalizedEntries[i];
             if (!ne || seen.has(ne)) continue;
-            // exact match: either entire row text equals or any cell equals
-            const ok = (rowText === ne) || cells.some(ct => ct === ne);
+            // match: exact or contains in either direction (handles codes + names and partial tokens)
+            const ok = (rowText === ne) || cells.some(ct => ct === ne || ct.includes(ne) || ne.includes(ct));
             if (ok) {
               const checkbox = row.querySelector('input[type="checkbox"]');
               if (checkbox && !checkbox.checked) {
@@ -5323,8 +5090,23 @@ async function selectViaModal({
       modalTitle,
     });
     
-    // Wrap selection attempt in a frame-retry to recover from detached-frame errors
-    const _withFrameResult = await withFrameRetry(async () => {
+    // Wrap selection attempt in retries to recover from detached-frame errors
+    let _withFrameResult = null;
+    let _attemptSel = 0;
+    let _selSuccess = false;
+    while (_attemptSel < 3 && !_selSuccess) {
+      try {
+        // re-resolve modalFrame if it became detached
+        try {
+          await modalFrame.evaluate(() => true).catch(() => null);
+        } catch (_) {
+          // try to find modal frame again
+          modalFrame = await findSelectionModalFrame(page, modalTitle, 5000).catch(() => null) || await findModalFrame(page, modalTitle, 5000).catch(() => null);
+          if (!modalFrame) throw new Error('Modal frame desapareceu durante seleção');
+        }
+
+        // perform the selection using existing robust logic
+        _withFrameResult = await withFrameRetry(async () => {
       // re-resolve modalInput fresh for this attempt
       const modalInputLocal = await resolveInput(modalFrame, searchSelectors, 4).catch(() => null);
       // LIMPA FILTRO ANTERIOR
@@ -5605,7 +5387,23 @@ async function selectViaModal({
       logEvent({ level: 'error', message: `Erro ao manipular checkbox para ${currentValue}: ${err.message}` });
       throw err;
     }
-    }, { name: `selectViaModal:${currentValue}`, retries: 2 });
+        }, { name: `selectViaModal:${currentValue}`, retries: 2 });
+
+        _selSuccess = true;
+      } catch (err) {
+        const msg = String(err && (err.message || err));
+        logEvent({ level: 'warn', message: `Erro ao selecionar '${currentValue}', tentativa=${_attemptSel + 1}`, detail: msg, modalTitle });
+        if (/Frame was detached|Execution context was destroyed|Target closed|Modal frame desapareceu/i.test(msg) && _attemptSel < 2) {
+          _attemptSel++;
+          await page.waitForTimeout(500 * _attemptSel);
+          // try to re-find the modal frame before next attempt
+          modalFrame = await findSelectionModalFrame(page, modalTitle, 5000).catch(() => null) || await findModalFrame(page, modalTitle, 5000).catch(() => null);
+          continue;
+        }
+        // non-transient: rethrow
+        throw err;
+      }
+    }
 
     if (_withFrameResult && _withFrameResult.skipped) continue;
     
@@ -5815,140 +5613,145 @@ async function selectViaModalByGrid({
   
   for (const currentValue of entries) {
     logEvent({ level: 'info', message: `Entry start: selecionando no modal: ${currentValue}`, modalTitle });
-    
-    await modalInput.fill('').catch(() => {});
-    await page.waitForTimeout(300);
-    
-    const inputValue = await modalInput.inputValue().catch(() => '');
-    if (inputValue && inputValue.trim()) {
-      await modalInput.evaluate((el) => {
-        el.value = '';
-        el.dispatchEvent(new Event('input', { bubbles: true }));
-      }).catch(() => {});
-      await page.waitForTimeout(200);
-    }
-    // try clicking any 'Limpar' control first to ensure previous filters are cleared
-    // try {
-    //   const clickedClear = await modalFrame.evaluate(() => {
-    //     try {
-    //       const nodes = Array.from(document.querySelectorAll('input,button,a'));
-    //       for (const n of nodes) {
-    //         const txt = ((n.value || '') + ' ' + (n.innerText || '')).trim();
-    //         if (/^\s*limpar\b/i.test(txt)) { try { n.click(); } catch(e){ try{ n.dispatchEvent(new MouseEvent('click',{bubbles:true})); }catch(_){} } return true; }
-    //       }
-    //     } catch (e) {}
-    //     return false;
-    //   }).catch(() => false);
-    //   if (clickedClear) logEvent({ level: 'debug', message: 'Limpar clicado antes de digitar novo valor', modalTitle });
-    // } catch (_) {}
 
-    await fillLegacyInput(modalInput, currentValue);
-    // garante foco após preencher
-    try { await modalInput.focus(); } catch (_) {}
-    await modalInput.press('Enter').catch(() => {});
-    // Click 'Procurar' inside the modal to trigger paginated/server search
-    try {
-      const prevFirst = await modalFrame.evaluate(() => {
-        try { const t = document.querySelector('tr'); return t ? t.innerText : ''; } catch (e) { return ''; }
-      }).catch(() => '');
+    let attempt = 0;
+    let succeeded = false;
 
-      const clicked = await modalFrame.evaluate(() => {
-        try {
-          const nodes = Array.from(document.querySelectorAll('input,button,a'));
-          for (const n of nodes) {
-            const txt = ((n.value || '') + ' ' + (n.innerText || '')).trim();
-            if (/procurar/i.test(txt)) { try { n.click(); } catch(e){ try{ n.dispatchEvent(new MouseEvent('click',{bubbles:true})); }catch(_){} } return true; }
-          }
-        } catch (e) {}
-        return false;
-      }).catch(() => false);
-
-      if (!clicked) {
-        const procurarBtn = modalFrame.locator('#pbProcurar, input[name="pbProcurar"], input[id*="Procurar"], input[value*="Procurar"]');
-        if (await procurarBtn.count().catch(() => 0)) {
-          await procurarBtn.first().click({ force: true }).catch(() => {});
-        }
-      }
-
+    while (attempt < 3 && !succeeded) {
+      attempt++;
       try {
-        await modalFrame.waitForFunction((needle, prev) => {
-          try {
-            const norm = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-            const first = document.querySelector('tr');
-            const text = first ? norm(first.innerText) : '';
-            if (!text) return false;
-            if (prev && text !== prev) return true;
-            return text.includes(needle);
-          } catch (e) { return false; }
-        }, { timeout: 10000 }, (String(currentValue || '').normalize ? String(currentValue || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase() : String(currentValue || '').toLowerCase(), prevFirst.normalize ? prevFirst.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase() : prevFirst).catch(() => {}));
-      } catch (e) {}
-    } catch (e) {}
-    
-    let rowLocator;
-    try {
-      rowLocator = await withFrameRetry(async () => await findSelectionRow(modalFrame, currentValue, modalDefinition.rowValueSelectors, 25000), { name: 'findSelectionRow', retries: 2 });
-    } catch (err) {
-      await saveDebugState('row-not-found').catch(() => {});
-      logEvent({ level: 'warn', message: `Linha não encontrada no modal, pulando: ${currentValue}`, detail: String(err && err.message || err), modalTitle });
-      continue;
-    }
-    
-    try {
-      // tenta marcar e aguarda até MODAL_SELECT_TIMEOUT_MS por confirmação
-      const selPromise = async () => await ensureCheckboxChecked(rowLocator, modalDefinition.rowCheckboxSelector);
-      const selOk = await Promise.race([withFrameRetry(selPromise, { name: `ensureCheckboxChecked:${currentValue}`, retries: 2 }), new Promise(res => setTimeout(() => res(false), MODAL_SELECT_TIMEOUT_MS))]);
-      if (!selOk) {
-        // tentativa de retry: tenta reabrir modal (fecha e reabre) uma vez
-        await saveDebugState('checkbox-timeout').catch(() => {});
-        logEvent({ level: 'warn', message: `Timeout ao selecionar valor no modal, tentando retry: ${currentValue}`, modalTitle });
+        // verifica se o modalFrame ainda está disponível, se não re-resolve
         try {
-          // tenta fechar modal se possível
-          try { await modalFrame.locator('#pbFechar, input[id*="pbFechar"]').first().click({ force: true }); } catch (_) {}
-          await page.waitForTimeout(400);
-          // reabrir
-          await trigger.click({ force: true }).catch(() => {});
-          modalFrame = await findSelectionModalFrame(page, modalTitle, 15000).catch(() => null);
-          if (!modalFrame) modalFrame = await findModalFrame(page, modalTitle, 15000).catch(() => null);
-          if (modalFrame) {
-            // recria o input e rowLocator para tentar novamente
-            const newModalInput = await findVisibleInput(modalFrame, searchSelectors).catch(() => null);
-            if (newModalInput) {
-              await fillLegacyInput(newModalInput, currentValue);
-              try { await newModalInput.focus(); } catch (_) {}
+          await modalFrame.evaluate(() => true).catch(() => null);
+        } catch (_) {
+          modalFrame = await findSelectionModalFrame(page, modalTitle, 5000).catch(() => null) || await findModalFrame(page, modalTitle, 5000).catch(() => null);
+          if (!modalFrame) throw new Error('Modal frame desapareceu durante seleção');
+        }
+
+        // re-resolve modal input fresh for this attempt
+        const modalInputLocal = await findVisibleInput(modalFrame, searchSelectors).catch(() => null);
+        if (!modalInputLocal) {
+          await saveDebugState('input-not-found-attempt').catch(() => {});
+          throw new Error('input-not-found');
+        }
+
+        // limpa e digita
+        await modalInputLocal.fill('').catch(() => {});
+        await page.waitForTimeout(300);
+        const inputValue = await modalInputLocal.inputValue().catch(() => '');
+        if (inputValue && inputValue.trim()) {
+          await modalInputLocal.evaluate((el) => { el.value = ''; el.dispatchEvent(new Event('input', { bubbles: true })); }).catch(() => {});
+          await page.waitForTimeout(200);
+        }
+
+        await fillLegacyInput(modalInputLocal, currentValue);
+        try { await modalInputLocal.focus(); } catch (_) {}
+        await modalInputLocal.press('Enter').catch(() => {});
+
+        // aciona procurar
+        const clicked = await modalFrame.evaluate(() => {
+          try {
+            const nodes = Array.from(document.querySelectorAll('input,button,a'));
+            for (const n of nodes) {
+              const txt = ((n.value || '') + ' ' + (n.innerText || '')).trim();
+              if (/procurar/i.test(txt)) { try { n.click(); } catch(e){ try{ n.dispatchEvent(new MouseEvent('click',{bubbles:true})); }catch(_){} } return true; }
             }
-            try {
-              rowLocator = await findSelectionRow(modalFrame, currentValue, modalDefinition.rowValueSelectors, 25000);
-              const selPromise2 = ensureCheckboxChecked(rowLocator, modalDefinition.rowCheckboxSelector);
-              const selOk2 = await Promise.race([selPromise2, new Promise(res => setTimeout(() => res(false), MODAL_SELECT_TIMEOUT_MS))]);
-              if (!selOk2) {
-                await saveDebugState('checkbox-timeout-retry').catch(() => {});
-                logEvent({ level: 'warn', message: `Retry falhou, pulando: ${currentValue}`, modalTitle });
-                continue;
-              }
-            } catch (e) {
-              await saveDebugState('checkbox-timeout-retry-error').catch(() => {});
-              logEvent({ level: 'warn', message: `Erro no retry para ${currentValue}: ${String(e && e.message || e)}`, modalTitle });
-              continue;
-            }
-          } else {
-            logEvent({ level: 'warn', message: `Não foi possível reabrir modal para retry, pulando: ${currentValue}`, modalTitle });
-            continue;
+          } catch (e) {}
+          return false;
+        }).catch(() => false);
+
+        if (!clicked) {
+          const procurarBtn = modalFrame.locator('#pbProcurar, input[name="pbProcurar"], input[id*="Procurar"], input[value*="Procurar"]');
+          if (await procurarBtn.count().catch(() => 0)) {
+            await procurarBtn.first().click({ force: true }).catch(() => {});
           }
-        } catch (e) {
-          logEvent({ level: 'warn', message: `Erro durante retry para ${currentValue}: ${String(e && e.message || e)}`, modalTitle });
+        }
+
+        try {
+          let normalizedToken;
+          try {
+            normalizedToken = String(currentValue || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+          } catch (e) {
+            normalizedToken = String(currentValue || '').toLowerCase();
+          }
+
+          await modalFrame.waitForFunction((needle) => {
+            try {
+              function norm(s) {
+                return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+              }
+              return document.body && norm(document.body.innerText).includes(needle);
+            } catch (e) {
+              return false;
+            }
+          }, { timeout: 10000 }, normalizedToken).catch(() => {});
+        } catch (_) {}
+
+        // tenta encontrar a linha e marcar o checkbox com frame-retry
+        let rowLocator = null;
+        try {
+          rowLocator = await withFrameRetry(async () => await findSelectionRow(modalFrame, currentValue, modalDefinition.rowValueSelectors, 25000), { name: 'findSelectionRow', retries: 2 });
+        } catch (err) {
+          await saveDebugState('row-not-found').catch(() => {});
+          logEvent({ level: 'warn', message: `Linha não encontrada no modal, tentativa=${attempt}, pulando: ${currentValue}`, detail: String(err && err.message || err), modalTitle });
+          // se foi a última tentativa, efetivamente pula
+          if (attempt >= 3) break;
+          await page.waitForTimeout(300 * attempt);
           continue;
         }
+
+        const selPromise = async () => await ensureCheckboxChecked(rowLocator, modalDefinition.rowCheckboxSelector);
+        const selOk = await Promise.race([withFrameRetry(selPromise, { name: `ensureCheckboxChecked:${currentValue}`, retries: 2 }), new Promise(res => setTimeout(() => res(false), MODAL_SELECT_TIMEOUT_MS))]);
+        if (!selOk) {
+          await saveDebugState('checkbox-timeout').catch(() => {});
+          logEvent({ level: 'warn', message: `Timeout ao selecionar valor no modal, tentativa=${attempt}: ${currentValue}`, modalTitle });
+          // tenta reabrir modal e refazer se houver tentativas restantes
+          try {
+            try { await modalFrame.locator('#pbFechar, input[id*="pbFechar"]').first().click({ force: true }); } catch (_) {}
+            await page.waitForTimeout(400);
+            await trigger.click({ force: true }).catch(() => {});
+            modalFrame = await findSelectionModalFrame(page, modalTitle, 15000).catch(() => null) || await findModalFrame(page, modalTitle, 15000).catch(() => null);
+            if (!modalFrame) {
+              logEvent({ level: 'warn', message: `Não foi possível reabrir modal para retry, tentativa=${attempt}, pulando: ${currentValue}`, modalTitle });
+              if (attempt >= 3) break;
+              await page.waitForTimeout(300 * attempt);
+              continue;
+            }
+            // se reabriu, faz mais uma iteração do loop
+            await page.waitForTimeout(300);
+            continue;
+          } catch (e) {
+            logEvent({ level: 'warn', message: `Erro durante retry para ${currentValue}: ${String(e && e.message || e)}`, modalTitle });
+            if (attempt >= 3) break;
+            await page.waitForTimeout(300 * attempt);
+            continue;
+          }
+        }
+
+        logEvent({ level: 'info', message: `Checkbox marcado: ${currentValue}`, modalTitle });
+        succeeded = true;
+      } catch (err) {
+        const msg = String(err && (err.message || err));
+        logEvent({ level: 'warn', message: `Erro ao selecionar '${currentValue}', tentativa=${attempt}`, detail: msg, modalTitle });
+        if (/Frame was detached|Execution context was destroyed|Cannot find context|Cannot find object|Target closed|Modal frame desapareceu/i.test(msg) && attempt < 3) {
+          // tenta re-resolver modal frame e repetir
+          modalFrame = await findSelectionModalFrame(page, modalTitle, 5000).catch(() => null) || await findModalFrame(page, modalTitle, 5000).catch(() => null);
+          await page.waitForTimeout(500 * attempt);
+          continue;
+        }
+        // se for erro irreversível, rethrow
+        if (attempt >= 3) throw err;
       }
-      logEvent({ level: 'info', message: `Checkbox marcado: ${currentValue}`, modalTitle });
-    } catch (err) {
-      await saveDebugState('checkbox-error').catch(() => {});
-      logEvent({ level: 'error', message: `Erro ao manipular checkbox para ${currentValue}: ${err.message}` });
-      throw err;
     }
-    
+
+    if (!succeeded) {
+      logEvent({ level: 'warn', message: `Falha ao selecionar após tentativas: ${currentValue}`, modalTitle });
+      continue;
+    }
+
     saveShot(page, `checkbox-${sanitizeFileName(currentValue)}`).catch(() => {});
     await page.waitForTimeout(700);
-    await modalInput.fill('').catch(() => {});
+    try { await modalInput.fill('').catch(() => {}); } catch (_) {}
     await page.waitForTimeout(200);
   }
   
@@ -7933,23 +7736,69 @@ async function closeLegacyPopups(page) {
       return { skipped: false };
     }
     
+    // lightweight dedupe map for console messages per page
+    const _consoleSeenMap = new WeakMap();
     async function attachPageDebug(page) {
       function _shouldIgnoreConsoleText(text) {
         if (!text) return false;
         const t = String(text);
         // ignore noisy network/resource failures and common irrelevant messages
-        const ignoreRe = /Failed to load resource|net::ERR_FAILED|ERR_FAILED|the server responded with a status of|favicon\.ico|favicon|\/sockjs\.|WebSocket connection to/i;
+        const ignoreRe = /Failed to load resource|net::ERR_FAILED|ERR_FAILED|the server responded with a status of|favicon\.ico|favicon|\/sockjs\.|WebSocket connection to|Source map error/i;
         return ignoreRe.test(t);
       }
 
-      page.on('pageerror', (err) => logEvent({ level: 'debug', message: 'Erro JS na página.', detail: String(err.message || err) }));
+      function _hashConsole(type, text) {
+        const t = String(text || '').trim().slice(0, 240);
+        return `${type}|${t}`;
+      }
+
+      const seen = new Map();
+      _consoleSeenMap.set(page, seen);
+
+      // Log only page runtime errors (important) and non-noisy console errors once.
+      page.on('pageerror', (err) => {
+        try {
+          logEvent({ level: 'error', message: 'Erro JS na página.', detail: String(err && (err.stack || err.message || err)) });
+        } catch (e) {}
+      });
+
       page.on('console', (msg) => {
         try {
+          const type = msg.type();
+          if (!['error', 'warning'].includes(type)) return;
           const text = msg.text();
-          if (['error', 'warning'].includes(msg.type())) {
-            if (_shouldIgnoreConsoleText(text)) return;
-            logEvent({ level: 'debug', message: `Console ${msg.type()} da página.`, detail: text });
-          }
+          if (_shouldIgnoreConsoleText(text)) return;
+          const key = _hashConsole(type, text);
+          const now = Date.now();
+          const last = seen.get(key) || 0;
+          // dedupe identical messages for 5 minutes
+          if (now - last < 5 * 60 * 1000) return;
+          seen.set(key, now);
+          // promote console error severity to 'error' level, warnings stay 'warning'
+          const level = type === 'error' ? 'error' : 'warning';
+          logEvent({ level, message: `Console ${type} da página.`, detail: text });
+        } catch (e) {}
+      });
+
+      // Log failed requests only for important resource types to avoid noise
+      page.on('requestfailed', (req) => {
+        try {
+          const f = req.failure();
+          if (!f) return;
+          const rt = req.resourceType();
+          // only care about document/xhr/fetch/script/api resources
+          const important = ['document', 'xhr', 'fetch', 'script', 'stylesheet'];
+          if (!important.includes(rt)) return;
+          const url = req.url();
+          // ignore known third-party analytic hosts
+          if (/google-analytics|googlesyndication|doubleclick|gstatic|hotjar|facebook|ads|adservice/i.test(url)) return;
+          const text = `${req.method()} ${url} - ${f.errorText || f}`;
+          const key = `requestfailed|${rt}|${url}`;
+          const now = Date.now();
+          const last = seen.get(key) || 0;
+          if (now - last < 5 * 60 * 1000) return;
+          seen.set(key, now);
+          logEvent({ level: 'warning', message: 'Requisição falhada na página.', detail: text, url });
         } catch (e) {}
       });
       try {

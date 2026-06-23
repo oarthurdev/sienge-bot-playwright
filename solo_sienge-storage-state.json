@@ -31,16 +31,6 @@
       "sameSite": "Lax"
     },
     {
-      "name": "__cf_bm",
-      "value": "QKC7LXxWs21uh8hQsLJ5NT93TiEEWqwlJT8bxJ_A3VI-1782216245.864884-1.0.1.1-3GmFce.kKiQBSPr34Km7Ly6WYGV10ZgcXABmipfmyB4ZTv81_DFphitdzG8Xcu7neBpkzcxyX.ruhoJBRHHcs4GtjeksYMwvgyr25Gt_lv9ls6detDvr0ofxR7TtHUoL",
-      "domain": ".sienge.com.br",
-      "path": "/",
-      "expires": 1782218045.883551,
-      "httpOnly": true,
-      "secure": true,
-      "sameSite": "None"
-    },
-    {
       "name": "SESSION",
       "value": "YzQ3NDU3ZmMtODE2MC00ODQyLTk0ZjItNWU5OGQwMzhiMjhi",
       "domain": "login.sienge.com.br",
@@ -75,7 +65,7 @@
       "value": "%7B%22distinct_id%22%3A%22LAURENTINO%20CONSTRUTORA%20E%20INCORPORADORA%20LTDA%7CAutoma%C3%A7%C3%A3o%20-%20Autorizar%20Parcela%20Automaticamente%22%2C%22%24device_id%22%3A%2268e52ee9-a6b7-4dbc-9af1-ce674bcc794e%22%2C%22%24initial_referrer%22%3A%22https%3A%2F%2Flaurentino.sienge.com.br%2Fsienge%2F%22%2C%22%24initial_referring_domain%22%3A%22laurentino.sienge.com.br%22%2C%22__mps%22%3A%7B%7D%2C%22__mpso%22%3A%7B%7D%2C%22__mpus%22%3A%7B%7D%2C%22__mpa%22%3A%7B%7D%2C%22__mpu%22%3A%7B%7D%2C%22__mpr%22%3A%5B%5D%2C%22__mpap%22%3A%5B%5D%2C%22%24user_id%22%3A%22LAURENTINO%20CONSTRUTORA%20E%20INCORPORADORA%20LTDA%7CAutoma%C3%A7%C3%A3o%20-%20Autorizar%20Parcela%20Automaticamente%22%2C%22client%22%3A%5B%227453%22%5D%7D",
       "domain": ".sienge.com.br",
       "path": "/",
-      "expires": 1813752787,
+      "expires": 1813758128,
       "httpOnly": false,
       "secure": true,
       "sameSite": "Lax"
