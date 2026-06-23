@@ -1,6 +1,8 @@
 .env
-sienge-storage-state.json
-sienge-storage-state-*.json
+solo_sienge-storage-state.json
+solo_sienge-storage-state-*.json
+solo_sienge-authorize-log.json
+solo_sienge-authorize-log-*.json
 sienge-authorize-log.json
 sienge-authorize-log-*.json
 reports/

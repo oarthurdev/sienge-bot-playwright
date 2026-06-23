@@ -16,9 +16,9 @@ const BASE_URL = process.env.SIENGE_BASE_URL;
 const USERNAME = process.env.SIENGE_USERNAME;
 const PASSWORD = process.env.SIENGE_PASSWORD;
 const HEADLESS = (process.env.HEADLESS ?? 'true').toLowerCase() !== 'false';
-const STATE_PATH = process.env.STATE_PATH || path.resolve(process.cwd(), `sienge-storage-state-${INSTANCE_ID}.json`);
+const STATE_PATH = process.env.STATE_PATH || path.resolve(process.cwd(), `solo_sienge-storage-state-${INSTANCE_ID}.json`);
 const SCREENSHOT_DIR = process.env.SCREENSHOT_DIR || path.resolve(process.cwd(), `screenshots-${INSTANCE_ID}`);
-const LOG_PATH = process.env.LOG_PATH || path.resolve(process.cwd(), `sienge-authorize-log-${INSTANCE_ID}.json`);
+const LOG_PATH = process.env.LOG_PATH || path.resolve(process.cwd(), `solo_sienge-authorize-log-${INSTANCE_ID}.json`);
 const DEBUG_HTML = (process.env.DEBUG_HTML ?? 'false').toLowerCase() === 'true';
 const BLOCK_RESOURCES = (process.env.BLOCK_RESOURCES ?? 'true').toLowerCase() !== 'false';
 const TASK_MODE = (process.env.TASK_MODE || 'authorize').toLowerCase();
@@ -94,9 +94,11 @@ const REPORT_FILTER_PAGE_URL = `${BASE_URL}/sienge/8/index.html#/common/page/492
 const TARGET_END_DATE = '31/12/2040';
 const REPORT_PERIOD_START = '01/04/2026';
 const REPORT_PERIOD_END = '30/04/2026';
+const STATE_REVALIDATE_TIMEOUT_MS = Number(process.env.STATE_REVALIDATE_TIMEOUT_MS || 15000);
+const STATE_REVALIDATE_POLL_MS = Number(process.env.STATE_REVALIDATE_POLL_MS || 2000);
 
-if (!BASE_URL || !USERNAME || !PASSWORD) {
-  console.error('Faltam variáveis: SIENGE_BASE_URL, SIENGE_USERNAME, SIENGE_PASSWORD');
+if (!BASE_URL) {
+  console.error('Falta variável: SIENGE_BASE_URL');
   process.exit(1);
 }
 
@@ -7313,9 +7315,78 @@ async function closeLegacyPopups(page) {
         return;
       }
       
-      logEvent({ level: 'info', message: 'Sessão inválida ou ausente. Fazendo login completo.' });
-      await login(page);
-      await saveStorageStateWithMeta(context);
+      logEvent({ level: 'info', message: 'Sessão inválida ou ausente. Aguardando revalidação do arquivo de estado externo.' });
+
+      const start = Date.now();
+      const timeout = STATE_REVALIDATE_TIMEOUT_MS;
+      const poll = STATE_REVALIDATE_POLL_MS;
+
+      async function applyStorageStateToContext(statePath) {
+        try {
+          const raw = await fs.promises.readFile(statePath, 'utf8').catch(() => null);
+          if (!raw) return false;
+          const parsed = JSON.parse(raw);
+          const cookies = Array.isArray(parsed.cookies) ? parsed.cookies : [];
+          const origins = Array.isArray(parsed.origins) ? parsed.origins : [];
+
+          if (cookies.length) {
+            try { await context.addCookies(cookies); } catch (e) { logEvent({ level: 'warning', message: 'Falha ao aplicar cookies do storageState', detail: String(e && e.message || e) }); }
+          }
+
+          for (const o of origins) {
+            try {
+              const originUrl = (o && o.origin) ? String(o.origin) : null;
+              if (!originUrl) continue;
+              const temp = await context.newPage();
+              try {
+                await temp.goto(originUrl, { waitUntil: 'domcontentloaded', timeout: 10000 }).catch(() => {});
+                if (Array.isArray(o.localStorage)) {
+                  await temp.evaluate((items) => {
+                    try {
+                      for (const it of items) {
+                        try { localStorage.setItem(it.name, it.value); } catch (e) {}
+                      }
+                    } catch (e) {}
+                  }, o.localStorage).catch(() => {});
+                }
+              } catch (e) {}
+              try { await temp.close(); } catch (e) {}
+            } catch (e) { logEvent({ level: 'debug', message: 'Falha ao aplicar localStorage para origin', origin: o && o.origin, detail: String(e && e.message || e) }); }
+          }
+          return true;
+        } catch (e) {
+          logEvent({ level: 'warning', message: 'Erro ao aplicar storageState', detail: String(e && e.message || e) });
+          return false;
+        }
+      }
+
+      let applied = false;
+      while (Date.now() - start < timeout) {
+        if (fs.existsSync(STATE_PATH)) {
+          logEvent({ level: 'info', message: 'Arquivo de estado detectado; aplicando ao contexto.' });
+          applied = await applyStorageStateToContext(STATE_PATH).catch(() => false);
+          if (applied) {
+            try {
+              await page.reload({ waitUntil: 'domcontentloaded' }).catch(() => {});
+              await waitForAppReady(page, 8000);
+              summary = await pageSummary(page);
+              if (isLoggedArea(summary)) {
+                logEvent({ level: 'info', message: 'Sessão válida após aplicação do estado externo.' });
+                if (TASK_MODE === 'reports') {
+                  await goDirectToReportsPageAfterLogin(page);
+                } else {
+                  await goDirectToAuthorizationPageAfterLogin(page);
+                }
+                return;
+              }
+            } catch (e) { logEvent({ level: 'debug', message: 'Revalidação após aplicação falhou', detail: String(e && e.message || e) }); }
+          }
+        }
+        await new Promise(r => setTimeout(r, poll));
+      }
+
+      // timed out without valid session
+      throw new Error('Sessão inválida ou ausente e revalidação do arquivo de estado expirou (' + STATE_REVALIDATE_TIMEOUT_MS + 'ms). Aguarde o processo de autenticação externo atualizar ' + STATE_PATH);
     }
     
     
@@ -7863,11 +7934,23 @@ async function closeLegacyPopups(page) {
     }
     
     async function attachPageDebug(page) {
+      function _shouldIgnoreConsoleText(text) {
+        if (!text) return false;
+        const t = String(text);
+        // ignore noisy network/resource failures and common irrelevant messages
+        const ignoreRe = /Failed to load resource|net::ERR_FAILED|ERR_FAILED|the server responded with a status of|favicon\.ico|favicon|\/sockjs\.|WebSocket connection to/i;
+        return ignoreRe.test(t);
+      }
+
       page.on('pageerror', (err) => logEvent({ level: 'debug', message: 'Erro JS na página.', detail: String(err.message || err) }));
       page.on('console', (msg) => {
-        if (['error', 'warning'].includes(msg.type())) {
-          logEvent({ level: 'debug', message: `Console ${msg.type()} da página.`, detail: msg.text() });
-        }
+        try {
+          const text = msg.text();
+          if (['error', 'warning'].includes(msg.type())) {
+            if (_shouldIgnoreConsoleText(text)) return;
+            logEvent({ level: 'debug', message: `Console ${msg.type()} da página.`, detail: text });
+          }
+        } catch (e) {}
       });
       try {
         await page.route('**/*', (route) => {

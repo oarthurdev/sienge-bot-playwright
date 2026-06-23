@@ -23,6 +23,7 @@ const REPORT_FILTER_PAGE_URL = `${BASE_URL}/sienge/CRC/filterContasRecebidas.do`
 const TARGET_END_DATE = '31/12/2040';
 const REPORT_PERIOD_START = '01/04/2026';
 const REPORT_PERIOD_END = '30/04/2026';
+const MFA_PREWAIT_MS = Number(process.env.MFA_PREWAIT_MS || 20000);
 
 if (!BASE_URL || !USERNAME || !PASSWORD) {
   console.error('Faltam variáveis: SIENGE_BASE_URL, SIENGE_USERNAME, SIENGE_PASSWORD');
@@ -2650,6 +2651,17 @@ async function fetchMfaCodeFromEmail(timeoutMs = 120000, pollMs = 5000) {
           if (sinceMsgs.length) messages = sinceMsgs;
         } catch (e) { logEvent({ level: 'debug', message: 'Erro ao buscar SINCE', detail: String(e && e.message || e) }); }
       }
+      // sort messages by date descending so newest are processed first
+      function getMsgTime(msg) {
+        try {
+          const d = msg.attributes && (msg.attributes.internalDate || msg.attributes.date) || (msg.attrs && msg.attrs.date) || msg.date || msg.internalDate;
+          const t = d ? (new Date(d)).getTime() : (msg.seqno || 0);
+          return isFinite(t) ? t : 0;
+        } catch (e) { return 0; }
+      }
+      try {
+        messages = Array.isArray(messages) ? messages.slice().sort((a, b) => getMsgTime(b) - getMsgTime(a)) : messages;
+      } catch (e) {}
       logEvent({ level: 'debug', message: `Mensagens a processar: ${messages.length}` });
       for (const msg of messages) {
         // filter by date if available
@@ -2731,6 +2743,14 @@ async function promptUserForCode() {
   if (autoEnabled) {
     const timeoutMs = Number(process.env.MFA_AUTO_TIMEOUT_MS || 120000);
     logEvent({ level: 'info', message: `Tentando obter código MFA do e-mail por até ${timeoutMs}ms.` });
+    // allow a small pre-wait to let the most recent MFA email arrive
+    try {
+      const prewait = Number(process.env.MFA_PREWAIT_MS || MFA_PREWAIT_MS || 0);
+      if (prewait > 0) {
+        logEvent({ level: 'info', message: `Aguardando ${prewait}ms para chegada do e-mail MFA antes de buscar.` });
+        await new Promise(r => setTimeout(r, prewait));
+      }
+    } catch (e) {}
     try {
       const code = await fetchMfaCodeFromEmail(timeoutMs, Number(process.env.MFA_AUTO_POLL_MS || 5000));
       if (code) {
