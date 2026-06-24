@@ -37,53 +37,12 @@ const STATE_REVALIDATE_TIMEOUT_MS = Number(process.env.STATE_REVALIDATE_TIMEOUT_
 const STATE_REVALIDATE_POLL_MS = Number(process.env.STATE_REVALIDATE_POLL_MS || 2000);
 
 const SINGLE_REPORT_ARG = (process.env.SINGLE_REPORT || getCliArg('--single') || getCliArg('-s')) || null;
-
 let MODAL_CACHE = {};
 
 function getCliArg(name) {
   const idx = process.argv.indexOf(name);
   if (idx >= 0 && process.argv.length > idx + 1) return process.argv[idx + 1];
   return null;
-}
-
-// Simple in-process semaphore to serialize modal interactions and avoid
-// concurrent modals stepping on each other when multiple reports run
-// in the same Node process.
-const _modalSemaphore = { taken: false, queue: [] };
-function acquireModalLock() {
-  return new Promise(resolve => {
-    if (!_modalSemaphore.taken) {
-      _modalSemaphore.taken = true;
-      resolve();
-      return;
-    }
-    _modalSemaphore.queue.push(resolve);
-  });
-}
-function releaseModalLock() {
-  const next = _modalSemaphore.queue.shift();
-  if (next) {
-    try { next(); } catch (_) {}
-    return;
-  }
-  _modalSemaphore.taken = false;
-}
-
-async function loadModalCache() {
-  try {
-    if (fs.existsSync(MODAL_CACHE_PATH)) {
-      const raw = await fs.promises.readFile(MODAL_CACHE_PATH, 'utf8').catch(() => null);
-      if (raw) {
-        MODAL_CACHE = JSON.parse(raw) || {};
-      }
-    }
-  } catch (e) {}
-}
-
-async function saveModalCache() {
-  try {
-    await fs.promises.writeFile(MODAL_CACHE_PATH, JSON.stringify(MODAL_CACHE, null, 2)).catch(() => {});
-  } catch (e) {}
 }
 
 // Global helper: retry actions that fail due to transient frame detach / execution context errors
@@ -1703,7 +1662,7 @@ const REPORT_DEFINITIONS = [
       "PERMUTA TOMIO GREEN GARDEN LOTE 46"
     ],
     pdfName: 'Venda de Passivo',
-    planoFinanceiro: ['Venda de Passivos'],
+    planoFinanceiro: ['Receita de Estoque de Terrenos', 'Receita de Bens/Imóveis Adquiridos de Terceiros'],
     
     documentos: [
       "Adiantamento",
@@ -2542,6 +2501,39 @@ async function logPageState(page, message, extra = {}) {
     ...Object.fromEntries(Object.entries(extra).filter(([k]) => !['shotName', 'level'].includes(k))),
   });
 }
+// Simple in-process modal lock to avoid concurrent modal actions
+let _modalLock = false;
+async function acquireModalLock(timeout = 15000) {
+  const start = Date.now();
+  while (_modalLock) {
+    if (Date.now() - start > timeout) throw new Error('Timeout acquiring modal lock');
+    await new Promise(r => setTimeout(r, 100));
+  }
+  _modalLock = true;
+  return true;
+}
+function releaseModalLock() {
+  _modalLock = false;
+  return true;
+}
+
+async function saveModalCache() {
+  try {
+    await fs.promises.mkdir(path.dirname(MODAL_CACHE_PATH), { recursive: true }).catch(() => {});
+    await fs.promises.writeFile(MODAL_CACHE_PATH, JSON.stringify(MODAL_CACHE || {}, null, 2), 'utf8').catch(() => {});
+  } catch (e) {}
+}
+
+async function loadModalCache() {
+  try {
+    if (fs.existsSync(MODAL_CACHE_PATH)) {
+      const txt = await fs.promises.readFile(MODAL_CACHE_PATH, 'utf8').catch(() => '{}');
+      MODAL_CACHE = JSON.parse(txt || '{}') || {};
+    }
+  } catch (e) {
+    MODAL_CACHE = {};
+  }
+}
 async function waitForAppReady(
   page,
   timeout = 15000
@@ -2762,7 +2754,9 @@ async function selectContasCorrente({
   values = [],
   reportName,
 }) {
-  
+  // defensive normalize: always pass a clean array to selectViaModal
+  values = uniqueNonEmpty(Array.isArray(values) ? values.map(x => String(x || '').trim()) : [String(values || '').trim()]);
+
   await selectViaModal({
     
     page,
@@ -3259,7 +3253,9 @@ async function selectCondicoesPagamento({
   values = [],
   reportName,
 }) {
-  
+  // defensive normalize: always pass a clean array to selectViaModal
+  values = uniqueNonEmpty(Array.isArray(values) ? values.map(x => String(x || '').trim()) : [String(values || '').trim()]);
+
   await selectViaModal({
     
     page,
@@ -3937,6 +3933,9 @@ async function selectPlanoFinanceiro({
   values = [],
   reportName,
 }) {
+  // defensive normalize: always pass a clean array to selectViaModal
+  values = uniqueNonEmpty(Array.isArray(values) ? values.map(x => String(x || '').trim()) : [String(values || '').trim()]);
+
   await selectViaModal({
     
     page,
@@ -3969,6 +3968,9 @@ async function selectDocumentos({
   values = [],
   reportName,
 }) {
+  // defensive normalize: always pass a clean array to selectViaModal
+  values = uniqueNonEmpty(Array.isArray(values) ? values.map(x => String(x || '').trim()) : [String(values || '').trim()]);
+
   await selectViaModal({
     
     page,
@@ -4689,72 +4691,102 @@ async function ensureCheckboxChecked(
   rowLocator,
   checkboxSelector = 'input[type="checkbox"][name="rowSelect"]'
 ) {
-  const attempts = 6;
   const selector = checkboxSelector || 'input[type="checkbox"]';
+
+  // 1) DOM-first: try to click matching checkboxes directly via evaluate inside the row
+  try {
+    const domResult = await rowLocator.evaluate((r, sel) => {
+      try {
+        const nodes = Array.from((sel ? r.querySelectorAll(sel) : r.querySelectorAll('input[type="checkbox"]')) || []);
+        if (!nodes.length) return false;
+        let anyChecked = false;
+        for (const cb of nodes) {
+          try {
+            if (!cb.checked) {
+              try { cb.click(); } catch (e) { cb.checked = true; }
+              try { cb.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {}
+            }
+            if (cb.checked) anyChecked = true;
+          } catch (e) {}
+        }
+        return anyChecked;
+      } catch (e) { return false; }
+    }, selector).catch(() => false);
+    logEvent({ level: 'debug', message: `ensureCheckboxChecked DOM-first result=${domResult}`, selector });
+    if (domResult) return true;
+  } catch (e) {
+    logEvent({ level: 'debug', message: `ensureCheckboxChecked DOM-first error: ${String(e && e.message || e)}` });
+  }
+
+  // 2) Fallback: use Playwright locators with a few attempts (preserve original robust behavior)
+  const attempts = 4;
   for (let i = 0; i < attempts; i++) {
     try {
       const snippet = (await rowLocator.innerText().catch(() => '')).slice(0, 200);
       logEvent({ level: 'debug', message: `ensureCheckboxChecked attempt=${i + 1}/${attempts} row-snippet='${snippet}' selector='${selector}'` });
-      const checkbox = rowLocator.locator(selector).first();
-      const exists = await checkbox.count().catch(() => 0);
-      logEvent({ level: 'debug', message: `ensureCheckboxChecked: checkbox exists=${exists}` });
-      if (!exists) {
-        // try to find a checkbox anywhere inside the row
-        const any = rowLocator.locator('input[type="checkbox"]').first();
+
+      const list = rowLocator.locator(selector);
+      const count = await list.count().catch(() => 0);
+      logEvent({ level: 'debug', message: `ensureCheckboxChecked: found ${count} checkbox(es) using selector='${selector}'` });
+
+      if (count === 0) {
+        const any = rowLocator.locator('input[type="checkbox"]');
         const anyCount = await any.count().catch(() => 0);
         logEvent({ level: 'debug', message: `ensureCheckboxChecked: any checkbox inside row count=${anyCount}` });
-        if (anyCount) {
-          try { await any.check(); } catch (err) { logEvent({ level: 'debug', message: `any.check() failed: ${String(err && err.message || err)}` }); try { await any.click({ force: true }); } catch (e) { logEvent({ level: 'debug', message: `any.click() failed: ${String(e && e.message || e)}` }); await any.evaluate(el => el.click()).catch(() => {}); } }
+        for (let j = 0; j < anyCount; j++) {
+          const cb = any.nth(j);
+          try {
+            const checked = await cb.isChecked().catch(() => false);
+            if (!checked) {
+              try { await cb.check(); } catch (err) { try { await cb.click({ force: true }); } catch (e) { await cb.evaluate(el => el.click()).catch(() => {}); } }
+            }
+          } catch (e) { logEvent({ level: 'debug', message: `ensureCheckboxChecked any-fallback error: ${String(e && e.message || e)}` }); }
         }
       } else {
-        const checked = await checkbox.isChecked().catch(() => false);
-        logEvent({ level: 'debug', message: `ensureCheckboxChecked: already checked=${checked}` });
-        if (checked) return true;
-        try {
-          await checkbox.check();
-        } catch (err) {
-          logEvent({ level: 'debug', message: `checkbox.check() failed: ${String(err && err.message || err)}` });
-          try { await checkbox.click({ force: true }); } catch (e) {
-            logEvent({ level: 'debug', message: `checkbox.click() failed: ${String(e && e.message || e)}` });
-            // last resort: evaluate and click the DOM element
-            try {
-              await rowLocator.evaluate((r, sel) => {
-                const cb = r.querySelector(sel) || r.querySelector('input[type="checkbox"]');
-                if (cb && !cb.checked) {
-                  cb.click();
-                  cb.checked = true;
-                  cb.dispatchEvent(new Event('change', { bubbles: true }));
+        for (let idx = 0; idx < count; idx++) {
+          const cb = list.nth(idx);
+          try {
+            const checked = await cb.isChecked().catch(() => false);
+            if (!checked) {
+              try { await cb.check(); } catch (err) {
+                logEvent({ level: 'debug', message: `checkbox.check() failed: ${String(err && err.message || err)}` });
+                try { await cb.click({ force: true }); } catch (e) {
+                  logEvent({ level: 'debug', message: `checkbox.click() failed: ${String(e && e.message || e)}` });
+                  try { await rowLocator.evaluate((r, params) => { const sel = params.sel; const index = params.index; const nodes = Array.from(r.querySelectorAll(sel)); if (nodes[index] && !nodes[index].checked) { nodes[index].click(); nodes[index].checked = true; nodes[index].dispatchEvent(new Event('change', { bubbles: true })); } }, { sel: selector, index: idx }).catch(() => {}); } catch (_) { logEvent({ level: 'debug', message: 'evaluate click fallback failed' }); }
                 }
-              }, selector).catch(() => {});
-            } catch (__) { logEvent({ level: 'debug', message: 'evaluate click fallback failed' }); }
-          }
+              }
+            }
+          } catch (e) { logEvent({ level: 'debug', message: `ensureCheckboxChecked per-cb error: ${String(e && e.message || e)}` }); }
         }
       }
 
-      // verify
-      const final = rowLocator.locator(selector).first();
-      const isNow = await final.isChecked().catch(() => false);
-      logEvent({ level: 'debug', message: `ensureCheckboxChecked: isNow=${isNow}` });
-      if (isNow) return true;
+      // verify at least one checkbox is checked now
+      const finalList = rowLocator.locator(selector);
+      const finalCount = await finalList.count().catch(() => 0);
+      let anyChecked = false;
+      for (let k = 0; k < finalCount; k++) {
+        try { if (await finalList.nth(k).isChecked().catch(() => false)) { anyChecked = true; break; } } catch (_) {}
+      }
+      logEvent({ level: 'debug', message: `ensureCheckboxChecked: anyChecked=${anyChecked}` });
+      if (anyChecked) return true;
     } catch (e) {
       logEvent({ level: 'debug', message: `ensureCheckboxChecked: attempt error: ${String(e && e.message || e)}` });
-      // ignore and retry
     }
 
-    // small delay before retrying (increase wait to allow UI to update)
-    await rowLocator.page().waitForTimeout(300 + i * 200).catch(() => {});
-    // try a gentle click on the row to trigger selection widgets that don't expose checkboxes directly
+    try { await rowLocator.page().waitForTimeout(300 + i * 200).catch(() => {}); } catch (_) {}
     try { await rowLocator.click({ force: true }).catch(() => {}); } catch (_) {}
   }
 
-  // final attempt: try evaluating across the frame to find and click by text
+  // final attempt: DOM evaluate any checkbox inside the row
   try {
-    await rowLocator.evaluate(r => {
-      const cb = r.querySelector('input[type="checkbox"]');
-      if (cb && !cb.checked) { cb.click(); cb.checked = true; cb.dispatchEvent(new Event('change', { bubbles: true })); }
+    await rowLocator.evaluate((r) => {
+      try {
+        const cb = r.querySelector('input[type="checkbox"]');
+        if (cb && !cb.checked) { try { cb.click(); } catch (_) { cb.checked = true; } cb.dispatchEvent(new Event('change', { bubbles: true })); }
+      } catch (e) {}
     }).catch(() => {});
   } catch (_) {}
-  // final verification: return whether the checkbox is now checked
+
   try {
     const final = rowLocator.locator(checkboxSelector).first();
     const nowChecked = await final.isChecked().catch(() => false);
@@ -5025,6 +5057,9 @@ async function selectViaModal({
   // MARCA TODOS OS VALORES
   // =====================================================
   
+  // prepara entradas normalizadas para matching DOM-first
+  const normalizedEntries = entries.map(e => normalizeSelectionText(e)).filter(Boolean);
+
   const modalInput =
   await resolveInput(
     modalFrame,
@@ -5034,15 +5069,29 @@ async function selectViaModal({
   
   if (!modalInput) {
     await saveDebugState('input-not-found').catch(() => {});
-    throw new Error(
-      `Nao encontrei input visivel no modal: ${modalTitle}`
-    );
+    logEvent({ level: 'info', message: 'Input do modal nao encontrado — prosseguindo com seleção por DOM (sem buscas)', modalTitle });
+    // nao interrompe o fluxo: tentaremos selecionar tudo diretamente no DOM
   }
   
   // TENTA SELEÇÃO EM LOTE (mais rápida) — seleciona checkboxes no DOM de uma só vez
   try {
-    const normalizedEntries = entries.map(e => String(e || '').trim().toLowerCase()).filter(Boolean);
+    logEvent({ level: 'debug', message: 'Bulk selection: normalized entries', detail: JSON.stringify(normalizedEntries.slice(0,50)), modalTitle });
     if (normalizedEntries.length) {
+      // Primeira tentativa: acionar checkbox de header (select-all) se existir
+      try {
+        await withFrameRetry(async () => {
+          await modalFrame.evaluate((rowCheckboxSel) => {
+            try {
+              const header = document.querySelector('thead input[type="checkbox"], tr th input[type="checkbox"], .ui-table thead input[type="checkbox"], input[data-select-all], [data-select-all]');
+              if (header && !header.checked) {
+                try { header.click(); } catch (e) { header.checked = true; header.dispatchEvent(new Event('change', { bubbles: true })); }
+              }
+              return true;
+            } catch (e) { return false; }
+          }, modalDefinition.rowCheckboxSelector).catch(() => {});
+        }, { name: 'dom-select-all-attempt' }).catch(() => {});
+      } catch (_) {}
+
       // scroll modal to render virtualized rows before matching
       await withFrameRetry(async () => {
         await modalFrame.evaluate(() => {
@@ -5052,41 +5101,63 @@ async function selectViaModal({
           let y = 0;
           while (y < height) {
             scroller.scrollTop = y;
-            y += 400;
+            y += 800;
           }
+          scroller.scrollTop = height;
         }).catch(() => {});
       }, { name: 'bulk-scroll' }).catch(() => {});
       
-        const matched = await withFrameRetry(async () => await modalFrame.evaluate((normalizedEntries) => {
+        const matched = await withFrameRetry(async () => await modalFrame.evaluate(({ normalizedEntries, rowCheckboxSel, rowValueSelectors }) => {
         function normalize(s) {
           try { return (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim().toLowerCase(); } catch (e) { return (s || '').replace(/\s+/g, ' ').trim().toLowerCase(); }
         }
-        const rows = Array.from(document.querySelectorAll('tr'));
+        const candidateRowSelectors = ['#tabelaResultado tr[indice]', '#tabelaResultado tr[linha="true"]', 'tr[indice]', 'tr[linha="true"]', 'tbody > tr', 'tr'];
+        let rows = [];
+        for (const sel of candidateRowSelectors) {
+          try { const r = Array.from(document.querySelectorAll(sel) || []); if (r && r.length) { rows = r; break; } } catch (e) {}
+        }
+        if (!rows || !rows.length) rows = Array.from(document.querySelectorAll('tr'));
+
         let found = 0;
         const seen = new Set();
         for (const row of rows) {
-          const rowText = normalize(row.innerText || '');
-          // collect cell texts too
-          const cells = Array.from(row.querySelectorAll('td,th')).map(c => normalize(c.innerText || ''));
-          for (let i = 0; i < normalizedEntries.length; i++) {
-            const ne = normalizedEntries[i];
-            if (!ne || seen.has(ne)) continue;
-            // match: exact or contains in either direction (handles codes + names and partial tokens)
-            const ok = (rowText === ne) || cells.some(ct => ct === ne || ct.includes(ne) || ne.includes(ct));
-            if (ok) {
-              const checkbox = row.querySelector('input[type="checkbox"]');
-              if (checkbox && !checkbox.checked) {
-                try { checkbox.click(); } catch (e) { try { checkbox.checked = true; checkbox.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {} }
-                try { checkbox.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {}
+          try {
+            const parts = [];
+            if (Array.isArray(rowValueSelectors) && rowValueSelectors.length) {
+              for (const rsel of rowValueSelectors) {
+                try {
+                  const c = row.querySelector(rsel);
+                  if (c) parts.push(normalize(c.innerText || ''));
+                } catch (e) {}
               }
-              seen.add(ne);
-              found++;
             }
-          }
+            if (!parts.length) {
+              const raw = String(row.innerText || '');
+              parts.push(...raw.split(/\r?\n|\t/).map(s => normalize(s)).filter(Boolean));
+            }
+            for (let i = 0; i < normalizedEntries.length; i++) {
+              const ne = normalizedEntries[i];
+              if (!ne || seen.has(ne)) continue;
+              const ok = parts.some(p => p === ne || p.includes(ne) || ne.includes(p));
+              if (ok) {
+                const checkbox = row.querySelector(rowCheckboxSel || 'input[type="checkbox"]');
+                if (checkbox && !checkbox.checked) {
+                  try { checkbox.click(); } catch (e) { try { checkbox.checked = true; checkbox.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {} }
+                  try { checkbox.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {}
+                }
+                seen.add(ne);
+                found++;
+              }
+            }
+          } catch (e) { /* ignore row errors */ }
         }
-        return { found, expected: normalizedEntries.length, matched: Array.from(seen) };
-      }, normalizedEntries), { name: 'bulk-evaluate' }).catch(() => null);
+        return { found, expected: normalizedEntries.length, matched: Array.from(seen), rowsCount: rows.length, sampleRows: rows.slice(0,30).map(r => r.innerText) };
+      }, { normalizedEntries, rowCheckboxSel: modalDefinition.rowCheckboxSelector, rowValueSelectors: (modalDefinition && modalDefinition.rowValueSelectors) || [] }), { name: 'bulk-evaluate' }).catch(() => null);
       
+      if (matched) {
+        logEvent({ level: 'debug', message: 'Bulk modal evaluate result', detail: JSON.stringify(matched), modalTitle });
+      }
+
       if (matched && matched.found >= matched.expected) {
         logEvent({ level: 'info', message: `Bulk modal selection succeeded: ${matched.matched.join(', ')}`, modalTitle });
         
@@ -5095,7 +5166,7 @@ async function selectViaModal({
         // Antes de finalizar, captura lista de rows marcadas no modal para diagnóstico
         try {
           const modalChecked = await modalFrame.evaluate(() => Array.from(document.querySelectorAll('tr')).filter(r => { try { const cb = r.querySelector('input[type="checkbox"]'); return !!(cb && cb.checked); } catch(e){return false;} }).map(r => r.innerText.trim()).slice(0,200)).catch(() => []);
-          logEvent({ level: 'info', message: `Modal checked rows (pre-select): ${modalChecked.length}`, detail: modalChecked.slice(0,10), modalTitle });
+          logEvent({ level: 'info', message: `Modal checked rows (pre-select): ${modalChecked.length}`, detail: JSON.stringify(modalChecked.slice(0,50)), modalTitle });
         } catch (_) {}
 
         // Clica no botão selecionar e finaliza o modal
@@ -5107,6 +5178,14 @@ async function selectViaModal({
         try {
           const iframeLocator2 = page.locator('iframe#iFramePage');
           const mainFrame2 = await iframeLocator2.contentFrame().catch(() => null);
+          // Re-obtem as linhas marcadas no modal e grava explicitamente no mainFrame para diagnóstico
+          try {
+            const modalCheckedPersist = await modalFrame.evaluate(() => Array.from(document.querySelectorAll('tr')).filter(r => { try { const cb = r.querySelector('input[type="checkbox"]'); return !!(cb && cb.checked); } catch(e){return false;} }).map(r => r.innerText.trim()).slice(0,200)).catch(() => []);
+            if (mainFrame2 && modalCheckedPersist && modalCheckedPersist.length) {
+              await writeSelectedEntitiesIntoMainFrame(mainFrame2, modalCheckedPersist).catch(() => {});
+              logEvent({ level: 'info', message: 'Wrote modal selections into main frame (bulk)', detail: JSON.stringify(modalCheckedPersist.slice(0,10)), modalTitle });
+            }
+          } catch (e) {}
           if (mainFrame2) {
             // tenta extrair input visível associado ao triggerSelector
             try {
@@ -5144,15 +5223,24 @@ async function selectViaModal({
                   return out;
                 } catch (e) { return []; }
               }).catch(() => []);
-              logEvent({ level: 'info', message: `Main SelectedEntitiesList after select: ${selectedLists.length}`, detail: selectedLists.slice(0,10), modalTitle });
+              logEvent({ level: 'info', message: `Main SelectedEntitiesList after select: ${selectedLists.length}`, detail: JSON.stringify(selectedLists.slice(0,10)), modalTitle });
             } catch (e) {}
           }
         } catch (_) {}
 
         logEvent({ level: 'info', message: `Modal finalizado (bulk): ${entries.join(', ')}`, modalTitle });
         try { await setReportProgress(reportName, 25, { lastMessage: 'modal_finished', step: 'modal_done' }); } catch (_) {}
-        try { await saveShot(page, `modal-selected-${sanitizeFileName(modalTitle)}`); } catch (_) {}
+        try { await saveShot(page, `modal-selected3-${sanitizeFileName(modalTitle)}`); } catch (_) {}
         return;
+      }
+      // if matched is present but incomplete, log which entries were not matched
+      if (matched && matched.found < matched.expected) {
+        try {
+          const unmatched = normalizedEntries.filter(ne => !(matched.matched || []).includes(ne));
+          logEvent({ level: 'warn', message: `Bulk selection incomplete: found ${matched.found}/${matched.expected}`, detail: JSON.stringify({ unmatched: unmatched.slice(0,50) }), modalTitle });
+          const sampleRows = matched.sampleRows || await modalFrame.evaluate(() => Array.from(document.querySelectorAll('tr')).slice(0,50).map(r => r.innerText)).catch(() => []);
+          logEvent({ level: 'debug', message: 'Modal sample rows for diagnosis', detail: JSON.stringify(sampleRows.slice(0,50)), modalTitle });
+        } catch (e) {}
       }
     }
   } catch (e) {
@@ -5297,6 +5385,7 @@ async function selectViaModal({
         } catch (e) {}
         return null;
       }, normalizedToken).catch(() => null);
+      logEvent({ level: 'debug', message: `Row index lookup for '${currentValue}': ${String(idx)}`, modalTitle });
       
       if (idx) {
         rowLocator = modalFrame.locator(`xpath=(//tr)[${idx}]`);
@@ -5528,14 +5617,41 @@ async function selectViaModal({
   // BOTÃO SELECIONAR
   // =====================================================
   
-  const { locator: selecionarBtn } = await findVisibleLocatorInFrames( page, '#pbSelecionar' ); 
+  // Prefer clicking Selecionar inside the modal frame, fallback to cross-frame locator
+  let clickedSelec = false;
+  try {
+    const selBtnFrame = modalFrame.locator('#pbSelecionar, input[id*="pbSelecionar"], input[name="pbSelecionar"], button#pbSelecionar').first();
+    if (await selBtnFrame.count().catch(() => 0)) {
+      await selBtnFrame.click({ force: true }).catch(() => {});
+      clickedSelec = true;
+    }
+  } catch (_) {}
+  let selecionarBtn = null;
+  if (!clickedSelec) {
+    const res = await findVisibleLocatorInFrames(page, '#pbSelecionar');
+    selecionarBtn = res && res.locator ? res.locator : null;
+  }
   // Antes de clicar em Selecionar, captura linhas marcadas no modal
   try {
     const modalChecked = await modalFrame.evaluate(() => Array.from(document.querySelectorAll('tr')).filter(r => { try { const cb = r.querySelector('input[type="checkbox"]'); return !!(cb && cb.checked); } catch(e){return false;} }).map(r => r.innerText.trim()).slice(0,200)).catch(() => []);
-    logEvent({ level: 'info', message: `Modal checked rows (pre-select): ${modalChecked.length}`, detail: modalChecked.slice(0,10), modalTitle });
+    logEvent({ level: 'info', message: `Modal checked rows (pre-select): ${modalChecked.length}`, detail: JSON.stringify(modalChecked.slice(0,50)), modalTitle });
+    try {
+      const iframeLocatorBefore = page.locator('iframe#iFramePage');
+      const mainFrameBefore = await iframeLocatorBefore.contentFrame().catch(() => null);
+      if (mainFrameBefore && modalChecked && modalChecked.length) {
+        await writeSelectedEntitiesIntoMainFrame(mainFrameBefore, modalChecked).catch(() => {});
+        logEvent({ level: 'info', message: 'Persisted modal selections into main frame (pre-click)', detail: JSON.stringify(modalChecked.slice(0,10)), modalTitle });
+      }
+    } catch (e) {}
   } catch (_) {}
 
-  await selecionarBtn.click({ force: true, });
+  try {
+    if (selecionarBtn) await selecionarBtn.click({ force: true });
+    else if (!clickedSelec) {
+      // final fallback: try to click any button in the modal via evaluate
+      try { await modalFrame.evaluate(() => { const b = document.querySelector('#pbSelecionar,input[id*="pbSelecionar"],input[name*="pbSelecionar"],button#pbSelecionar'); if (b) try { b.click(); } catch(e) { try { b.dispatchEvent(new MouseEvent('click',{bubbles:true})); } catch(_){} } }).catch(() => {}); } catch(_) {}
+    }
+  } catch (_) {}
 
   await page.waitForTimeout(300);
 
@@ -5543,9 +5659,17 @@ async function selectViaModal({
   try {
     const iframeLocator2 = page.locator('iframe#iFramePage');
     const mainFrame2 = await iframeLocator2.contentFrame().catch(() => null);
+    // Re-obtem as linhas marcadas no modal e grava explicitamente no mainFrame para diagnóstico
+    try {
+      const modalCheckedPersist = await modalFrame.evaluate(() => Array.from(document.querySelectorAll('tr')).filter(r => { try { const cb = r.querySelector('input[type="checkbox"]'); return !!(cb && cb.checked); } catch(e){return false;} }).map(r => r.innerText.trim()).slice(0,200)).catch(() => []);
+      if (mainFrame2 && modalCheckedPersist && modalCheckedPersist.length) {
+        await writeSelectedEntitiesIntoMainFrame(mainFrame2, modalCheckedPersist).catch(() => {});
+        logEvent({ level: 'info', message: 'Wrote modal selections into main frame', detail: JSON.stringify(modalCheckedPersist.slice(0,10)), modalTitle });
+      }
+    } catch (e) {}
     if (mainFrame2) {
       try {
-        const nearValue = await mainFrame2.locator(`${triggerSelector}`).evaluate((el) => {
+          const nearInfo = await mainFrame2.locator(`${triggerSelector}`).evaluate((el) => {
           try {
             function findNearInput(node) {
               if (!node) return null;
@@ -5563,8 +5687,36 @@ async function selectViaModal({
             }
             return null;
           } catch (e) { return null; }
-        }).catch(() => null);
-        logEvent({ level: 'info', message: `Main input near trigger after select: ${String(nearValue).slice(0,200)}`, modalTitle });
+          }).catch(() => null);
+          // tenta setar explicitamente o input visível próximo ao trigger com os nomes selecionados
+          try {
+            const combined = (modalCheckedPersist || []).join('\n');
+            await mainFrame2.evaluate((sel, trigger) => {
+              try {
+                function findNearInput(node) {
+                  if (!node) return null;
+                  if (node.tagName && node.tagName.toLowerCase() === 'input') return node;
+                  for (const child of Array.from(node.childNodes || [])) {
+                    if (child.tagName && child.tagName.toLowerCase() === 'input') return child;
+                  }
+                  return null;
+                }
+                const el = document.querySelector(trigger);
+                if (!el) return null;
+                let parent = el.parentElement;
+                while (parent) {
+                  const inp = findNearInput(parent);
+                  if (inp) {
+                    try { inp.value = sel; inp.dispatchEvent(new Event('change', { bubbles: true })); } catch(e) {}
+                    return true;
+                  }
+                  parent = parent.parentElement;
+                }
+                return false;
+              } catch (e) { return false; }
+            }, combined, triggerSelector).catch(() => {});
+            logEvent({ level: 'info', message: `Wrote combined selection into near input (len=${String(modalCheckedPersist.length)})`, modalTitle });
+          } catch (e) {}
       } catch (e) {}
 
       try {
@@ -5578,7 +5730,18 @@ async function selectViaModal({
             return out;
           } catch (e) { return []; }
         }).catch(() => []);
-        logEvent({ level: 'info', message: `Main SelectedEntitiesList after select: ${selectedLists.length}`, detail: selectedLists.slice(0,10), modalTitle });
+          try {
+            logEvent({ level: 'info', message: `Main SelectedEntitiesList after select: ${selectedLists.length}`, detail: JSON.stringify(selectedLists.slice(0,10)), modalTitle });
+            // If main frame lists don't include all selectedSoFar, re-write merged selections
+            try {
+              const flat = (Array.isArray(selectedLists) ? selectedLists.join('\n') : String(selectedLists || '')).split('\n').map(s=>s.trim()).filter(Boolean);
+              const missing = (selectedSoFar || []).filter(s => !flat.includes(s.trim()));
+              if (missing && missing.length) {
+                await writeSelectedEntitiesIntoMainFrame(mainFrame2, selectedSoFar).catch(() => {});
+                logEvent({ level: 'warn', message: 'Main frame missing some selections after click; re-wrote merged selections', detail: JSON.stringify({ missingCount: missing.length, missing: missing.slice(0,10) }), modalTitle });
+              }
+            } catch (e) {}
+          } catch (e) { logEvent({ level: 'debug', message: 'Failed logging selectedLists', detail: String(e && e.message || e) }); }
       } catch (e) {}
     }
   } catch (_) {}
@@ -5594,7 +5757,7 @@ async function selectViaModal({
 
   // =====================================================
   // MITIGAÇÃO DEFENSIVA: limpar possíveis estados remanescentes após fechar modal
-  // =====================================================
+  // ====================================================='
   try {
     // reseta cache em memória e grava
     MODAL_CACHE = {};
@@ -5766,9 +5929,148 @@ async function selectViaModalByGrid({
     await saveDebugState('input-not-found').catch(() => {});
     throw new Error(`Nao encontrei input visivel no modal: ${modalTitle}`);
   }
+  // acumulador local de seleções já marcadas no modal (texto das linhas)
+  let selectedSoFar = [];
+
+  // TENTA SELEÇÃO EM LOTE ANTES DE PROCESSAR POR ITEM (DOM-FIRST)
+  try {
+    const normalizedEntries = entries.map(e => normalizeSelectionText(e)).filter(Boolean);
+    logEvent({ level: 'debug', message: 'Bulk selection (grid): normalized entries', detail: JSON.stringify(normalizedEntries.slice(0,50)), modalTitle });
+    if (normalizedEntries.length) {
+      // tentativa rápida: acionar checkbox de header (select-all) se existir
+      try {
+        await withFrameRetry(async () => {
+          await modalFrame.evaluate((rowCheckboxSel) => {
+            try {
+              const header = document.querySelector('thead input[type="checkbox"], tr th input[type="checkbox"], .ui-table thead input[type="checkbox"], input[data-select-all], [data-select-all]');
+              if (header && !header.checked) {
+                try { header.click(); } catch (e) { header.checked = true; header.dispatchEvent(new Event('change', { bubbles: true })); }
+              }
+              return true;
+            } catch (e) { return false; }
+          }, modalDefinition.rowCheckboxSelector).catch(() => {});
+        }, { name: 'dom-select-all-attempt' }).catch(() => {});
+      } catch (_) {}
+
+      // scroll para renderizar linhas virtualizadas
+      await withFrameRetry(async () => {
+        await modalFrame.evaluate(() => {
+          const scroller = document.querySelector('.ui-table') || document.querySelector('.modal-body') || document.scrollingElement || document.documentElement;
+          if (!scroller) return;
+          const height = scroller.scrollHeight || (document.body && document.body.scrollHeight) || 0;
+          let y = 0;
+          while (y < height) {
+            scroller.scrollTop = y;
+            y += 800;
+          }
+          scroller.scrollTop = height;
+        }).catch(() => {});
+      }, { name: 'bulk-scroll' }).catch(() => {});
+
+      let matched = null;
+      try {
+        matched = await withFrameRetry(async () => await modalFrame.evaluate(({ normalizedEntries, rowCheckboxSel, rowValueSelectors }) => {
+        function normalize(s) {
+          try { return (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim().toLowerCase(); } catch (e) { return (s || '').replace(/\s+/g, ' ').trim().toLowerCase(); }
+        }
+        const candidateRowSelectors = ['#tabelaResultado tr[indice]', '#tabelaResultado tr[linha="true"]', 'tr[indice]', 'tr[linha="true"]', 'tbody > tr', 'tr'];
+        let rows = [];
+        for (const sel of candidateRowSelectors) {
+          try { const r = Array.from(document.querySelectorAll(sel) || []); if (r && r.length) { rows = r; break; } } catch (e) {}
+        }
+        if (!rows || !rows.length) rows = Array.from(document.querySelectorAll('tr'));
+
+        let found = 0;
+        const seen = new Set();
+        for (const row of rows) {
+          try {
+            const parts = [];
+            if (Array.isArray(rowValueSelectors) && rowValueSelectors.length) {
+              for (const rsel of rowValueSelectors) {
+                try { const c = row.querySelector(rsel); if (c) parts.push(normalize(c.innerText || '')); } catch (e) {}
+              }
+            }
+            if (!parts.length) {
+              const raw = String(row.innerText || '');
+              parts.push(...raw.split(/\r?\n|\t/).map(s => normalize(s)).filter(Boolean));
+            }
+            for (let i = 0; i < normalizedEntries.length; i++) {
+              const ne = normalizedEntries[i];
+              if (!ne || seen.has(ne)) continue;
+              const ok = parts.some(p => p === ne || p.includes(ne) || ne.includes(p));
+              if (ok) {
+                const checkbox = row.querySelector(rowCheckboxSel || 'input[type="checkbox"]');
+                if (checkbox && !checkbox.checked) {
+                  try { checkbox.click(); } catch (e) { try { checkbox.checked = true; checkbox.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {} }
+                  try { checkbox.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {}
+                }
+                seen.add(ne);
+                found++;
+              }
+            }
+          } catch (e) { }
+        }
+        return { found, expected: normalizedEntries.length, matched: Array.from(seen), rowsCount: rows.length, sampleRows: rows.slice(0,30).map(r => r.innerText) };
+        }, { normalizedEntries, rowCheckboxSel: modalDefinition.rowCheckboxSelector, rowValueSelectors: (modalDefinition && modalDefinition.rowValueSelectors) || [] }), { name: 'bulk-evaluate' });
+      } catch (err) {
+        matched = null;
+        try {
+          if (DEBUG_HTML) {
+            try {
+              const ts = nowIso().replace(/[:.]/g, '-');
+              const dumpName = sanitizeFileName(`${modalTitle}-bulk-evaluate-error-${ts}.json`);
+              const dumpPath = path.join(SCREENSHOT_DIR, dumpName);
+              const payload = { error: String(err && (err.stack || err.message || err)), time: new Date().toISOString() };
+              await fs.promises.writeFile(dumpPath, JSON.stringify(payload, null, 2)).catch(() => {});
+              logEvent({ level: 'warn', message: `Saved bulk-evaluate error JSON`, detail: { dumpPath }, modalTitle });
+            } catch (e) {}
+          }
+        } catch (e) {}
+      }
+
+      if (matched) {
+        logEvent({ level: 'debug', message: 'Bulk grid evaluate result', detail: JSON.stringify(matched), modalTitle });
+        try {
+          if (DEBUG_HTML) {
+            try {
+              const ts = nowIso().replace(/[:.]/g, '-');
+              const dumpName = sanitizeFileName(`${modalTitle}-bulk-evaluate-${ts}.json`);
+              const dumpPath = path.join(SCREENSHOT_DIR, dumpName);
+              await fs.promises.writeFile(dumpPath, JSON.stringify(matched, null, 2)).catch(() => {});
+              logEvent({ level: 'info', message: `Saved bulk-evaluate debug JSON`, detail: { dumpPath }, modalTitle });
+            } catch (e) {}
+          }
+        } catch (e) {}
+      }
+
+      if (matched && matched.found >= matched.expected) {
+        logEvent({ level: 'info', message: `Bulk modal (grid) selection succeeded: ${matched.matched.join(', ')}`, modalTitle });
+        // clica em Selecionar dentro do modal
+        try {
+          const selBtn = modalFrame.locator('#pbSelecionar, input[id*="pbSelecionar"], input[name="pbSelecionar"], button#pbSelecionar').first();
+          if (await selBtn.count().catch(() => 0)) {
+            await selBtn.click({ force: true }).catch(() => {});
+          } else {
+            const { locator: selecionarBtn } = await findVisibleLocatorInFrames(page, '#pbSelecionar');
+            if (selecionarBtn) await selecionarBtn.click({ force: true }).catch(() => {});
+          }
+        } catch (_) {}
+
+        try { await saveShot(page, `modal-selected2-${sanitizeFileName(modalTitle)}`); } catch (_) {}
+        return;
+      }
+      if (matched && matched.found < matched.expected) {
+        const unmatched = normalizedEntries.filter(ne => !(matched.matched || []).includes(ne));
+        logEvent({ level: 'warn', message: `Bulk grid selection incomplete: found ${matched.found}/${matched.expected}`, detail: JSON.stringify({ unmatched: unmatched.slice(0,50) }), modalTitle });
+      }
+    }
+  } catch (e) {
+    logEvent({ level: 'debug', message: `Bulk grid selection attempt failed: ${String(e && e.message || e)}`, modalTitle });
+  }
   
   for (const currentValue of entries) {
     logEvent({ level: 'info', message: `Entry start: selecionando no modal: ${currentValue}`, modalTitle });
+    logEvent({ level: 'debug', message: `Entry debug: selectedSoFar count=${selectedSoFar.length}`, detail: selectedSoFar.slice(0,50), modalTitle });
 
     let attempt = 0;
     let succeeded = false;
@@ -5791,26 +6093,79 @@ async function selectViaModalByGrid({
           throw new Error('input-not-found');
         }
 
+        // Reaplica seleções previamente marcadas (se houver) para evitar perda
+        // quando uma nova busca reposicionar/limpar a lista.
+        if (selectedSoFar && selectedSoFar.length) {
+          try {
+            await modalFrame.evaluate((prev) => {
+              try {
+                const norm = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+                const needles = prev.map(p => norm(p));
+                for (const r of Array.from(document.querySelectorAll('tr'))) {
+                  try {
+                    const txt = norm(r.innerText || '');
+                    if (!txt) continue;
+                    if (needles.includes(txt)) {
+                      const cb = r.querySelector('input[type="checkbox"]');
+                      if (cb && !cb.checked) {
+                        try { cb.click(); } catch (e) { try { cb.checked = true; } catch(_){} }
+                        try { cb.dispatchEvent(new Event('change', { bubbles: true })); } catch(_){}
+                      }
+                    }
+                  } catch (e) {}
+                }
+              } catch (e) {}
+            }, selectedSoFar).catch(() => {});
+            // after reapplying, log how many rows are checked now
+            try {
+              const rechecked = await modalFrame.evaluate(() => {
+                try { return Array.from(document.querySelectorAll('tr')).filter(r => { try { const cb = r.querySelector('input[type="checkbox"]'); return !!(cb && cb.checked); } catch(e){return false;} }).map(r => r.innerText.trim()).slice(0,200); } catch (e) { return []; }
+              }).catch(() => []);
+              logEvent({ level: 'debug', message: 'After reapply selectedSoFar, modal checked rows count', detail: JSON.stringify({ count: (rechecked||[]).length, sample: (rechecked||[]).slice(0,20) }), modalTitle });
+            } catch (_) {}
+          } catch (_) {}
+        }
+
         // Try quick DOM-only selection first to avoid triggering searches that may re-render
         // and clear previously checked items. If quick selection succeeds, skip typing.
         let qnorm;
         try { qnorm = String(currentValue || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); } catch (e) { qnorm = String(currentValue || '').toLowerCase(); }
-        const quickMarked = await modalFrame.evaluate((needle) => {
+        // ensure virtualized rows are rendered by scrolling the modal briefly
+        try {
+          await modalFrame.evaluate(() => {
+            const scroller = document.querySelector('.ui-table') || document.querySelector('.modal-body') || document.scrollingElement || document.documentElement;
+            if (!scroller) return;
+            const height = scroller.scrollHeight || (document.body && document.body.scrollHeight) || 0;
+            let y = 0;
+            while (y < height) {
+              scroller.scrollTop = y;
+              y += 800;
+            }
+            scroller.scrollTop = height;
+          }).catch(() => {});
+        } catch (_) {}
+
+        const quickMarked = await modalFrame.evaluate(({ needle, rowCheckboxSel }) => {
           try {
-            const norm = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+            const normalize = s => {
+              try { return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim().toLowerCase(); } catch (e) { return String(s || '').replace(/\s+/g, ' ').trim().toLowerCase(); }
+            };
             for (const r of document.querySelectorAll('tr')) {
-              if (norm(r.innerText || '') === needle) {
-                const cb = r.querySelector('input[type="checkbox"]');
+              const rowText = normalize(r.innerText || '');
+              const cells = Array.from(r.querySelectorAll('td,th')).map(c => normalize(c.innerText || ''));
+              const ok = rowText === needle || cells.some(ct => ct === needle || ct.includes(needle) || needle.includes(ct));
+              if (ok) {
+                const cb = r.querySelector(rowCheckboxSel || 'input[type="checkbox"]');
                 if (cb && !cb.checked) {
                   try { cb.click(); } catch (e) { try { cb.checked = true; } catch(_){} }
-                  try { cb.dispatchEvent(new Event('change', { bubbles: true })); } catch(_){}
+                  try { cb.dispatchEvent(new Event('change', { bubbles: true })); } catch(_){ }
                 }
                 return !!(cb && cb.checked);
               }
             }
           } catch (e) {}
           return false;
-        }, qnorm).catch(() => false);
+        }, { needle: qnorm, rowCheckboxSel: modalDefinition.rowCheckboxSelector }).catch(() => false);
 
         if (quickMarked) {
           logEvent({ level: 'info', message: `Entry quick-mark succeeded: ${currentValue}`, modalTitle });
@@ -5819,6 +6174,10 @@ async function selectViaModalByGrid({
         }
 
         // limpa e digita
+          try {
+          const beforeInputVal = await modalInputLocal.inputValue().catch(() => '');
+          logEvent({ level: 'debug', message: 'Modal input before clear', detail: JSON.stringify({ beforeInputVal }), modalTitle });
+        } catch (_) {}
         await modalInputLocal.fill('').catch(() => {});
         await page.waitForTimeout(300);
         const inputValue = await modalInputLocal.inputValue().catch(() => '');
@@ -5828,6 +6187,7 @@ async function selectViaModalByGrid({
         }
 
         await fillLegacyInput(modalInputLocal, currentValue);
+        logEvent({ level: 'debug', message: 'Typed into modal input', detail: JSON.stringify({ value: String(currentValue).slice(0,200) }), modalTitle });
         try { await modalInputLocal.focus(); } catch (_) {}
         await modalInputLocal.press('Enter').catch(() => {});
 
@@ -5870,6 +6230,42 @@ async function selectViaModalByGrid({
           }, { timeout: 10000 }, normalizedToken).catch(() => {});
         } catch (_) {}
 
+        // Re-apply previously selected rows AFTER search results load to avoid the search
+        // clearing previously-checked items (important for multi-select scenarios).
+        try {
+          if (selectedSoFar && selectedSoFar.length) {
+            await modalFrame.evaluate((prev) => {
+              try {
+                const norm = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+                const needles = prev.map(p => norm(p));
+                for (const r of Array.from(document.querySelectorAll('tr'))) {
+                  try {
+                    const txt = norm(r.innerText || '');
+                    if (!txt) continue;
+                    for (const needle of needles) {
+                      if (!needle) continue;
+                      if (txt === needle || txt.includes(needle) || needle.includes(txt)) {
+                        const cb = r.querySelector('input[type="checkbox"]');
+                        if (cb && !cb.checked) {
+                          try { cb.click(); } catch (e) { try { cb.checked = true; } catch(_){} }
+                          try { cb.dispatchEvent(new Event('change', { bubbles: true })); } catch(_){ }
+                        }
+                        break;
+                      }
+                    }
+                  } catch (e) {}
+                }
+              } catch (e) {}
+            }, selectedSoFar).catch(() => {});
+            try {
+              const rechecked = await modalFrame.evaluate(() => {
+                try { return Array.from(document.querySelectorAll('tr')).filter(r => { try { const cb = r.querySelector('input[type="checkbox"]'); return !!(cb && cb.checked); } catch(e){return false;} }).map(r => r.innerText.trim()).slice(0,200); } catch (e) { return []; }
+              }).catch(() => []);
+              logEvent({ level: 'debug', message: 'After reapply-post-search selectedSoFar, modal checked rows count', detail: JSON.stringify({ count: (rechecked||[]).length, sample: (rechecked||[]).slice(0,20) }), modalTitle });
+            } catch (_) {}
+          }
+        } catch (_) {}
+
         // tenta encontrar a linha e marcar o checkbox com frame-retry
         let rowLocator = null;
         try {
@@ -5890,10 +6286,12 @@ async function selectViaModalByGrid({
           logEvent({ level: 'warn', message: `Timeout ao selecionar valor no modal, tentativa=${attempt}: ${currentValue}`, modalTitle });
           // tenta reabrir modal e refazer se houver tentativas restantes
           try {
+            logEvent({ level: 'info', message: 'Attempting to close and reopen modal for retry', detail: { attempt, currentValue }, modalTitle });
             try { await modalFrame.locator('#pbFechar, input[id*="pbFechar"]').first().click({ force: true }); } catch (_) {}
             await page.waitForTimeout(400);
             await trigger.click({ force: true }).catch(() => {});
             modalFrame = await findSelectionModalFrame(page, modalTitle, 15000).catch(() => null) || await findModalFrame(page, modalTitle, 15000).catch(() => null);
+            logEvent({ level: 'info', message: 'Modal re-open attempt complete', detail: { reopened: !!modalFrame }, modalTitle });
             if (!modalFrame) {
               logEvent({ level: 'warn', message: `Não foi possível reabrir modal para retry, tentativa=${attempt}, pulando: ${currentValue}`, modalTitle });
               if (attempt >= 3) break;
@@ -5912,6 +6310,26 @@ async function selectViaModalByGrid({
         }
 
         logEvent({ level: 'info', message: `Checkbox marcado: ${currentValue}`, modalTitle });
+        try { logEvent({ level: 'debug', message: 'selectedSoFar before update', detail: JSON.stringify(selectedSoFar.slice(0,50)), modalTitle }); } catch (_) {}
+        // Persist selection immediately into main frame to avoid losing it when modal changes
+        try {
+          const modalCheckedNow = await modalFrame.evaluate(() => Array.from(document.querySelectorAll('tr')).filter(r => { try { const cb = r.querySelector('input[type="checkbox"]'); return !!(cb && cb.checked); } catch(e){return false;} }).map(r => r.innerText.trim()).slice(0,200)).catch(() => []);
+          try {
+            const iframeLocator2 = page.locator('iframe#iFramePage');
+            const mainFrame2 = await iframeLocator2.contentFrame().catch(() => null);
+            if (mainFrame2 && modalCheckedNow && modalCheckedNow.length) {
+              await writeSelectedEntitiesIntoMainFrame(mainFrame2, modalCheckedNow).catch(() => {});
+              logEvent({ level: 'debug', message: 'Persisted modal selections into main frame (per-item)', detail: JSON.stringify(modalCheckedNow.slice(0,10)), modalTitle });
+            }
+          } catch (e) {}
+            // atualiza acumulador local de seleções sem duplicatas
+            try {
+              for (const m of (modalCheckedNow || [])) {
+                if (!selectedSoFar.includes(m)) selectedSoFar.push(m);
+              }
+              logEvent({ level: 'debug', message: 'selectedSoFar updated', detail: JSON.stringify({ count: selectedSoFar.length, sample: selectedSoFar.slice(0,50) }), modalTitle });
+            } catch (_) {}
+        } catch (e) {}
         succeeded = true;
       } catch (err) {
         const msg = String(err && (err.message || err));
@@ -5931,16 +6349,109 @@ async function selectViaModalByGrid({
       logEvent({ level: 'warn', message: `Falha ao selecionar após tentativas: ${currentValue}`, modalTitle });
       continue;
     }
-
     saveShot(page, `checkbox-${sanitizeFileName(currentValue)}`).catch(() => {});
     await page.waitForTimeout(700);
     // don't clear the modal input here; clearing can reset previous selections in some modals
     // keep input as-is and move to next iteration which will set new value explicitly
     await page.waitForTimeout(200);
+
+    // Log main frame selected lists after this iteration to help understand persistence
+    try {
+      const iframeLocator2 = page.locator('iframe#iFramePage');
+      const mainFrame2 = await iframeLocator2.contentFrame().catch(() => null);
+      if (mainFrame2) {
+        const selLists = await mainFrame2.evaluate(() => {
+          try {
+            return Array.from(document.querySelectorAll('[id$="SelectedEntitiesList"], [class*="SelectedEntitiesList"]')).map(el => (el.value || el.innerText || '').toString()).slice(0,20);
+          } catch (e) { return []; }
+        }).catch(() => []);
+        logEvent({ level: 'debug', message: 'Main frame SelectedEntitiesList after iteration', detail: { count: selLists.length, sample: selLists.slice(0,10) }, modalTitle });
+      }
+    } catch (_) {}
   }
   
-  const { locator: selecionarBtn } = await findVisibleLocatorInFrames(page, '#pbSelecionar');
-  await selecionarBtn.click({ force: true });
+  // Antes de confirmar, re-aplica todas as seleções acumuladas no modal
+  try {
+    let finalModal = await findSelectionModalFrame(page, modalTitle, 2000).catch(() => null) || await findModalFrame(page, modalTitle, 2000).catch(() => null);
+    if (finalModal && selectedSoFar && selectedSoFar.length) {
+      try {
+        await finalModal.evaluate((prev) => {
+          try {
+            const norm = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+            const needles = Array.from(new Set(prev.map(p => norm(p))));
+            for (const r of Array.from(document.querySelectorAll('tr'))) {
+              try {
+                const txt = norm(r.innerText || '');
+                if (!txt) continue;
+                for (const needle of needles) {
+                  if (!needle) continue;
+                  if (txt === needle || txt.includes(needle) || needle.includes(txt)) {
+                    const cb = r.querySelector('input[type="checkbox"]');
+                    if (cb && !cb.checked) {
+                      try { cb.click(); } catch (e) { try { cb.checked = true; } catch(_){} }
+                      try { cb.dispatchEvent(new Event('change', { bubbles: true })); } catch(_){ }
+                    }
+                    break;
+                  }
+                }
+              } catch (e) {}
+            }
+          } catch (e) {}
+        }, selectedSoFar).catch(() => {});
+        await page.waitForTimeout(300);
+      } catch (_) {}
+    }
+  } catch (_) {}
+
+    // --- DEBUG: dump modal state (HTML + diagnostic JSON) before clicking Selecionar
+    try {
+      if (DEBUG_HTML) {
+        try {
+          await fs.promises.mkdir(SCREENSHOT_DIR, { recursive: true }).catch(() => {});
+          const ts = nowIso().replace(/[:.]/g, '-');
+          const base = sanitizeFileName(`${modalTitle}-preselect-${ts}`);
+          const htmlPath = path.join(SCREENSHOT_DIR, `${base}.html`);
+          const diagPath = path.join(SCREENSHOT_DIR, `${base}-diag.json`);
+          try {
+            const modalHtml = await finalModal.content().catch(() => '<!-- erro ao capturar -->');
+            await fs.promises.writeFile(htmlPath, modalHtml || '<!-- vazio -->').catch(() => {});
+          } catch (e) {}
+          try {
+            const diag = await finalModal.evaluate(() => {
+              try {
+                const norm = s => String(s || '').trim();
+                const checkedRows = Array.from(document.querySelectorAll('tr')).filter(r => { try { const cb = r.querySelector('input[type="checkbox"]'); return !!(cb && cb.checked); } catch(e){return false;} }).map(r => ({ text: norm(r.innerText), html: r.innerHTML.slice(0,1000) }));
+                const inputs = Array.from(document.querySelectorAll('input,textarea,select')).map(i => ({ tag: i.tagName, type: i.type, id: i.id, name: i.name, value: i.value, display: (i.style && i.style.display) || getComputedStyle(i).display }));
+                const hidden = inputs.filter(i => i.type === 'hidden' || i.display === 'none');
+                const selectedEntities = Array.from(document.querySelectorAll('[id$="SelectedEntitiesList"],[class*="SelectedEntitiesList"]')).map(el => ({ id: el.id || null, class: el.className || null, tag: el.tagName, value: el.value || el.innerText || '' }));
+                const dataAttrs = Array.from(document.querySelectorAll('*')).filter(el => el && el.getAttribute && Array.from(el.attributes).some(a => a.name.indexOf('data-')===0)).slice(0,200).map(el => ({ tag: el.tagName, id: el.id||null, attrs: Array.from(el.attributes).filter(a => a.name.indexOf('data-')===0).map(a=>({name:a.name,value:a.value})) }));
+                return { checkedRows, inputs, hidden, selectedEntities, dataAttrs };
+              } catch (e) { return { error: String(e && e.message || e) }; }
+            }).catch(() => ({ error: 'evaluate-failed' }));
+            await fs.promises.writeFile(diagPath, JSON.stringify(diag, null, 2)).catch(() => {});
+            logEvent({ level: 'info', message: `Saved modal debug HTML+diag`, detail: { htmlPath, diagPath }, modalTitle });
+          } catch (e) {}
+        } catch (e) {}
+      }
+    } catch (e) {}
+
+    // Clique no botão Selecionar preferencialmente dentro do frame do modal
+    let clickedSelec = false;
+    try {
+      const finalModalFrame = finalModal || await findSelectionModalFrame(page, modalTitle, 2000).catch(() => null) || await findModalFrame(page, modalTitle, 2000).catch(() => null);
+      if (finalModalFrame) {
+        const selBtn = finalModalFrame.locator('#pbSelecionar, input[id*="pbSelecionar"], input[name="pbSelecionar"], button#pbSelecionar').first();
+        if (await selBtn.count().catch(() => 0)) {
+          await selBtn.click({ force: true }).catch(() => {});
+          clickedSelec = true;
+        }
+      }
+    } catch (_) {}
+
+    if (!clickedSelec) {
+      const { locator: selecionarBtn } = await findVisibleLocatorInFrames(page, '#pbSelecionar');
+      await selecionarBtn.click({ force: true });
+    }
   
   await page.waitForTimeout(2000);
   await page.waitForTimeout(2000);
@@ -5950,7 +6461,7 @@ async function selectViaModalByGrid({
     message: `Modal finalizado: ${entries.join(', ')}`,
     modalTitle,
   });
-  try { await saveShot(page, `modal-selected-${sanitizeFileName(modalTitle)}`); } catch (_) {}
+  try { await saveShot(page, `modal-selected2-${sanitizeFileName(modalTitle)}`); } catch (_) {}
   } finally {
     if (typeof _modalLockHeld !== 'undefined' && _modalLockHeld) {
       try { releaseModalLock(); } catch (_) {}
@@ -8058,7 +8569,30 @@ async function closeLegacyPopups(page) {
     async function run() {
       await ensureDir(SCREENSHOT_DIR);
       await ensureDir(REPORT_OUTPUT_DIR);
-      const browser = await chromium.launch({ headless: HEADLESS });
+      // Prepare launch options; non-headless in containers often needs extra flags
+      const launchOpts = { headless: HEADLESS };
+      try {
+        if (!HEADLESS) {
+          launchOpts.args = [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-gpu',
+            '--window-size=1280,1024'
+          ];
+        }
+      } catch (e) {}
+
+      let browser;
+      try {
+        browser = await chromium.launch(launchOpts);
+      } catch (err) {
+        // provide richer logging to help diagnose headful failures
+        try {
+          logEvent({ level: 'error', message: 'Falha ao lançar browser Playwright.', detail: String(err && (err.stack || err.message || err)) });
+        } catch (e) {}
+        throw err;
+      }
       const context = await browser.newContext(fs.existsSync(STATE_PATH) ? { storageState: STATE_PATH } : {});
       if (BLOCK_RESOURCES) {
         try {
