@@ -1306,7 +1306,7 @@ const REPORT_DEFINITIONS = [
   {
     sheetName: 'Empréstimo',
     pdfName: 'Empréstimo',
-    planoFinanceiro: ['Receita de Empréstimos', 'Receita de Incorporação de Imóveis'],
+    planoFinanceiro: ['Receita de Empréstimos'],
     
     contasCorrente: [
       "Viacredi Laurentino",
@@ -1662,7 +1662,7 @@ const REPORT_DEFINITIONS = [
       "PERMUTA TOMIO GREEN GARDEN LOTE 46"
     ],
     pdfName: 'Venda de Passivo',
-    planoFinanceiro: ['Receita de Estoque de Terrenos', 'Receita de Bens/Imóveis Adquiridos de Terceiros'],
+    planoFinanceiro: ['Venda de Passivos'],
     
     documentos: [
       "Adiantamento",
@@ -5109,7 +5109,7 @@ async function selectViaModal({
       
         const matched = await withFrameRetry(async () => await modalFrame.evaluate(({ normalizedEntries, rowCheckboxSel, rowValueSelectors }) => {
         function normalize(s) {
-          try { return (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim().toLowerCase(); } catch (e) { return (s || '').replace(/\s+/g, ' ').trim().toLowerCase(); }
+          try { return (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase(); } catch (e) { return (s || '').replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase(); }
         }
         const candidateRowSelectors = ['#tabelaResultado tr[indice]', '#tabelaResultado tr[linha="true"]', 'tr[indice]', 'tr[linha="true"]', 'tbody > tr', 'tr'];
         let rows = [];
@@ -5971,7 +5971,7 @@ async function selectViaModalByGrid({
       try {
         matched = await withFrameRetry(async () => await modalFrame.evaluate(({ normalizedEntries, rowCheckboxSel, rowValueSelectors }) => {
         function normalize(s) {
-          try { return (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim().toLowerCase(); } catch (e) { return (s || '').replace(/\s+/g, ' ').trim().toLowerCase(); }
+          try { return (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase(); } catch (e) { return (s || '').replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase(); }
         }
         const candidateRowSelectors = ['#tabelaResultado tr[indice]', '#tabelaResultado tr[linha="true"]', 'tr[indice]', 'tr[linha="true"]', 'tbody > tr', 'tr'];
         let rows = [];
