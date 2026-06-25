@@ -5107,52 +5107,135 @@ async function selectViaModal({
         }).catch(() => {});
       }, { name: 'bulk-scroll' }).catch(() => {});
       
-        const matched = await withFrameRetry(async () => await modalFrame.evaluate(({ normalizedEntries, rowCheckboxSel, rowValueSelectors }) => {
-        function normalize(s) {
-          try { return (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase(); } catch (e) { return (s || '').replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase(); }
-        }
-        const candidateRowSelectors = ['#tabelaResultado tr[indice]', '#tabelaResultado tr[linha="true"]', 'tr[indice]', 'tr[linha="true"]', 'tbody > tr', 'tr'];
-        let rows = [];
-        for (const sel of candidateRowSelectors) {
-          try { const r = Array.from(document.querySelectorAll(sel) || []); if (r && r.length) { rows = r; break; } } catch (e) {}
-        }
-        if (!rows || !rows.length) rows = Array.from(document.querySelectorAll('tr'));
-
-        let found = 0;
-        const seen = new Set();
-        for (const row of rows) {
+        const isDocsModal = normalizeSelectionText(modalTitle || '').includes('consulta de documentos');
+        let matched = null;
+        if (isDocsModal) {
           try {
-            const parts = [];
-            if (Array.isArray(rowValueSelectors) && rowValueSelectors.length) {
-              for (const rsel of rowValueSelectors) {
-                try {
-                  const c = row.querySelector(rsel);
-                  if (c) parts.push(normalize(c.innerText || ''));
-                } catch (e) {}
-              }
-            }
-            if (!parts.length) {
-              const raw = String(row.innerText || '');
-              parts.push(...raw.split(/\r?\n|\t/).map(s => normalize(s)).filter(Boolean));
-            }
-            for (let i = 0; i < normalizedEntries.length; i++) {
-              const ne = normalizedEntries[i];
-              if (!ne || seen.has(ne)) continue;
-              const ok = parts.some(p => p === ne || p.includes(ne) || ne.includes(p));
-              if (ok) {
-                const checkbox = row.querySelector(rowCheckboxSel || 'input[type="checkbox"]');
-                if (checkbox && !checkbox.checked) {
-                  try { checkbox.click(); } catch (e) { try { checkbox.checked = true; checkbox.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {} }
-                  try { checkbox.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {}
+            const maxPages = 100;
+            const accum = new Set();
+            let rowsCount = 0;
+            let sampleRows = [];
+            for (let pageIdx = 0; pageIdx < maxPages; pageIdx++) {
+              const res = await withFrameRetry(async () => await modalFrame.evaluate(({ normalizedEntries, rowCheckboxSel, rowValueSelectors }) => {
+                function normalize(s) {
+                  try { return (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase(); } catch (e) { return (s || '').replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase(); }
                 }
-                seen.add(ne);
-                found++;
+                const candidateRowSelectors = ['#tabelaResultado tr[indice]', '#tabelaResultado tr[linha="true"]', 'tr[indice]', 'tr[linha="true"]', 'tbody > tr', 'tr'];
+                let rows = [];
+                for (const sel of candidateRowSelectors) {
+                  try { const r = Array.from(document.querySelectorAll(sel) || []); if (r && r.length) { rows = r; break; } } catch (e) {}
+                }
+                if (!rows || !rows.length) rows = Array.from(document.querySelectorAll('tr'));
+
+                const matchedPage = new Set();
+                for (const row of rows) {
+                  try {
+                    const parts = [];
+                    if (Array.isArray(rowValueSelectors) && rowValueSelectors.length) {
+                      for (const rsel of rowValueSelectors) {
+                        try { const c = row.querySelector(rsel); if (c) parts.push(normalize(c.innerText || '')); } catch (e) {}
+                      }
+                    }
+                    if (!parts.length) {
+                      const raw = String(row.innerText || '');
+                      parts.push(...raw.split(/\r?\n|\t/).map(s => normalize(s)).filter(Boolean));
+                    }
+                    for (let i = 0; i < normalizedEntries.length; i++) {
+                      const ne = normalizedEntries[i];
+                      if (!ne || matchedPage.has(ne)) continue;
+                      const ok = parts.some(p => p === ne || p.includes(ne) || ne.includes(p));
+                      if (ok) {
+                        const checkbox = row.querySelector(rowCheckboxSel || 'input[type="checkbox"]');
+                        if (checkbox && !checkbox.checked) {
+                          try { checkbox.click(); } catch (e) { try { checkbox.checked = true; checkbox.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {} }
+                          try { checkbox.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {}
+                        }
+                        matchedPage.add(ne);
+                      }
+                    }
+                  } catch (e) { /* ignore row errors */ }
+                }
+
+                const nextSelectors = ['.ui-paginator-next', 'a.ui-paginator-next', 'button.ui-paginator-next', '.spwBotaoProximo', 'a[aria-label="Proxima pagina"]', 'a[aria-label="Próxima página"]', 'button[title*="Próxima"]', 'a[title*="Próxima"]', 'a[aria-label*="Next"]'];
+                let nextClicked = false;
+                for (const ns of nextSelectors) {
+                  try {
+                    const el = document.querySelector(ns);
+                    if (el) {
+                      const disabled = el.disabled || (el.classList && el.classList.contains && el.classList.contains('ui-state-disabled')) || el.getAttribute('aria-disabled') === 'true';
+                      if (!disabled) {
+                        try { el.click(); } catch (e) { }
+                        nextClicked = true;
+                        break;
+                      }
+                    }
+                  } catch (e) {}
+                }
+                return { matchedPage: Array.from(matchedPage), rowsCount: rows.length, sampleRows: rows.slice(0,30).map(r => r.innerText), nextClicked };
+              }, { normalizedEntries, rowCheckboxSel: modalDefinition.rowCheckboxSelector, rowValueSelectors: (modalDefinition && modalDefinition.rowValueSelectors) || [] }), { name: 'bulk-evaluate-page' });
+
+              if (!res) break;
+              rowsCount = rowsCount || res.rowsCount || 0;
+              sampleRows = sampleRows.length ? sampleRows : (res.sampleRows || []);
+              (res.matchedPage || []).forEach(m => accum.add(m));
+              if (accum.size >= normalizedEntries.length) {
+                matched = { found: accum.size, expected: normalizedEntries.length, matched: Array.from(accum), rowsCount, sampleRows };
+                break;
               }
+              if (!res.nextClicked) break;
+              try { await page.waitForTimeout(300); } catch (e) {}
             }
-          } catch (e) { /* ignore row errors */ }
+            if (!matched) matched = { found: accum.size, expected: normalizedEntries.length, matched: Array.from(accum), rowsCount, sampleRows };
+          } catch (err) {
+            matched = null;
+          }
+        } else {
+          // Non-paginated: single-page evaluate (original behavior)
+          try {
+            matched = await withFrameRetry(async () => await modalFrame.evaluate(({ normalizedEntries, rowCheckboxSel, rowValueSelectors }) => {
+              function normalize(s) {
+                try { return (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase(); } catch (e) { return (s || '').replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase(); }
+              }
+              const candidateRowSelectors = ['#tabelaResultado tr[indice]', '#tabelaResultado tr[linha="true"]', 'tr[indice]', 'tr[linha="true"]', 'tbody > tr', 'tr'];
+              let rows = [];
+              for (const sel of candidateRowSelectors) {
+                try { const r = Array.from(document.querySelectorAll(sel) || []); if (r && r.length) { rows = r; break; } } catch (e) {}
+              }
+              if (!rows || !rows.length) rows = Array.from(document.querySelectorAll('tr'));
+              const seen = new Set();
+              for (const row of rows) {
+                try {
+                  const parts = [];
+                  if (Array.isArray(rowValueSelectors) && rowValueSelectors.length) {
+                    for (const rsel of rowValueSelectors) {
+                      try { const c = row.querySelector(rsel); if (c) parts.push(normalize(c.innerText || '')); } catch (e) {}
+                    }
+                  }
+                  if (!parts.length) {
+                    const raw = String(row.innerText || '');
+                    parts.push(...raw.split(/\r?\n|\t/).map(s => normalize(s)).filter(Boolean));
+                  }
+                  for (let i = 0; i < normalizedEntries.length; i++) {
+                    const ne = normalizedEntries[i];
+                    if (!ne || seen.has(ne)) continue;
+                    const ok = parts.some(p => p === ne || p.includes(ne) || ne.includes(p));
+                    if (ok) {
+                      const checkbox = row.querySelector(rowCheckboxSel || 'input[type="checkbox"]');
+                      if (checkbox && !checkbox.checked) {
+                        try { checkbox.click(); } catch (e) { try { checkbox.checked = true; checkbox.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {} }
+                        try { checkbox.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {}
+                      }
+                      seen.add(ne);
+                    }
+                  }
+                } catch (e) { }
+              }
+              return { found: seen.size, expected: normalizedEntries.length, matched: Array.from(seen), rowsCount: rows.length, sampleRows: rows.slice(0,30).map(r => r.innerText) };
+            }, { normalizedEntries, rowCheckboxSel: modalDefinition.rowCheckboxSelector, rowValueSelectors: (modalDefinition && modalDefinition.rowValueSelectors) || [] }), { name: 'bulk-evaluate' }).catch(() => null);
+          } catch (err) {
+            matched = null;
+          }
         }
-        return { found, expected: normalizedEntries.length, matched: Array.from(seen), rowsCount: rows.length, sampleRows: rows.slice(0,30).map(r => r.innerText) };
-      }, { normalizedEntries, rowCheckboxSel: modalDefinition.rowCheckboxSelector, rowValueSelectors: (modalDefinition && modalDefinition.rowValueSelectors) || [] }), { name: 'bulk-evaluate' }).catch(() => null);
       
       if (matched) {
         logEvent({ level: 'debug', message: 'Bulk modal evaluate result', detail: JSON.stringify(matched), modalTitle });
@@ -5967,65 +6050,147 @@ async function selectViaModalByGrid({
         }).catch(() => {});
       }, { name: 'bulk-scroll' }).catch(() => {});
 
+      const isDocsModal = normalizeSelectionText(modalTitle || '').includes('consulta de documentos');
       let matched = null;
-      try {
-        matched = await withFrameRetry(async () => await modalFrame.evaluate(({ normalizedEntries, rowCheckboxSel, rowValueSelectors }) => {
-        function normalize(s) {
-          try { return (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase(); } catch (e) { return (s || '').replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase(); }
-        }
-        const candidateRowSelectors = ['#tabelaResultado tr[indice]', '#tabelaResultado tr[linha="true"]', 'tr[indice]', 'tr[linha="true"]', 'tbody > tr', 'tr'];
-        let rows = [];
-        for (const sel of candidateRowSelectors) {
-          try { const r = Array.from(document.querySelectorAll(sel) || []); if (r && r.length) { rows = r; break; } } catch (e) {}
-        }
-        if (!rows || !rows.length) rows = Array.from(document.querySelectorAll('tr'));
-
-        let found = 0;
-        const seen = new Set();
-        for (const row of rows) {
-          try {
-            const parts = [];
-            if (Array.isArray(rowValueSelectors) && rowValueSelectors.length) {
-              for (const rsel of rowValueSelectors) {
-                try { const c = row.querySelector(rsel); if (c) parts.push(normalize(c.innerText || '')); } catch (e) {}
-              }
-            }
-            if (!parts.length) {
-              const raw = String(row.innerText || '');
-              parts.push(...raw.split(/\r?\n|\t/).map(s => normalize(s)).filter(Boolean));
-            }
-            for (let i = 0; i < normalizedEntries.length; i++) {
-              const ne = normalizedEntries[i];
-              if (!ne || seen.has(ne)) continue;
-              const ok = parts.some(p => p === ne || p.includes(ne) || ne.includes(p));
-              if (ok) {
-                const checkbox = row.querySelector(rowCheckboxSel || 'input[type="checkbox"]');
-                if (checkbox && !checkbox.checked) {
-                  try { checkbox.click(); } catch (e) { try { checkbox.checked = true; checkbox.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {} }
-                  try { checkbox.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {}
-                }
-                seen.add(ne);
-                found++;
-              }
-            }
-          } catch (e) { }
-        }
-        return { found, expected: normalizedEntries.length, matched: Array.from(seen), rowsCount: rows.length, sampleRows: rows.slice(0,30).map(r => r.innerText) };
-        }, { normalizedEntries, rowCheckboxSel: modalDefinition.rowCheckboxSelector, rowValueSelectors: (modalDefinition && modalDefinition.rowValueSelectors) || [] }), { name: 'bulk-evaluate' });
-      } catch (err) {
-        matched = null;
+      if (isDocsModal) {
         try {
-          if (DEBUG_HTML) {
-            try {
-              const ts = nowIso().replace(/[:.]/g, '-');
-              const dumpName = sanitizeFileName(`${modalTitle}-bulk-evaluate-error-${ts}.json`);
-              const dumpPath = path.join(SCREENSHOT_DIR, dumpName);
-              const payload = { error: String(err && (err.stack || err.message || err)), time: new Date().toISOString() };
-              await fs.promises.writeFile(dumpPath, JSON.stringify(payload, null, 2)).catch(() => {});
-              logEvent({ level: 'warn', message: `Saved bulk-evaluate error JSON`, detail: { dumpPath }, modalTitle });
-            } catch (e) {}
+          const maxPages = 100;
+          const accum = new Set();
+          let rowsCount = 0;
+          let sampleRows = [];
+          for (let pageIdx = 0; pageIdx < maxPages; pageIdx++) {
+            const res = await withFrameRetry(async () => await modalFrame.evaluate(({ normalizedEntries, rowCheckboxSel, rowValueSelectors }) => {
+              function normalize(s) {
+                try { return (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase(); } catch (e) { return (s || '').replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase(); }
+              }
+              const candidateRowSelectors = ['#tabelaResultado tr[indice]', '#tabelaResultado tr[linha="true"]', 'tr[indice]', 'tr[linha="true"]', 'tbody > tr', 'tr'];
+              let rows = [];
+              for (const sel of candidateRowSelectors) {
+                try { const r = Array.from(document.querySelectorAll(sel) || []); if (r && r.length) { rows = r; break; } } catch (e) {}
+              }
+              if (!rows || !rows.length) rows = Array.from(document.querySelectorAll('tr'));
+
+              const matchedPage = new Set();
+              for (const row of rows) {
+                try {
+                  const parts = [];
+                  if (Array.isArray(rowValueSelectors) && rowValueSelectors.length) {
+                    for (const rsel of rowValueSelectors) {
+                      try { const c = row.querySelector(rsel); if (c) parts.push(normalize(c.innerText || '')); } catch (e) {}
+                    }
+                  }
+                  if (!parts.length) {
+                    const raw = String(row.innerText || '');
+                    parts.push(...raw.split(/\r?\n|\t/).map(s => normalize(s)).filter(Boolean));
+                  }
+                  for (let i = 0; i < normalizedEntries.length; i++) {
+                    const ne = normalizedEntries[i];
+                    if (!ne || matchedPage.has(ne)) continue;
+                    const ok = parts.some(p => p === ne || p.includes(ne) || ne.includes(p));
+                    if (ok) {
+                      const checkbox = row.querySelector(rowCheckboxSel || 'input[type="checkbox"]');
+                      if (checkbox && !checkbox.checked) {
+                        try { checkbox.click(); } catch (e) { try { checkbox.checked = true; checkbox.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {} }
+                        try { checkbox.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {}
+                      }
+                      matchedPage.add(ne);
+                    }
+                  }
+                } catch (e) { }
+              }
+
+              const nextSelectors = ['.ui-paginator-next', 'a.ui-paginator-next', 'button.ui-paginator-next', '.spwBotaoProximo', 'a[aria-label="Proxima pagina"]', 'a[aria-label="Próxima página"]', 'button[title*="Próxima"]', 'a[title*="Próxima"]', 'a[aria-label*="Next"]'];
+              let nextClicked = false;
+              for (const ns of nextSelectors) {
+                try {
+                  const el = document.querySelector(ns);
+                  if (el) {
+                    const disabled = el.disabled || (el.classList && el.classList.contains && el.classList.contains('ui-state-disabled')) || el.getAttribute('aria-disabled') === 'true';
+                    if (!disabled) {
+                      try { el.click(); } catch (e) { }
+                      nextClicked = true;
+                      break;
+                    }
+                  }
+                } catch (e) {}
+              }
+              return { matchedPage: Array.from(matchedPage), rowsCount: rows.length, sampleRows: rows.slice(0,30).map(r => r.innerText), nextClicked };
+            }, { normalizedEntries, rowCheckboxSel: modalDefinition.rowCheckboxSelector, rowValueSelectors: (modalDefinition && modalDefinition.rowValueSelectors) || [] }), { name: 'bulk-evaluate-page' });
+
+            if (!res) break;
+            rowsCount = rowsCount || res.rowsCount || 0;
+            sampleRows = sampleRows.length ? sampleRows : (res.sampleRows || []);
+            (res.matchedPage || []).forEach(m => accum.add(m));
+            if (accum.size >= normalizedEntries.length) {
+              matched = { found: accum.size, expected: normalizedEntries.length, matched: Array.from(accum), rowsCount, sampleRows };
+              break;
+            }
+            if (!res.nextClicked) break;
+            try { await page.waitForTimeout(300); } catch (e) {}
           }
-        } catch (e) {}
+          if (!matched) matched = { found: accum.size, expected: normalizedEntries.length, matched: Array.from(accum), rowsCount, sampleRows };
+        } catch (err) {
+          matched = null;
+          try {
+            if (DEBUG_HTML) {
+              try {
+                const ts = nowIso().replace(/[:.]/g, '-');
+                const dumpName = sanitizeFileName(`${modalTitle}-bulk-evaluate-error-${ts}.json`);
+                const dumpPath = path.join(SCREENSHOT_DIR, dumpName);
+                const payload = { error: String(err && (err.stack || err.message || err)), time: new Date().toISOString() };
+                await fs.promises.writeFile(dumpPath, JSON.stringify(payload, null, 2)).catch(() => {});
+                logEvent({ level: 'warn', message: `Saved bulk-evaluate error JSON`, detail: { dumpPath }, modalTitle });
+              } catch (e) {}
+            }
+          } catch (e) {}
+        }
+      } else {
+        // Non-paginated single-page evaluate (preserve original behavior)
+        try {
+          matched = await withFrameRetry(async () => await modalFrame.evaluate(({ normalizedEntries, rowCheckboxSel, rowValueSelectors }) => {
+            function normalize(s) {
+              try { return (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase(); } catch (e) { return (s || '').replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase(); }
+            }
+            const candidateRowSelectors = ['#tabelaResultado tr[indice]', '#tabelaResultado tr[linha="true"]', 'tr[indice]', 'tr[linha="true"]', 'tbody > tr', 'tr'];
+            let rows = [];
+            for (const sel of candidateRowSelectors) {
+              try { const r = Array.from(document.querySelectorAll(sel) || []); if (r && r.length) { rows = r; break; } } catch (e) {}
+            }
+            if (!rows || !rows.length) rows = Array.from(document.querySelectorAll('tr'));
+
+            const seen = new Set();
+            for (const row of rows) {
+              try {
+                const parts = [];
+                if (Array.isArray(rowValueSelectors) && rowValueSelectors.length) {
+                  for (const rsel of rowValueSelectors) {
+                    try { const c = row.querySelector(rsel); if (c) parts.push(normalize(c.innerText || '')); } catch (e) {}
+                  }
+                }
+                if (!parts.length) {
+                  const raw = String(row.innerText || '');
+                  parts.push(...raw.split(/\r?\n|\t/).map(s => normalize(s)).filter(Boolean));
+                }
+                for (let i = 0; i < normalizedEntries.length; i++) {
+                  const ne = normalizedEntries[i];
+                  if (!ne || seen.has(ne)) continue;
+                  const ok = parts.some(p => p === ne || p.includes(ne) || ne.includes(p));
+                  if (ok) {
+                    const checkbox = row.querySelector(rowCheckboxSel || 'input[type="checkbox"]');
+                    if (checkbox && !checkbox.checked) {
+                      try { checkbox.click(); } catch (e) { try { checkbox.checked = true; checkbox.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {} }
+                      try { checkbox.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {}
+                    }
+                    seen.add(ne);
+                  }
+                }
+              } catch (e) { }
+            }
+            return { found: seen.size, expected: normalizedEntries.length, matched: Array.from(seen), rowsCount: rows.length, sampleRows: rows.slice(0,30).map(r => r.innerText) };
+          }, { normalizedEntries, rowCheckboxSel: modalDefinition.rowCheckboxSelector, rowValueSelectors: (modalDefinition && modalDefinition.rowValueSelectors) || [] }), { name: 'bulk-evaluate' }).catch(() => null);
+        } catch (err) {
+          matched = null;
+        }
       }
 
       if (matched) {

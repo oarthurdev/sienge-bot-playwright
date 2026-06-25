@@ -42,7 +42,7 @@
     },
     {
       "name": "JSESSIONID",
-      "value": "9yGfaLewLbbqG1_HJAILZsE8GwR687_006WR_kUg.43-sienge-maya-app-cp-107",
+      "value": "ZWlVFauYhqG1sbLWd1KIOeBan0VXg1Khco1Tq9GZ.43-sienge-maya-app-cp-107",
       "domain": "laurentino.sienge.com.br",
       "path": "/",
       "expires": -1,
@@ -55,17 +55,87 @@
       "value": "%7B%22distinct_id%22%3A%20%22common%22%2C%22%24device_id%22%3A%20%2219ef45dc1b2a7d-0ed6bd95fc1e798-397c0c7a-e1000-19ef45dc1b2a7d%22%2C%22%24initial_referrer%22%3A%20%22https%3A%2F%2Flaurentino.sienge.com.br%2F%22%2C%22%24initial_referring_domain%22%3A%20%22laurentino.sienge.com.br%22%2C%22__mps%22%3A%20%7B%7D%2C%22__mpso%22%3A%20%7B%7D%2C%22__mpus%22%3A%20%7B%7D%2C%22__mpa%22%3A%20%7B%7D%2C%22__mpu%22%3A%20%7B%7D%2C%22__mpr%22%3A%20%5B%5D%2C%22__mpap%22%3A%20%5B%5D%2C%22%24user_id%22%3A%20%22common%22%7D",
       "domain": ".sienge.com.br",
       "path": "/",
-      "expires": 1813813372,
+      "expires": 1813892817,
       "httpOnly": false,
       "secure": false,
       "sameSite": "Lax"
+    },
+    {
+      "name": "CLID",
+      "value": "2032ec4304bc4206b19bd4f8f3d823a8.20260625.20270625",
+      "domain": "www.clarity.ms",
+      "path": "/",
+      "expires": 1813920149.755668,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "MUID",
+      "value": "14C5C21C4DD36F0902C6D59F4CAA6E74",
+      "domain": ".bing.com",
+      "path": "/",
+      "expires": 1816080151.174241,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "MR",
+      "value": "0",
+      "domain": ".c.bing.com",
+      "path": "/",
+      "expires": 1782988951.174393,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "SRM_B",
+      "value": "14C5C21C4DD36F0902C6D59F4CAA6E74",
+      "domain": ".c.bing.com",
+      "path": "/",
+      "expires": 1816080151.174415,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "SM",
+      "value": "C",
+      "domain": ".c.clarity.ms",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "MUID",
+      "value": "14C5C21C4DD36F0902C6D59F4CAA6E74",
+      "domain": ".clarity.ms",
+      "path": "/",
+      "expires": 1816080150.295994,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "MR",
+      "value": "0",
+      "domain": ".c.clarity.ms",
+      "path": "/",
+      "expires": 1782988950.296027,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
     },
     {
       "name": "mp_12f07d7d76c676668dd9faed4ba8c58a_mixpanel",
       "value": "%7B%22distinct_id%22%3A%22LAURENTINO%20CONSTRUTORA%20E%20INCORPORADORA%20LTDA%7CAutoma%C3%A7%C3%A3o%20-%20Autorizar%20Parcela%20Automaticamente%22%2C%22%24device_id%22%3A%2268e52ee9-a6b7-4dbc-9af1-ce674bcc794e%22%2C%22%24initial_referrer%22%3A%22https%3A%2F%2Flaurentino.sienge.com.br%2Fsienge%2F%22%2C%22%24initial_referring_domain%22%3A%22laurentino.sienge.com.br%22%2C%22__mps%22%3A%7B%7D%2C%22__mpso%22%3A%7B%7D%2C%22__mpus%22%3A%7B%7D%2C%22__mpa%22%3A%7B%7D%2C%22__mpu%22%3A%7B%7D%2C%22__mpr%22%3A%5B%5D%2C%22__mpap%22%3A%5B%5D%2C%22%24user_id%22%3A%22LAURENTINO%20CONSTRUTORA%20E%20INCORPORADORA%20LTDA%7CAutoma%C3%A7%C3%A3o%20-%20Autorizar%20Parcela%20Automaticamente%22%2C%22client%22%3A%5B%227453%22%5D%7D",
       "domain": ".sienge.com.br",
       "path": "/",
-      "expires": 1813848201,
+      "expires": 1813926552,
       "httpOnly": false,
       "secure": true,
       "sameSite": "Lax"
@@ -118,7 +188,16 @@
         },
         {
           "name": "__mpq_3b0398edc8eaee107948aec46f3bafd4_pp",
-          "value": "[]"
+          "value": "[{\"id\":\"wt8aq5d5fo1tc6fw\",\"flushAfter\":1782356827289,\"payload\":{\"$set_once\":{\"$initial_referrer\":\"https://laurentino.sienge.com.br/\",\"$initial_referring_domain\":\"laurentino.sienge.com.br\"},\"$token\":\"3b0398edc8eaee107948aec46f3bafd4\",\"$distinct_id\":\"common\",\"$device_id\":\"19ef45dc1b2a7d-0ed6bd95fc1e798-397c0c7a-e1000-19ef45dc1b2a7d\",\"$user_id\":\"common\"}}]"
+        }
+      ]
+    },
+    {
+      "origin": "https://v3.app-indecx.com",
+      "localStorage": [
+        {
+          "name": "__locale",
+          "value": "\"br\""
         }
       ]
     }
