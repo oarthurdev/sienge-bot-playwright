@@ -2015,16 +2015,32 @@ const MODAL_SELECTION_DEFINITIONS = [
   {
     key: 'documentos',
     titleMatchers: ['documentos', 'consulta de documentos'],
+    inputName: 'docMultFilterContaRecebidas',
+    entityName: 'docMultFilterContaRecebidas',
     frameSelectors: [
       'input[name="docMultFilterContaRecebidasSelectedEntitiesList"]',
       'input#idObjRetorno[value="docMultFilterContaRecebidas"]',
       'input#multSelecaoProperty[value="documentos"]',
       'input[name="entity.nmDocumento"]',
       'input[name="entity.documentoPK.cdDocumento"]',
+      '#nmDocumento',
+      'input[name*="documento"]',
+      'input[id*="documento"]',
+      'input[name*="nmDocumento"]',
+      'input[id*="nmDocumento"]',
     ],
     searchInputSelectors: [
       'input[name="entity.nmDocumento"]',
       'input[name="nmDocumento"]',
+      '#nmDocumento',
+      'input[name*="documento"]',
+      'input[id*="documento"]',
+      'input[name*="nmDocumento"]',
+      'input[id*="nmDocumento"]',
+      'input[placeholder*="Documento"]',
+      'input[placeholder*="documento"]',
+      'input[aria-label*="Documento"]',
+      'input[aria-label*="documento"]',
     ],
     rowValueSelectors: [
       'td[reference="nmDocumento"]',
@@ -4239,6 +4255,8 @@ async function findVisibleInput(surface, selectors) {
   ? selectors
   : [selectors];
   
+  const attachedCandidates = [];
+
   for (const selector of selectorList) {
     
     try {
@@ -4257,6 +4275,8 @@ async function findVisibleInput(surface, selectors) {
         continue;
       }
       
+      attachedCandidates.push(locator);
+      
       await locator.waitFor({
         state: 'visible',
         timeout: 3000,
@@ -4274,8 +4294,128 @@ async function findVisibleInput(surface, selectors) {
       
     } catch (_) {}
   }
-  
+
+  const fallbackSelectors = [
+    'input[name*="documento"]',
+    'input[id*="documento"]',
+    'input[placeholder*="Documento"]',
+    'input[placeholder*="documento"]',
+    'input[aria-label*="Documento"]',
+    'input[aria-label*="documento"]',
+    'input[name*="nmDocumento"]',
+    'input[id*="nmDocumento"]',
+    '#nmDocumento',
+    'input[type="search"]',
+  ];
+
+  for (const selector of fallbackSelectors) {
+    
+    try {
+      
+      const locator =
+      surface
+      .locator(selector)
+      .first();
+      
+      const count =
+      await locator
+      .count()
+      .catch(() => 0);
+      
+      if (!count) {
+        continue;
+      }
+      
+      attachedCandidates.push(locator);
+      
+      await locator.waitFor({
+        state: 'visible',
+        timeout: 3000,
+      }).catch(() => {});
+      
+      const visible =
+      await locator
+      .isVisible()
+      .catch(() => false);
+      
+      if (visible) {
+        
+        return locator;
+      }
+      
+    } catch (_) {}
+  }
+
+  try {
+    const candidates =
+    surface
+    .locator('input[type="text"], input:not([type]), textarea');
+    const count =
+    await candidates
+    .count()
+    .catch(() => 0);
+
+    for (let i = 0; i < count; i++) {
+      const candidate = candidates.nth(i);
+      const visible =
+      await candidate
+      .isVisible()
+      .catch(() => false);
+      
+      if (visible) {
+        return candidate;
+      }
+
+      attachedCandidates.push(candidate);
+    }
+  } catch (_) {}
+
+  if (attachedCandidates.length) {
+    return attachedCandidates[0];
+  }
+
   return null;
+}
+
+async function resolveInput(surface, selectors, timeout = 30000) {
+  const selectorList = uniqueNonEmpty(Array.isArray(selectors) ? selectors : [selectors]);
+  const fallbackSelectors = [
+    'input[name*="documento"]',
+    'input[id*="documento"]',
+    'input[placeholder*="Documento"]',
+    'input[placeholder*="documento"]',
+    'input[aria-label*="Documento"]',
+    'input[aria-label*="documento"]',
+    'input[name*="nmDocumento"]',
+    'input[id*="nmDocumento"]',
+    '#nmDocumento',
+    'input[type="search"]',
+    'input[type="text"]',
+    'input:not([type])',
+    'textarea',
+  ];
+  const candidates = uniqueNonEmpty([...selectorList, ...fallbackSelectors]);
+
+  const started = Date.now();
+  let attachedFirst = null;
+
+  while (Date.now() - started < timeout) {
+    for (const selector of candidates) {
+      try {
+        const locator = surface.locator(selector).first();
+        const count = await locator.count().catch(() => 0);
+        if (!count) continue;
+        if (!attachedFirst) attachedFirst = locator;
+
+        await locator.waitFor({ state: 'visible', timeout: 1000 }).catch(() => {});
+        const visible = await locator.isVisible().catch(() => false);
+        if (visible) return locator;
+      } catch (_) {}
+    }
+    await new Promise(resolve => setTimeout(resolve, 250));
+  }
+
+  return attachedFirst;
 }
 
 // =====================================================
@@ -4512,7 +4652,7 @@ async function findSelectionModalFrame(
         
         const hasSelecionar =
         await frame.locator(
-          'input[name="pbSelecionar"]'
+          'input[name="pbSelecionar"], button[name="pbSelecionar"], button#pbSelecionar, #pbSelecionar'
         ).count().catch(() => 0);
         
         if (!hasSelecionar) {
@@ -5113,6 +5253,7 @@ async function selectViaModal({
           try {
             const maxPages = 100;
             const accum = new Set();
+            const accumDocumentos = new Set();
             let rowsCount = 0;
             let sampleRows = [];
             for (let pageIdx = 0; pageIdx < maxPages; pageIdx++) {
@@ -5128,6 +5269,7 @@ async function selectViaModal({
                 if (!rows || !rows.length) rows = Array.from(document.querySelectorAll('tr'));
 
                 const matchedPage = new Set();
+                const documentos = Array.from(document.querySelectorAll('tr[id^="linha_"]')).map(tr => tr.querySelectorAll('td')[2]?.innerText.trim()).filter(Boolean);
                 for (const row of rows) {
                   try {
                     const parts = [];
@@ -5171,21 +5313,22 @@ async function selectViaModal({
                     }
                   } catch (e) {}
                 }
-                return { matchedPage: Array.from(matchedPage), rowsCount: rows.length, sampleRows: rows.slice(0,30).map(r => r.innerText), nextClicked };
+                return { matchedPage: Array.from(matchedPage), rowsCount: rows.length, sampleRows: rows.slice(0,30).map(r => r.innerText), nextClicked, documentos };
               }, { normalizedEntries, rowCheckboxSel: modalDefinition.rowCheckboxSelector, rowValueSelectors: (modalDefinition && modalDefinition.rowValueSelectors) || [] }), { name: 'bulk-evaluate-page' });
 
               if (!res) break;
               rowsCount = rowsCount || res.rowsCount || 0;
               sampleRows = sampleRows.length ? sampleRows : (res.sampleRows || []);
               (res.matchedPage || []).forEach(m => accum.add(m));
+              (res.documentos || []).forEach(d => accumDocumentos.add(d));
               if (accum.size >= normalizedEntries.length) {
-                matched = { found: accum.size, expected: normalizedEntries.length, matched: Array.from(accum), rowsCount, sampleRows };
+                matched = { found: accum.size, expected: normalizedEntries.length, matched: Array.from(accum), rowsCount, sampleRows, documentos: Array.from(accumDocumentos) };
                 break;
               }
               if (!res.nextClicked) break;
               try { await page.waitForTimeout(300); } catch (e) {}
             }
-            if (!matched) matched = { found: accum.size, expected: normalizedEntries.length, matched: Array.from(accum), rowsCount, sampleRows };
+            if (!matched) matched = { found: accum.size, expected: normalizedEntries.length, matched: Array.from(accum), rowsCount, sampleRows, documentos: Array.from(accumDocumentos) };
           } catch (err) {
             matched = null;
           }
@@ -6007,11 +6150,17 @@ async function selectViaModalByGrid({
     } catch (_) {}
   }
   
-  const modalInput = await findVisibleInput(modalFrame, searchSelectors);
+  const modalInput = await findVisibleInput(modalFrame, searchSelectors).catch(() => null);
   if (!modalInput) {
     await saveDebugState('input-not-found').catch(() => {});
-    throw new Error(`Nao encontrei input visivel no modal: ${modalTitle}`);
+    logEvent({
+      level: 'warn',
+      message: `Nao encontrei input visivel no modal; prosseguindo com selecao via DOM: ${modalTitle}`,
+      modalTitle,
+      searchSelectors,
+    });
   }
+
   // acumulador local de seleções já marcadas no modal (texto das linhas)
   let selectedSoFar = [];
 
@@ -6056,6 +6205,7 @@ async function selectViaModalByGrid({
         try {
           const maxPages = 100;
           const accum = new Set();
+          const accumDocumentos = new Set();
           let rowsCount = 0;
           let sampleRows = [];
           for (let pageIdx = 0; pageIdx < maxPages; pageIdx++) {
@@ -6071,6 +6221,7 @@ async function selectViaModalByGrid({
               if (!rows || !rows.length) rows = Array.from(document.querySelectorAll('tr'));
 
               const matchedPage = new Set();
+              const documentos = Array.from(document.querySelectorAll('tr[id^="linha_"]')).map(tr => tr.querySelectorAll('td')[2]?.innerText.trim()).filter(Boolean);
               for (const row of rows) {
                 try {
                   const parts = [];
@@ -6114,21 +6265,22 @@ async function selectViaModalByGrid({
                   }
                 } catch (e) {}
               }
-              return { matchedPage: Array.from(matchedPage), rowsCount: rows.length, sampleRows: rows.slice(0,30).map(r => r.innerText), nextClicked };
+              return { matchedPage: Array.from(matchedPage), rowsCount: rows.length, sampleRows: rows.slice(0,30).map(r => r.innerText), nextClicked, documentos };
             }, { normalizedEntries, rowCheckboxSel: modalDefinition.rowCheckboxSelector, rowValueSelectors: (modalDefinition && modalDefinition.rowValueSelectors) || [] }), { name: 'bulk-evaluate-page' });
 
             if (!res) break;
             rowsCount = rowsCount || res.rowsCount || 0;
             sampleRows = sampleRows.length ? sampleRows : (res.sampleRows || []);
             (res.matchedPage || []).forEach(m => accum.add(m));
+            (res.documentos || []).forEach(d => accumDocumentos.add(d));
             if (accum.size >= normalizedEntries.length) {
-              matched = { found: accum.size, expected: normalizedEntries.length, matched: Array.from(accum), rowsCount, sampleRows };
+              matched = { found: accum.size, expected: normalizedEntries.length, matched: Array.from(accum), rowsCount, sampleRows, documentos: Array.from(accumDocumentos) };
               break;
             }
             if (!res.nextClicked) break;
             try { await page.waitForTimeout(300); } catch (e) {}
           }
-          if (!matched) matched = { found: accum.size, expected: normalizedEntries.length, matched: Array.from(accum), rowsCount, sampleRows };
+          if (!matched) matched = { found: accum.size, expected: normalizedEntries.length, matched: Array.from(accum), rowsCount, sampleRows, documentos: Array.from(accumDocumentos) };
         } catch (err) {
           matched = null;
           try {
@@ -6637,6 +6789,25 @@ async function selectViaModalByGrid({
 
 selectViaModal = selectViaModalByGrid;
 
+async function writeSelectedEntitiesIntoMainFrame(frame, values, config = {}) {
+  const {
+    inputName,
+    entityName,
+    hiddenMappings = {},
+  } = config;
+
+  if (!inputName || !entityName) {
+    throw new Error('writeSelectedEntitiesIntoMainFrame requires inputName and entityName');
+  }
+
+  return setInputSelectState(frame, {
+    inputName,
+    entityName,
+    values,
+    hiddenMappings,
+  });
+}
+
 async function setInputSelectState(page, config) {
   const {
     inputName,
@@ -6644,21 +6815,24 @@ async function setInputSelectState(page, config) {
     values,
     hiddenMappings = {},
   } = config;
-  
+
   const entries = Array.isArray(values) ? values : [values];
-  
+
   const selectedList = entries
-  .map((entry, idx) => {
-    const parts = Object.entries(entry)
-    .map(([k, v]) => `${entityName}[${idx}].${k}=${v}`);
-    
-    return `DivID=div${inputName}${idx + 1};^${parts.join('^')}$`;
-  })
-  .join('|');
-  
+    .map((entry, idx) => {
+      const parts = Object.entries(entry)
+        .map(([k, v]) => `${entityName}[${idx}].${k}=${v}`);
+
+      return `DivID=div${inputName}${idx + 1};^${parts.join('^')}$`;
+    })
+    .join('|');
+
   await page.evaluate((payload) => {
     const setValue = (id, value) => {
-      const el = document.getElementById(id);
+      let el = document.getElementById(id);
+      if (!el) {
+        el = document.querySelector(`[name="${id}"]`);
+      }
       
       if (!el) return;
       
