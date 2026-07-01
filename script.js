@@ -112,6 +112,20 @@ function excelSerialToBrDate(serial) {
   return formatBrDate(base);
 }
 
+const DOCUMENTOS_NEXT_PAGE_SELECTORS = [
+  'input[type="button"].spwBotaoProximo[title="Próxima página"]',
+  'input.spwBotaoProximo[title="Próxima página"]',
+  '.spwBotaoProximo',
+  '.ui-paginator-next',
+  'a.ui-paginator-next',
+  'button.ui-paginator-next',
+  'a[aria-label="Proxima pagina"]',
+  'a[aria-label="Próxima página"]',
+  'button[title*="Próxima"]',
+  'a[title*="Próxima"]',
+  'a[aria-label*="Next"]',
+];
+
 const REPORT_DEFINITIONS = [
   {
     sheetName: 'Receita Parcelas Mensal',
@@ -2346,7 +2360,7 @@ function logEvent(event) {
   if (payload.url) parts.push(`url=${payload.url}`);
   if (payload.bytes) parts.push(`bytes=${payload.bytes}`);
   if (payload.shotName) parts.push(`shot=${payload.shotName}`);
-  if (payload.detail) parts.push(`detail=${truncateForLog(payload.detail, 200)}`);
+  if (typeof payload.detail !== 'undefined') parts.push(`detail=${formatLogValue(payload.detail, 400)}`);
   
   if (parts.length) {
     console.log(baseLine + ' - ' + parts.join(' | '));
@@ -2358,6 +2372,27 @@ function logEvent(event) {
 function truncateForLog(value, maxLen = 500) {
   const s = String(value == null ? '' : value);
   return s.length > maxLen ? s.slice(0, maxLen) + '…' : s;
+}
+
+function formatLogValue(value, maxLen = 500) {
+  try {
+    if (typeof value === 'string') {
+      return truncateForLog(value, maxLen);
+    }
+    if (typeof value === 'number' || typeof value === 'boolean' || value == null) {
+      return truncateForLog(value, maxLen);
+    }
+    if (value instanceof Error) {
+      return truncateForLog(JSON.stringify({
+        name: value.name,
+        message: value.message,
+        stack: value.stack,
+      }), maxLen);
+    }
+    return truncateForLog(JSON.stringify(value, null, 0), maxLen);
+  } catch (_) {
+    return truncateForLog(value, maxLen);
+  }
 }
 
 // -------------------------
@@ -3188,7 +3223,7 @@ async function configureReportFilters({
     if (documentos.length) {
       logEvent({ level: 'info', message: `[${report.sheetName}] Selecionando documentos`, documentos });
       try { await setReportProgress(report.sheetName, 20, { lastMessage: 'selecting_documentos', step: 'documentos_start' }); } catch (_) {}
-      await selectDocumentos({ page, values: documentos, reportName: report.sheetName });
+      await selectDocumentos({ page, values: documentos, enablePagination: true, reportName: report.sheetName });
     }
   } else {
     logEvent({ level: 'info', message: `[${report.sheetName}] Documentos = TODOS` });
@@ -3329,6 +3364,640 @@ function getAllCondicoesPagamentoValues() {
       r => r.condicoesPagamento || []
     )
   );
+}
+
+async function resolveDocumentosRenderingMode(modalFrame) {
+  return await modalFrame.evaluate(() => {
+    try {
+      const currentDoc = document;
+      const currentRows = currentDoc.querySelectorAll('tr[id^="linha_"]').length;
+      const currentPager = !!currentDoc.querySelector('#infoTotalPaginas, .spwBotaoProximo, input[type="button"].spwBotaoProximo[title="Próxima página"]');
+
+      const iframe = currentDoc.querySelector('#layerFormConsulta');
+      const nestedDoc = iframe && (iframe.contentDocument || iframe.contentWindow?.document);
+      const nestedRows = nestedDoc ? nestedDoc.querySelectorAll('tr[id^="linha_"]').length : 0;
+      const nestedPager = !!(nestedDoc && nestedDoc.querySelector('#infoTotalPaginas, .spwBotaoProximo, input[type="button"].spwBotaoProximo[title="Próxima página"]'));
+
+      return {
+        useNested: !currentRows && (nestedRows > 0 || nestedPager),
+        currentRows,
+        nestedRows,
+        hasCurrentPager: currentPager,
+        hasNestedPager: nestedPager,
+      };
+    } catch (error) {
+      return { useNested: false, currentRows: 0, nestedRows: 0, hasCurrentPager: false, hasNestedPager: false };
+    }
+  }).catch(() => ({ useNested: false, currentRows: 0, nestedRows: 0, hasCurrentPager: false, hasNestedPager: false }));
+}
+
+async function getDocumentosTotalPages(modalFrame, useNested = false) {
+  const rawInfo = await modalFrame.evaluate((useNestedDoc) => {
+    try {
+      const currentDoc = document;
+      const doc = useNestedDoc
+        ? (currentDoc.querySelector('#layerFormConsulta')?.contentDocument || currentDoc.querySelector('#layerFormConsulta')?.contentWindow?.document)
+        : currentDoc;
+
+      return doc?.querySelector('#infoTotalPaginas')?.innerText || '';
+    } catch (error) {
+      return '';
+    }
+  }, useNested).catch(() => '');
+
+  const match = String(rawInfo || '').match(/de\s+(\d+)/i);
+  return match ? Number(match[1]) || 1 : 1;
+}
+
+async function waitForDocumentosDom(modalFrame, timeout = 45000) {
+  const started = Date.now();
+
+  while (Date.now() - started < timeout) {
+    const info = await modalFrame.evaluate(() => {
+      try {
+        const iframe = document.querySelector('#layerFormConsulta');
+        const doc = iframe && (iframe.contentDocument || iframe.contentWindow?.document) || document;
+        const rowsCount = doc.querySelectorAll('tr[id^="linha_"]').length;
+        const pagerText = String(doc.querySelector('#infoTotalPaginas')?.innerText || '').trim();
+        const nextExists = !!doc.querySelector('input[type="button"].spwBotaoProximo[title="Próxima página"], .spwBotaoProximo');
+        const inputExists = !!doc.querySelector('input[name="entity.nmDocumento"], input[id="nmDocumento"], input[name*="documento"], input[type="search"]');
+        const totalMatch = pagerText.match(/de\s+(\d+)/i);
+        return {
+          ready: rowsCount > 0 || nextExists || inputExists || !!pagerText,
+          useNested: !!iframe && doc !== document,
+          rowsCount,
+          totalPages: totalMatch ? Number(totalMatch[1]) || 1 : 1,
+        };
+      } catch (error) {
+        return { ready: false, useNested: false, rowsCount: 0, totalPages: 1 };
+      }
+    }).catch(() => ({ ready: false, useNested: false, rowsCount: 0, totalPages: 1 }));
+
+    if (info.ready) {
+      return info;
+    }
+
+    await modalFrame.page().waitForTimeout(500).catch(() => {});
+  }
+
+  return { ready: false, useNested: false, rowsCount: 0, totalPages: 1 };
+}
+
+async function selectDocumentosAcrossPages({
+  page,
+  modalFrame,
+  preferredFrame = null,
+  modalTitle,
+  values = [],
+  rowCheckboxSelector = 'input[type="checkbox"][name="rowSelect"]',
+}) {
+  const desiredEntries = uniqueNonEmpty(
+    Array.isArray(values)
+      ? values.map(value => String(value || '').trim())
+      : [String(values || '').trim()]
+  );
+
+  if (!desiredEntries.length) {
+    return { found: 0, expected: 0, matched: [], documents: [], totalPages: 1 };
+  }
+
+  const desiredMap = new Map(
+    desiredEntries.map(value => [normalizeSelectionText(value), value])
+  );
+  const pageRef = modalFrame?.page?.() || page || null;
+
+  function normalize(value) {
+    return normalizeSelectionText(value);
+  }
+
+  async function resolveDocumentosFrame(sourceFrame) {
+    const pageRef = sourceFrame.page();
+    const started = Date.now();
+    let lastInfo = null;
+
+    while (Date.now() - started < 15000) {
+      lastInfo = await sourceFrame.evaluate(() => {
+        try {
+          const currentDoc = document;
+          const directRows = currentDoc.querySelectorAll('tr[id^="linha_"]').length;
+          const directPagerText = String(currentDoc.querySelector('#infoTotalPaginas')?.innerText || '').trim();
+          const directNextExists = !!currentDoc.querySelector('input[type="button"].spwBotaoProximo[title="Próxima página"], .spwBotaoProximo');
+          const iframe = currentDoc.querySelector('#layerFormConsulta');
+          const nestedDoc = iframe && (iframe.contentDocument || iframe.contentWindow?.document);
+          const nestedRows = nestedDoc ? nestedDoc.querySelectorAll('tr[id^="linha_"]').length : 0;
+          const nestedPagerText = String(nestedDoc?.querySelector('#infoTotalPaginas')?.innerText || '').trim();
+          const nestedNextExists = !!(nestedDoc && nestedDoc.querySelector('input[type="button"].spwBotaoProximo[title="Próxima página"], .spwBotaoProximo'));
+
+          return {
+            hasIframe: !!iframe,
+            directRows,
+            directPagerText,
+            directNextExists,
+            nestedRows,
+            nestedPagerText,
+            nestedNextExists,
+          };
+        } catch (error) {
+          return {
+            hasIframe: false,
+            directRows: 0,
+            directPagerText: '',
+            directNextExists: false,
+            nestedRows: 0,
+            nestedPagerText: '',
+            nestedNextExists: false,
+          };
+        }
+      }).catch(() => null);
+
+      const directReady = !!lastInfo && (
+        lastInfo.directRows > 0 ||
+        !!lastInfo.directPagerText ||
+        lastInfo.directNextExists
+      );
+      const nestedReady = !!lastInfo && lastInfo.hasIframe && (
+        lastInfo.nestedRows > 0 ||
+        !!lastInfo.nestedPagerText ||
+        lastInfo.nestedNextExists
+      );
+
+      if (nestedReady) {
+        const iframeLocator = sourceFrame.locator('#layerFormConsulta').first();
+        const iframeHandle = await iframeLocator.elementHandle().catch(() => null);
+        const nestedFrame = iframeHandle ? await iframeHandle.contentFrame().catch(() => null) : null;
+        if (nestedFrame) {
+          return { frame: nestedFrame, mode: 'nested', info: lastInfo };
+        }
+      }
+
+      if (directReady) {
+        return { frame: sourceFrame, mode: 'direct', info: lastInfo };
+      }
+
+      await pageRef?.waitForTimeout(400).catch(() => {});
+    }
+
+    const iframeLocator = sourceFrame.locator('#layerFormConsulta').first();
+    const iframeHandle = await iframeLocator.elementHandle().catch(() => null);
+    const nestedFrame = iframeHandle ? await iframeHandle.contentFrame().catch(() => null) : null;
+    return {
+      frame: nestedFrame || sourceFrame,
+      mode: nestedFrame ? 'nested' : 'direct',
+      info: lastInfo,
+    };
+  }
+
+  async function captureDocumentosPage(targetFrame) {
+    return await targetFrame.evaluate(({ desiredValues, rowCheckboxSelector }) => {
+      function normalizeLocal(value) {
+        try {
+          return String(value || '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^\w\s]/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .toLowerCase();
+        } catch (error) {
+          return String(value || '')
+            .replace(/[^\w\s]/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .toLowerCase();
+        }
+      }
+
+      function getDoc() {
+        const currentDoc = document;
+        const iframe = currentDoc.querySelector('#layerFormConsulta');
+        const nestedDoc = iframe && (iframe.contentDocument || iframe.contentWindow?.document);
+        const directRows = currentDoc.querySelectorAll('tr[id^="linha_"]').length;
+        const nestedRows = nestedDoc ? nestedDoc.querySelectorAll('tr[id^="linha_"]').length : 0;
+        const directPager = String(currentDoc.querySelector('#infoTotalPaginas')?.innerText || '').trim();
+        const nestedPager = String(nestedDoc?.querySelector('#infoTotalPaginas')?.innerText || '').trim();
+        const directNext = !!currentDoc.querySelector('input[type="button"].spwBotaoProximo[title="Próxima página"], .spwBotaoProximo');
+        const nestedNext = !!(nestedDoc && nestedDoc.querySelector('input[type="button"].spwBotaoProximo[title="Próxima página"], .spwBotaoProximo'));
+
+        if (nestedDoc && (nestedRows > 0 || nestedPager || nestedNext || (!directRows && !directPager && !directNext))) {
+          return nestedDoc;
+        }
+        return currentDoc;
+      }
+
+      function getUrl(doc) {
+        try {
+          const iframe = document.querySelector('#layerFormConsulta');
+          if (iframe?.contentWindow?.location?.href) {
+            return iframe.contentWindow.location.href;
+          }
+        } catch (error) {}
+        try {
+          return doc?.defaultView?.location?.href || window.location.href || '';
+        } catch (error) {
+          return '';
+        }
+      }
+
+      function getTotalPages(doc) {
+        const raw = String(doc.querySelector('#infoTotalPaginas')?.innerText || '');
+        const match = raw.match(/de\s+(\d+)/i);
+        return match ? Number(match[1]) || 1 : 1;
+      }
+
+      const doc = getDoc();
+      const rows = Array.from(doc.querySelectorAll('tr[id^="linha_"]'));
+      const documentos = [];
+      const matchedOnPage = [];
+      const wanted = new Map(desiredValues.map(value => [normalizeLocal(value), value]));
+
+      rows.forEach(tr => {
+        const nome = tr.querySelectorAll('td')[2]?.innerText.trim();
+        if (!nome) return;
+        documentos.push(nome);
+
+        const normalizedName = normalizeLocal(nome);
+        if (!wanted.has(normalizedName)) return;
+
+        const checkbox = tr.querySelector(rowCheckboxSelector || 'input[type="checkbox"]');
+        if (checkbox && !checkbox.checked) {
+          try {
+            checkbox.click();
+          } catch (error) {
+            try {
+              checkbox.checked = true;
+              checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+            } catch (fallbackError) {}
+          }
+          try {
+            checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+          } catch (error) {}
+        }
+        matchedOnPage.push(nome);
+      });
+
+      const pagerText = String(doc.querySelector('#infoTotalPaginas')?.innerText || '').trim();
+      return {
+        documentos,
+        matchedOnPage,
+        rowCount: rows.length,
+        totalPaginas: getTotalPages(doc),
+        currentUrl: getUrl(doc),
+        pagerText,
+      };
+    }, {
+      desiredValues: desiredEntries,
+      rowCheckboxSelector,
+    }).catch((error) => ({
+      documentos: [],
+      matchedOnPage: [],
+      rowCount: 0,
+      totalPaginas: 1,
+      currentUrl: '',
+      pagerText: '',
+      error: String(error && (error.stack || error.message || error)),
+    })).then(result => ({
+      ...result,
+      frameUrl: targetFrame.url() || '',
+    }));
+  }
+
+  async function clickNextPage(targetFrame, pageIndex) {
+    const selectors = [
+      'input[type="button"].spwBotaoProximo[title="Próxima página"]',
+      'input.spwBotaoProximo[title="Próxima página"]',
+      '.spwBotaoProximo',
+      'input[type="button"][onclick*="paginar(\'proximo\'"]',
+      'input[type="button"][onclick*="paginar("]',
+    ];
+
+    logEvent({
+      level: 'debug',
+      message: 'Iniciando tentativa de avançar página de documentos',
+      modalTitle,
+      detail: {
+        pageIndex,
+        selectors: selectors.length,
+      },
+    });
+
+    for (const selector of selectors) {
+      logEvent({
+        level: 'debug',
+        message: 'Testando seletor de próxima página',
+        modalTitle,
+        detail: { selector, pageIndex },
+      });
+
+      const locator = targetFrame.locator(selector).first();
+      const count = await locator.count().catch(() => 0);
+      if (!count) {
+        logEvent({
+          level: 'debug',
+          message: 'Seletor de próxima página inexistente ou desabilitado',
+          modalTitle,
+          detail: { selector, pageIndex, frameState: { exists: false } },
+        });
+        continue;
+      }
+
+      const state = await locator.evaluate((el) => {
+        const attrs = {};
+        Array.from(el.attributes || []).forEach(attr => {
+          attrs[attr.name] = attr.value;
+        });
+        return {
+          title: el.getAttribute('title') || '',
+          tagName: el.tagName,
+          className: el.className || '',
+          outerHTML: el.outerHTML ? el.outerHTML.slice(0, 450) : '',
+          hasPaginar: typeof window.paginar === 'function',
+          hasParentPaginar: !!(window.parent && window.parent !== window && typeof window.parent.paginar === 'function'),
+          hasTopPaginar: !!(window.top && window.top !== window && typeof window.top.paginar === 'function'),
+          attributes: attrs,
+        };
+      }).catch(() => ({
+        title: '',
+        tagName: '',
+        className: '',
+        outerHTML: '',
+        hasPaginar: false,
+        hasParentPaginar: false,
+        hasTopPaginar: false,
+        attributes: {},
+      }));
+
+      logEvent({
+        level: 'info',
+        message: 'Tentando avançar página de documentos',
+        modalTitle,
+        detail: {
+          selector,
+          pageIndex,
+          scope: targetFrame === modalFrame ? 'modalFrame' : 'nestedFrame',
+          ...state,
+          shotPath: await saveShot(page, `documentos-avancar-pagina-${pageIndex}`).catch(() => null),
+        },
+      });
+
+      let clicked = false;
+      try {
+        await locator.scrollIntoViewIfNeeded().catch(() => {});
+        await locator.click({ force: true, timeout: 8000 });
+        clicked = true;
+      } catch (clickError) {
+        logEvent({
+          level: 'debug',
+          message: 'Clique padrão na próxima página falhou',
+          modalTitle,
+          detail: {
+            selector,
+            pageIndex,
+            error: String(clickError && (clickError.message || clickError) || clickError),
+          },
+        });
+        try {
+          const handle = await locator.elementHandle().catch(() => null);
+          if (handle) {
+            await handle.evaluate(el => {
+              try {
+                el.scrollIntoView({ block: 'center', inline: 'center' });
+                el.click();
+              } catch (error) {}
+            });
+            clicked = true;
+          }
+        } catch (fallbackError) {
+          logEvent({
+            level: 'debug',
+            message: 'Clique via evaluate na próxima página falhou',
+            modalTitle,
+            detail: {
+              selector,
+              pageIndex,
+              error: String(fallbackError && (fallbackError.message || fallbackError) || fallbackError),
+            },
+          });
+        }
+      }
+
+      logEvent({
+        level: 'debug',
+        message: 'Resultado da tentativa de clique em próxima página',
+        modalTitle,
+        detail: { selector, pageIndex, clicked },
+      });
+
+      if (clicked) {
+        return { clicked: true, selector, state };
+      }
+    }
+
+    logEvent({
+      level: 'debug',
+      message: 'Não foi possível avançar a página de documentos',
+      modalTitle,
+      detail: { pageIndex },
+    });
+
+    return { clicked: false };
+  }
+
+  const resolved = await withFrameRetry(async () => {
+    const frameCandidate = await resolveDocumentosFrame(modalFrame);
+    return frameCandidate;
+  }, { name: 'selectDocumentos:resolve-frame', retries: 2 }).catch((error) => {
+    logEvent({
+      level: 'warn',
+      message: 'Seleção paginada de documentos falhou ao resolver o frame do modal.',
+      modalTitle,
+      detail: {
+        desiredCount: desiredEntries.length,
+        error: String(error && (error.stack || error.message || error)),
+      },
+    });
+    return null;
+  });
+
+  if (!resolved || !resolved.frame) {
+    return {
+      found: 0,
+      expected: desiredEntries.length,
+      matched: [],
+      documents: [],
+      totalPages: 1,
+    };
+  }
+
+  const docsFrame = resolved.frame;
+  const pageResults = [];
+  const documents = new Set();
+  const matched = new Set();
+  const maxPages = 50;
+
+  logEvent({
+    level: 'debug',
+    message: 'Iniciando seleção paginada de documentos',
+    modalTitle,
+    detail: {
+      desiredCount: desiredEntries.length,
+      resolvedMode: resolved.mode,
+      resolvedInfo: resolved.info,
+    },
+  });
+
+  let firstPage = await captureDocumentosPage(docsFrame);
+  if ((!firstPage.rowCount || firstPage.rowCount === 0) && resolved.mode === 'nested') {
+    await pageRef?.waitForTimeout(1000).catch(() => {});
+    firstPage = await captureDocumentosPage(docsFrame);
+  }
+
+  pageResults.push({ pagina: 1, ...firstPage });
+  firstPage.documentos.forEach(nome => documents.add(nome));
+  firstPage.matchedOnPage.forEach(nome => matched.add(nome));
+
+  let totalPages = Math.max(1, Number(firstPage.totalPaginas) || 1);
+
+  logEvent({
+    level: 'debug',
+    message: 'Detalhe da página de documentos lida',
+    modalTitle,
+    detail: {
+      pageIndex: 1,
+      totalPages,
+      documentsCount: firstPage.documentos.length,
+      matchedOnPageCount: firstPage.matchedOnPage.length,
+      capturedCount: documents.size,
+      matchedCount: matched.size,
+      sampleDocuments: firstPage.documentos.slice(0, 10),
+      pageResult: { pagina: 1, ...firstPage },
+    },
+  });
+
+  for (let pagina = 2; pagina <= totalPages && pagina <= maxPages; pagina++) {
+    logEvent({
+      level: 'debug',
+      message: 'Solicitando avanço para próxima página de documentos',
+      modalTitle,
+      detail: {
+        pageIndex: pagina - 1,
+        totalPages,
+        matchedCount: matched.size,
+      },
+    });
+
+    const previousUrl = pageResults[pageResults.length - 1]?.frameUrl || pageResults[pageResults.length - 1]?.currentUrl || '';
+    const advanceResult = await clickNextPage(docsFrame, pagina - 1);
+
+    logEvent({
+      level: 'debug',
+      message: 'Resultado da solicitação de avanço',
+      modalTitle,
+      detail: {
+        pageIndex: pagina - 1,
+        totalPages,
+        advanced: !!advanceResult.clicked,
+      },
+    });
+
+    if (!advanceResult.clicked) {
+      break;
+    }
+
+    let advanced = false;
+    const started = Date.now();
+    while (Date.now() - started < 20000) {
+      const currentResolved = await withFrameRetry(async () => await resolveDocumentosFrame(modalFrame), {
+        name: 'selectDocumentos:resolve-frame-after-advance',
+        retries: 1,
+      }).catch(() => null);
+      const currentFrame = currentResolved?.frame || docsFrame;
+      const currentPage = await captureDocumentosPage(currentFrame);
+      const currentFrameUrl = currentPage.frameUrl || currentPage.currentUrl || currentFrame.url() || '';
+      if (currentFrameUrl && currentFrameUrl !== previousUrl && currentPage.rowCount > 0) {
+        advanced = true;
+        pageResults.push({ pagina, ...currentPage, advanced });
+        currentPage.documentos.forEach(nome => documents.add(nome));
+        currentPage.matchedOnPage.forEach(nome => matched.add(nome));
+
+        totalPages = Math.max(totalPages, Number(currentPage.totalPaginas) || totalPages || 1);
+        logEvent({
+          level: 'info',
+          message: `Página ${pagina}/${totalPages} -> ${currentPage.rowCount} registros`,
+          modalTitle,
+          detail: {
+            matched: matched.size,
+            rowCount: currentPage.rowCount || 0,
+          },
+        });
+        logEvent({
+          level: 'debug',
+          message: 'Detalhe da página de documentos lida',
+          modalTitle,
+          detail: {
+            pageIndex: pagina,
+            totalPages,
+            documentsCount: currentPage.documentos.length,
+            matchedOnPageCount: currentPage.matchedOnPage.length,
+            capturedCount: documents.size,
+            matchedCount: matched.size,
+            sampleDocuments: currentPage.documentos.slice(0, 10),
+            pageResult: { pagina, ...currentPage, advanced },
+          },
+        });
+        break;
+      }
+
+      await pageRef?.waitForTimeout(500).catch(() => {});
+    }
+
+    if (!advanced) {
+      const fallbackResolved = await withFrameRetry(async () => await resolveDocumentosFrame(modalFrame), {
+        name: 'selectDocumentos:resolve-frame-fallback',
+        retries: 1,
+      }).catch(() => null);
+      const fallbackFrame = fallbackResolved?.frame || docsFrame;
+      const fallbackPage = await captureDocumentosPage(fallbackFrame);
+      pageResults.push({ pagina, ...fallbackPage, advanced: false });
+      fallbackPage.documentos.forEach(nome => documents.add(nome));
+      fallbackPage.matchedOnPage.forEach(nome => matched.add(nome));
+
+        logEvent({
+          level: 'warn',
+          message: 'Não foi possível confirmar a troca de página de documentos',
+          modalTitle,
+          detail: {
+            pageIndex: pagina - 1,
+            previousUrl,
+            currentUrl: fallbackPage.frameUrl || fallbackPage.currentUrl || '',
+            rowCount: fallbackPage.rowCount || 0,
+            totalPages,
+          },
+        });
+      break;
+    }
+  }
+
+  logEvent({
+    level: 'debug',
+    message: 'Seleção paginada de documentos finalizada',
+    modalTitle,
+    detail: {
+      found: matched.size,
+      expected: desiredEntries.length,
+      totalPages,
+      capturedDocuments: documents.size,
+      pageResults,
+    },
+  });
+
+  return {
+    found: matched.size,
+    expected: desiredEntries.length,
+    matched: Array.from(matched),
+    documents: Array.from(documents),
+    totalPages,
+    pageResults,
+  };
 }
 
 async function ensureSubmitEnabled(surface) {
@@ -3982,6 +4651,7 @@ async function selectPlanoFinanceiro({
 async function selectDocumentos({
   page,
   values = [],
+  enablePagination,
   reportName,
 }) {
   // defensive normalize: always pass a clean array to selectViaModal
@@ -4003,8 +4673,8 @@ async function selectDocumentos({
       'input[name="nmDocumento"]',
       
     ],
-    
     values,
+    enablePagination: true,
     reportName,
     
   });
@@ -4948,6 +5618,8 @@ async function selectViaModal({
   
   value,
   values,
+
+  enablePagination = false,
   
   // optional report name to update progress
   reportName,
@@ -5257,7 +5929,7 @@ async function selectViaModal({
             let rowsCount = 0;
             let sampleRows = [];
             for (let pageIdx = 0; pageIdx < maxPages; pageIdx++) {
-              const res = await withFrameRetry(async () => await modalFrame.evaluate(({ normalizedEntries, rowCheckboxSel, rowValueSelectors }) => {
+              const res = await withFrameRetry(async () => await modalFrame.evaluate(({ normalizedEntries, rowCheckboxSel, rowValueSelectors, nextSelectors }) => {
                 function normalize(s) {
                   try { return (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase(); } catch (e) { return (s || '').replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase(); }
                 }
@@ -5298,7 +5970,6 @@ async function selectViaModal({
                   } catch (e) { /* ignore row errors */ }
                 }
 
-                const nextSelectors = ['.ui-paginator-next', 'a.ui-paginator-next', 'button.ui-paginator-next', '.spwBotaoProximo', 'a[aria-label="Proxima pagina"]', 'a[aria-label="Próxima página"]', 'button[title*="Próxima"]', 'a[title*="Próxima"]', 'a[aria-label*="Next"]'];
                 let nextClicked = false;
                 for (const ns of nextSelectors) {
                   try {
@@ -5314,7 +5985,7 @@ async function selectViaModal({
                   } catch (e) {}
                 }
                 return { matchedPage: Array.from(matchedPage), rowsCount: rows.length, sampleRows: rows.slice(0,30).map(r => r.innerText), nextClicked, documentos };
-              }, { normalizedEntries, rowCheckboxSel: modalDefinition.rowCheckboxSelector, rowValueSelectors: (modalDefinition && modalDefinition.rowValueSelectors) || [] }), { name: 'bulk-evaluate-page' });
+              }, { normalizedEntries, rowCheckboxSel: modalDefinition.rowCheckboxSelector, rowValueSelectors: (modalDefinition && modalDefinition.rowValueSelectors) || [], nextSelectors: DOCUMENTOS_NEXT_PAGE_SELECTORS }), { name: 'bulk-evaluate-page' });
 
               if (!res) break;
               rowsCount = rowsCount || res.rowsCount || 0;
@@ -6024,6 +6695,7 @@ async function selectViaModalByGrid({
   searchInputSelector,
   value,
   values,
+  enablePagination = false,
 }) {
   const entries = uniqueNonEmpty(values || [value]);
   if (!entries.length) return;
@@ -6149,6 +6821,74 @@ async function selectViaModalByGrid({
       await modalFrame.locator(selector).first().waitFor({ state: 'attached', timeout: 5000 }).catch(() => {});
     } catch (_) {}
   }
+
+  const isDocsModal = normalizeSelectionText(modalTitle || '').includes('consulta de documentos');
+  if (isDocsModal && enablePagination !== false) {
+    const paginatedResult = await selectDocumentosAcrossPages({
+      modalFrame,
+      modalTitle,
+      values: entries,
+      rowCheckboxSelector: modalDefinition.rowCheckboxSelector,
+    }).catch((error) => {
+      logEvent({
+        level: 'warn',
+        message: 'Seleção paginada de documentos falhou ao executar o fluxo no modal.',
+        modalTitle,
+        detail: {
+          desiredCount: entries.length,
+          error: String(error && (error.stack || error.message || error)),
+        },
+      });
+      return {
+        found: 0,
+        expected: entries.length,
+        matched: [],
+        documents: [],
+        totalPages: 1,
+        error: String(error && (error.stack || error.message || error)),
+      };
+    });
+
+    if (paginatedResult && paginatedResult.found > 0) {
+      logEvent({
+        level: 'info',
+        message: `Seleção paginada de documentos concluída: ${paginatedResult.matched.join(', ')}`,
+        modalTitle,
+        totalPages: paginatedResult.totalPages,
+      });
+    } else {
+      logEvent({
+        level: 'warn',
+        message: `Seleção paginada de documentos incompleta: ${paginatedResult ? `${paginatedResult.found}/${paginatedResult.expected}` : 'falhou'}`,
+        modalTitle,
+        detail: paginatedResult && paginatedResult.error ? {
+          error: paginatedResult.error,
+          desiredCount: entries.length,
+          found: paginatedResult.found,
+          expected: paginatedResult.expected,
+          totalPages: paginatedResult.totalPages,
+        } : {
+          desiredCount: entries.length,
+          found: paginatedResult ? paginatedResult.found : 0,
+          expected: paginatedResult ? paginatedResult.expected : entries.length,
+          totalPages: paginatedResult ? paginatedResult.totalPages : 1,
+        },
+      });
+    }
+
+    try {
+      const selBtn = modalFrame.locator('#pbSelecionar, input[id*="pbSelecionar"], input[name="pbSelecionar"], button#pbSelecionar').first();
+      if (await selBtn.count().catch(() => 0)) {
+        await selBtn.click({ force: true }).catch(() => {});
+      } else {
+        const { locator: selecionarBtn } = await findVisibleLocatorInFrames(page, '#pbSelecionar');
+        if (selecionarBtn) await selecionarBtn.click({ force: true }).catch(() => {});
+      }
+    } catch (_) {}
+
+    try { await saveShot(page, `modal-selected2-${sanitizeFileName(modalTitle)}`); } catch (_) {}
+    return;
+  }
   
   const modalInput = await findVisibleInput(modalFrame, searchSelectors).catch(() => null);
   if (!modalInput) {
@@ -6199,9 +6939,9 @@ async function selectViaModalByGrid({
         }).catch(() => {});
       }, { name: 'bulk-scroll' }).catch(() => {});
 
-      const isDocsModal = normalizeSelectionText(modalTitle || '').includes('consulta de documentos');
+      const useDocsFallback = false;
       let matched = null;
-      if (isDocsModal) {
+      if (useDocsFallback) {
         try {
           const maxPages = 100;
           const accum = new Set();
@@ -6209,7 +6949,7 @@ async function selectViaModalByGrid({
           let rowsCount = 0;
           let sampleRows = [];
           for (let pageIdx = 0; pageIdx < maxPages; pageIdx++) {
-            const res = await withFrameRetry(async () => await modalFrame.evaluate(({ normalizedEntries, rowCheckboxSel, rowValueSelectors }) => {
+            const res = await withFrameRetry(async () => await modalFrame.evaluate(({ normalizedEntries, rowCheckboxSel, rowValueSelectors, nextSelectors }) => {
               function normalize(s) {
                 try { return (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase(); } catch (e) { return (s || '').replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase(); }
               }
@@ -6250,7 +6990,6 @@ async function selectViaModalByGrid({
                 } catch (e) { }
               }
 
-              const nextSelectors = ['.ui-paginator-next', 'a.ui-paginator-next', 'button.ui-paginator-next', '.spwBotaoProximo', 'a[aria-label="Proxima pagina"]', 'a[aria-label="Próxima página"]', 'button[title*="Próxima"]', 'a[title*="Próxima"]', 'a[aria-label*="Next"]'];
               let nextClicked = false;
               for (const ns of nextSelectors) {
                 try {
@@ -6266,7 +7005,7 @@ async function selectViaModalByGrid({
                 } catch (e) {}
               }
               return { matchedPage: Array.from(matchedPage), rowsCount: rows.length, sampleRows: rows.slice(0,30).map(r => r.innerText), nextClicked, documentos };
-            }, { normalizedEntries, rowCheckboxSel: modalDefinition.rowCheckboxSelector, rowValueSelectors: (modalDefinition && modalDefinition.rowValueSelectors) || [] }), { name: 'bulk-evaluate-page' });
+            }, { normalizedEntries, rowCheckboxSel: modalDefinition.rowCheckboxSelector, rowValueSelectors: (modalDefinition && modalDefinition.rowValueSelectors) || [], nextSelectors: DOCUMENTOS_NEXT_PAGE_SELECTORS }), { name: 'bulk-evaluate-page' });
 
             if (!res) break;
             rowsCount = rowsCount || res.rowsCount || 0;

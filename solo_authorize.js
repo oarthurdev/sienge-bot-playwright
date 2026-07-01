@@ -24,6 +24,9 @@ const TARGET_END_DATE = '31/12/2040';
 const REPORT_PERIOD_START = '01/04/2026';
 const REPORT_PERIOD_END = '30/04/2026';
 const MFA_PREWAIT_MS = Number(process.env.MFA_PREWAIT_MS || 20000);
+const ZAPI_SEND_TEXT_URL = process.env.ZAPI_SEND_TEXT_URL || 'https://api.z-api.io/instances/3E3A6DFFDC3AD016E1A29E80A122AB54/token/82CAC4DF8A0B69FC6B3D230F/send-text';
+const ZAPI_CLIENT_TOKEN = process.env.ZAPI_CLIENT_TOKEN || 'Fa09c1cac17974bb2a3b812fc21c54e21S';
+const ZAPI_ALERT_PHONE = process.env.ZAPI_ALERT_PHONE || '554799688517';
 
 if (!BASE_URL || !USERNAME || !PASSWORD) {
   console.error('Faltam variáveis: SIENGE_BASE_URL, SIENGE_USERNAME, SIENGE_PASSWORD');
@@ -229,6 +232,56 @@ function logEvent(event) {
 function truncateForLog(value, maxLen = 500) {
   const s = String(value == null ? '' : value);
   return s.length > maxLen ? s.slice(0, maxLen) + '…' : s;
+}
+
+function truncateForAlert(value, maxLen = 1200) {
+  const s = String(value == null ? '' : value);
+  return s.length > maxLen ? `${s.slice(0, maxLen)}…` : s;
+}
+
+async function sendZapiAlert({ title, detail, stack, url, pageTitle }) {
+  if (!ZAPI_SEND_TEXT_URL || !ZAPI_CLIENT_TOKEN || !ZAPI_ALERT_PHONE) {
+    return false;
+  }
+
+  const lines = [
+    `Bot falhou: ${title || 'falha no robô'}`,
+  ];
+
+  if (detail) lines.push(`Erro: ${truncateForAlert(detail, 400)}`);
+  if (pageTitle) lines.push(`Tela: ${truncateForAlert(pageTitle, 180)}`);
+  if (url) lines.push(`URL: ${truncateForAlert(url, 220)}`);
+  if (stack) lines.push(`Stack: ${truncateForAlert(stack, 700)}`);
+
+  const payload = {
+    phone: ZAPI_ALERT_PHONE,
+    message: lines.join('\n'),
+  };
+
+  try {
+    const response = await fetch(ZAPI_SEND_TEXT_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Client-Token': ZAPI_CLIENT_TOKEN,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const responseText = await response.text().catch(() => '');
+      throw new Error(`HTTP ${response.status}${responseText ? ` - ${truncateForAlert(responseText, 300)}` : ''}`);
+    }
+
+    return true;
+  } catch (err) {
+    logEvent({
+      level: 'warning',
+      message: 'Falha ao enviar alerta via Z-API.',
+      detail: String(err && err.message || err),
+    });
+    return false;
+  }
 }
 
 async function debugPageSnapshot(page, label) {
@@ -3670,6 +3723,13 @@ async function run() {
     const errorShot = await saveShot(page, 'error');
     const html = await saveHtml(page, 'error');
     const summary = await pageSummary(page);
+    await sendZapiAlert({
+      title: err.message || 'Falha na execução do robô',
+      detail: err.message || String(err),
+      stack: String(err.stack || ''),
+      url: summary.url,
+      pageTitle: summary.title,
+    });
     logEvent({ level: 'error', message: err.message, screenshot: errorShot, html, stack: String(err.stack || ''), ...summary });
     console.error(err);
     process.exitCode = 1;
@@ -3770,5 +3830,10 @@ startPm2Loop().catch(err => {
     detail: String(err && err.message || err),
     stack: String(err && err.stack || '')
   });
+  sendZapiAlert({
+    title: 'Falha fatal ao inicializar o modo PM2',
+    detail: String(err && err.message || err),
+    stack: String(err && err.stack || ''),
+  }).catch(() => {});
   process.exit(1);
 });

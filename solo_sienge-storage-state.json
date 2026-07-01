@@ -65,7 +65,7 @@
       "value": "14C5C21C4DD36F0902C6D59F4CAA6E74",
       "domain": ".c.bing.com",
       "path": "/",
-      "expires": 1816347669.230634,
+      "expires": 1816473755.004492,
       "httpOnly": false,
       "secure": true,
       "sameSite": "None"
@@ -92,10 +92,10 @@
     },
     {
       "name": "CLID",
-      "value": "2032ec4304bc4206b19bd4f8f3d823a8.20260625.20270628",
+      "value": "2032ec4304bc4206b19bd4f8f3d823a8.20260625.20270630",
       "domain": "www.clarity.ms",
       "path": "/",
-      "expires": 1814187667.60885,
+      "expires": 1814313754.079681,
       "httpOnly": true,
       "secure": true,
       "sameSite": "None"
@@ -112,7 +112,7 @@
     },
     {
       "name": "JSESSIONID",
-      "value": "ngrDzy-TgsVuMyVOCqna1zBTel_3RYqojZcLLlA2.43-sienge-maya-app-cp-107",
+      "value": "KW_B3eUawuXPlnfCKs52pVRIPjwIMSFn33N0BkN5.43-sienge-maya-app-cp-107",
       "domain": "laurentino.sienge.com.br",
       "path": "/",
       "expires": -1,
@@ -125,7 +125,7 @@
       "value": "%7B%22distinct_id%22%3A%20%22common%22%2C%22%24device_id%22%3A%20%2219ef45dc1b2a7d-0ed6bd95fc1e798-397c0c7a-e1000-19ef45dc1b2a7d%22%2C%22%24initial_referrer%22%3A%20%22https%3A%2F%2Flaurentino.sienge.com.br%2F%22%2C%22%24initial_referring_domain%22%3A%20%22laurentino.sienge.com.br%22%2C%22__mps%22%3A%20%7B%7D%2C%22__mpso%22%3A%20%7B%7D%2C%22__mpus%22%3A%20%7B%7D%2C%22__mpa%22%3A%20%7B%7D%2C%22__mpu%22%3A%20%7B%7D%2C%22__mpr%22%3A%20%5B%5D%2C%22__mpap%22%3A%20%5B%5D%2C%22%24user_id%22%3A%20%22common%22%7D",
       "domain": ".sienge.com.br",
       "path": "/",
-      "expires": 1814238445,
+      "expires": 1814411237,
       "httpOnly": false,
       "secure": false,
       "sameSite": "Lax"
@@ -135,7 +135,7 @@
       "value": "%7B%22distinct_id%22%3A%22LAURENTINO%20CONSTRUTORA%20E%20INCORPORADORA%20LTDA%7CAutoma%C3%A7%C3%A3o%20-%20Autorizar%20Parcela%20Automaticamente%22%2C%22%24device_id%22%3A%2268e52ee9-a6b7-4dbc-9af1-ce674bcc794e%22%2C%22%24initial_referrer%22%3A%22https%3A%2F%2Flaurentino.sienge.com.br%2Fsienge%2F%22%2C%22%24initial_referring_domain%22%3A%22laurentino.sienge.com.br%22%2C%22__mps%22%3A%7B%7D%2C%22__mpso%22%3A%7B%7D%2C%22__mpus%22%3A%7B%7D%2C%22__mpa%22%3A%7B%7D%2C%22__mpu%22%3A%7B%7D%2C%22__mpr%22%3A%5B%5D%2C%22__mpap%22%3A%5B%5D%2C%22%24user_id%22%3A%22LAURENTINO%20CONSTRUTORA%20E%20INCORPORADORA%20LTDA%7CAutoma%C3%A7%C3%A3o%20-%20Autorizar%20Parcela%20Automaticamente%22%2C%22client%22%3A%5B%227453%22%5D%7D",
       "domain": ".sienge.com.br",
       "path": "/",
-      "expires": 1814270946,
+      "expires": 1814471420,
       "httpOnly": false,
       "secure": true,
       "sameSite": "Lax"
