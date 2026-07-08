@@ -5485,14 +5485,6 @@ async function findRowByText(
               return { frame, cell: el };
             }
             
-            // relaxed fallback: allow contains when exact match fails
-            try {
-              if (normalizedContent.includes(normalizedText) && normalizedText.length > 2) {
-                try { await el.waitFor({ state: 'visible', timeout: 3000 }).catch(() => {}); } catch (_) {}
-                logEvent({ level: 'debug', message: `Linha encontrada (CONTAINS) em ${sel}: ${text}`, frameUrl: frame.url(), index: i });
-                return { frame, cell: el };
-              }
-            } catch (_) {}
           }
         }
       } catch (_) {}
@@ -5703,34 +5695,7 @@ async function findSelectionRow(
           if (cellText === normalizedValue) return row;
         }
 
-        // 3) relaxed match: contains (helps when row has multiple columns concatenated)
-        if (rowText.includes(normalizedValue)) return row;
-        for (const selector of selectors) {
-          const cell = row.locator(selector).first();
-          const cellCount = await cell.count().catch(() => 0);
-          if (!cellCount) continue;
-          const cellText = normalizeSelectionText(await cell.innerText().catch(() => ''));
-          if (cellText.includes(normalizedValue)) return row;
-        }
-        // 4) token match: all tokens from the search value appear in the row (order-insensitive)
-        try {
-          const tokens = normalizedValue.split(/\s+/).filter(Boolean);
-          if (tokens.length > 0) {
-            const all = tokens.every(t => rowText.includes(t));
-            if (all) return row;
-            for (const selector of selectors) {
-              try {
-                const cell = row.locator(selector).first();
-                const cellCount = await cell.count().catch(() => 0);
-                if (!cellCount) continue;
-                const cellText = normalizeSelectionText(await cell.innerText().catch(() => ''));
-                const allCell = tokens.every(t => cellText.includes(t));
-                if (allCell) return row;
-              } catch (_) {}
-            }
-          }
-        } catch (_) {}
-        // no relaxed matching: only exact equality is accepted
+        // only exact equality is accepted for this modal
       } catch (_) {}
     }
     
@@ -5745,25 +5710,19 @@ async function findSelectionRow(
     logEvent({ level: 'debug', message: `findSelectionRow final preview (first rows): ${preview.map(p => p.slice(0,200)).join(' || ')}`, frameUrl: modalFrame.url() });
   } catch (_) {}
 
-  // Final fallback: try a DOM-level scan of all <tr> for tokens (order-insensitive)
+  // Final fallback: try a DOM-level scan of all <tr> for exact normalized text.
   try {
     const normalized = normalizedValue;
     const idx = await modalFrame.evaluate((search) => {
       function normalize(s) {
-        try { return String(s || '').normalize('NFD').replace(/[ -\u036f]/g, '').replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase(); } catch (e) { return String(s || '').replace(/\s+/g, ' ').trim().toLowerCase(); }
+        try { return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase(); } catch (e) { return String(s || '').replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase(); }
       }
-      const tokens = String(search).split(/\s+/).filter(Boolean);
       const rows = Array.from(document.querySelectorAll('tr'));
       for (let i = 0; i < rows.length; i++) {
         try {
           const txt = normalize(rows[i].innerText || '');
           if (!txt) continue;
-          // direct contains
-          if (txt.includes(search)) return i + 1;
-          // token all present
-          let all = true;
-          for (const t of tokens) { if (!txt.includes(t)) { all = false; break; } }
-          if (all) return i + 1;
+          if (txt === search) return i + 1;
         } catch (e) {}
       }
       return null;
@@ -6414,7 +6373,6 @@ async function selectViaModal({
                 }),
               });
               matched = null;
-              continue;
             }
           } catch (diffError) {
             logEvent({ level: 'debug', message: 'Failed to diff modal checked rows against expected selection', modalTitle, detail: String(diffError && diffError.message || diffError) });
@@ -6530,7 +6488,7 @@ async function selectViaModal({
         // perform the selection using existing robust logic
         // Try quick DOM-only selection first to avoid triggering searches that may re-render
         // and clear previously checked items. If quick selection succeeds, skip typing.
-        const normalizedToken = String(currentValue || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+        const normalizedToken = normalizeSelectionText(currentValue);
         const quickMarked = await modalFrame.evaluate(({ needle, rowValueSelectors }) => {
           try {
             const normalize = s => String(s || '')
@@ -6623,8 +6581,8 @@ async function selectViaModal({
         }
       }
 
-      const normalizedToken = String(currentValue || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-      try { await modalFrame.waitForFunction((t) => { try { const norm = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); return document.body && norm(document.body.innerText).includes(t); } catch (e) { return false; } }, { timeout: 10000 }, normalizedToken).catch(() => {}); } catch (_) {}
+      const normalizedToken = normalizeSelectionText(currentValue);
+      try { await modalFrame.waitForFunction((t) => { try { const norm = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase(); return document.body && Array.from(String(document.body.innerText || '').split(/\r?\n/)).map(norm).some(line => line === t); } catch (e) { return false; } }, { timeout: 10000 }, normalizedToken).catch(() => {}); } catch (_) {}
       try { await modalFrame.locator('tr').first().waitFor({ timeout: 7000 }); } catch (_) {}
 
       // Primeiro: busca o índice da <tr> no DOM via evaluate (um roundtrip único, rápido)
@@ -6733,10 +6691,32 @@ async function selectViaModal({
     // Se não obteve rowLocator, tenta encontrar uma <tr> que contenha o texto no mesmo frame
     if (!rowLocator) {
       try {
-        const xpath = `//tr[.//text()[contains(normalize-space(.), "${currentValue}")]]`;
         const frameForSearch = cellFrame || modalFrame;
-        const maybeRow = frameForSearch.locator(`xpath=${xpath}`).first();
-        if (await maybeRow.count().catch(() => 0)) rowLocator = maybeRow;
+        const idx2 = await frameForSearch.evaluate((needle) => {
+          try {
+            function normalize(s) {
+              try {
+                return String(s || '')
+                  .normalize('NFD')
+                  .replace(/[\u0300-\u036f]/g, '')
+                  .replace(/[^\w\s]/g, ' ')
+                  .replace(/\s+/g, ' ')
+                  .trim()
+                  .toLowerCase();
+              } catch (e) {
+                return String(s || '').replace(/\s+/g, ' ').trim().toLowerCase();
+              }
+            }
+
+            const rows = Array.from(document.querySelectorAll('tr'));
+            for (let i = 0; i < rows.length; i++) {
+              const text = normalize(rows[i].innerText || '');
+              if (text && text === needle) return i + 1;
+            }
+          } catch (e) {}
+          return null;
+        }, normalizedToken).catch(() => null);
+        if (idx2) rowLocator = frameForSearch.locator(`xpath=(//tr)[${idx2}]`);
       } catch (_) {}
     }
     
@@ -7374,7 +7354,7 @@ async function selectViaModalByGrid({
                   for (let i = 0; i < normalizedEntries.length; i++) {
                     const ne = normalizedEntries[i];
                     if (!ne || matchedPage.has(ne)) continue;
-                    const ok = parts.some(p => p === ne || p.includes(ne) || ne.includes(p));
+                      const ok = parts.some(p => p === ne);
                     if (ok) {
                       const checkbox = row.querySelector(rowCheckboxSel || 'input[type="checkbox"]');
                       if (checkbox && !checkbox.checked) {
@@ -7466,7 +7446,7 @@ async function selectViaModalByGrid({
                 for (let i = 0; i < normalizedEntries.length; i++) {
                   const ne = normalizedEntries[i];
                   if (!ne || seen.has(ne)) continue;
-                  const ok = parts.some(p => p === ne || p.includes(ne) || ne.includes(p));
+                  const ok = parts.some(p => p === ne);
                   if (ok) {
                     const checkbox = row.querySelector(rowCheckboxSel || 'input[type="checkbox"]');
                       if (checkbox && !checkbox.checked) {
@@ -7589,8 +7569,7 @@ async function selectViaModalByGrid({
 
         // Try quick DOM-only selection first to avoid triggering searches that may re-render
         // and clear previously checked items. If quick selection succeeds, skip typing.
-        let qnorm;
-        try { qnorm = String(currentValue || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); } catch (e) { qnorm = String(currentValue || '').toLowerCase(); }
+        const qnorm = normalizeSelectionText(currentValue);
         // ensure virtualized rows are rendered by scrolling the modal briefly
         try {
           await modalFrame.evaluate(() => {
@@ -7609,12 +7588,12 @@ async function selectViaModalByGrid({
         const quickMarked = await modalFrame.evaluate(({ needle, rowCheckboxSel }) => {
           try {
             const normalize = s => {
-              try { return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim().toLowerCase(); } catch (e) { return String(s || '').replace(/\s+/g, ' ').trim().toLowerCase(); }
+              try { return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase(); } catch (e) { return String(s || '').replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase(); }
             };
             for (const r of document.querySelectorAll('tr')) {
               const rowText = normalize(r.innerText || '');
               const cells = Array.from(r.querySelectorAll('td,th')).map(c => normalize(c.innerText || ''));
-              const ok = rowText === needle || cells.some(ct => ct === needle || ct.includes(needle) || needle.includes(ct));
+              const ok = rowText === needle || cells.some(ct => ct === needle);
               if (ok) {
                 const cb = r.querySelector(rowCheckboxSel || 'input[type="checkbox"]');
                 if (cb && !cb.checked) {
@@ -7674,17 +7653,17 @@ async function selectViaModalByGrid({
         try {
           let normalizedToken;
           try {
-            normalizedToken = String(currentValue || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+            normalizedToken = normalizeSelectionText(currentValue);
           } catch (e) {
-            normalizedToken = String(currentValue || '').toLowerCase();
+            normalizedToken = normalizeSelectionText(currentValue);
           }
 
           await modalFrame.waitForFunction((needle) => {
             try {
               function norm(s) {
-                return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+                return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
               }
-              return document.body && norm(document.body.innerText).includes(needle);
+              return document.body && Array.from(String(document.body.innerText || '').split(/\r?\n/)).map(norm).some(line => line === needle);
             } catch (e) {
               return false;
             }
@@ -7697,7 +7676,7 @@ async function selectViaModalByGrid({
           if (selectedSoFar && selectedSoFar.length) {
             await modalFrame.evaluate((prev) => {
               try {
-                const norm = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+                const norm = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
                 const needles = prev.map(p => norm(p));
                 for (const r of Array.from(document.querySelectorAll('tr'))) {
                   try {
@@ -7705,7 +7684,7 @@ async function selectViaModalByGrid({
                     if (!txt) continue;
                     for (const needle of needles) {
                       if (!needle) continue;
-                      if (txt === needle || txt.includes(needle) || needle.includes(txt)) {
+                      if (txt === needle) {
                         const cb = r.querySelector('input[type="checkbox"]');
                         if (cb && !cb.checked) {
                           try { cb.click(); } catch (e) { try { cb.checked = true; } catch(_){} }
@@ -7838,7 +7817,7 @@ async function selectViaModalByGrid({
       try {
         await finalModal.evaluate((prev) => {
           try {
-            const norm = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+            const norm = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
             const needles = Array.from(new Set(prev.map(p => norm(p))));
             for (const r of Array.from(document.querySelectorAll('tr'))) {
               try {
@@ -7846,7 +7825,7 @@ async function selectViaModalByGrid({
                 if (!txt) continue;
                 for (const needle of needles) {
                   if (!needle) continue;
-                  if (txt === needle || txt.includes(needle) || needle.includes(txt)) {
+                  if (txt === needle) {
                     const cb = r.querySelector('input[type="checkbox"]');
                     if (cb && !cb.checked) {
                       try { cb.click(); } catch (e) { try { cb.checked = true; } catch(_){} }

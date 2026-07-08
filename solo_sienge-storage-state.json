@@ -75,14 +75,34 @@
       "value": "213c4546-e2b2-4507-ed4b-0ef6b5aef7a7",
       "domain": ".sienge.com.br",
       "path": "/",
-      "expires": 1814981496,
+      "expires": 1815066632,
       "httpOnly": false,
       "secure": false,
       "sameSite": "Lax"
     },
     {
+      "name": "X-AUDIT_LOGIN-ID",
+      "value": "16b849a5-6ed3-48bb-ac31-95869db38cc6",
+      "domain": "login.sienge.com.br",
+      "path": "/",
+      "expires": 1784689685.60496,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "SESSION",
+      "value": "ODYyMTg1M2MtM2FkNy00N2Y0LTk4YjQtZWRkZjcwYWIxNmEz",
+      "domain": "login.sienge.com.br",
+      "path": "/",
+      "expires": 1784689699.259879,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
       "name": "JSESSIONID",
-      "value": "YuGd9fznKDlgjw8XEuX7uFQsLhsiozFsMjeFnTKY.43-sienge-maya-app-cp-107",
+      "value": "cPXqbOqGiljyFyPVpZLT5321Olzdy2E4dY-AbWeQ.43-sienge-maya-app-cp-107",
       "domain": "laurentino.sienge.com.br",
       "path": "/",
       "expires": -1,
@@ -95,17 +115,17 @@
       "value": "%7B%22distinct_id%22%3A%20%22common%22%2C%22%24device_id%22%3A%20%2219ef45dc1b2a7d-0ed6bd95fc1e798-397c0c7a-e1000-19ef45dc1b2a7d%22%2C%22%24initial_referrer%22%3A%20%22https%3A%2F%2Flaurentino.sienge.com.br%2F%22%2C%22%24initial_referring_domain%22%3A%20%22laurentino.sienge.com.br%22%2C%22__mps%22%3A%20%7B%7D%2C%22__mpso%22%3A%20%7B%7D%2C%22__mpus%22%3A%20%7B%7D%2C%22__mpa%22%3A%20%7B%7D%2C%22__mpu%22%3A%20%7B%7D%2C%22__mpr%22%3A%20%5B%5D%2C%22__mpap%22%3A%20%5B%5D%2C%22%24user_id%22%3A%20%22common%22%7D",
       "domain": ".sienge.com.br",
       "path": "/",
-      "expires": 1814936507,
+      "expires": 1815022993,
       "httpOnly": false,
       "secure": false,
       "sameSite": "Lax"
     },
     {
       "name": "__cf_bm",
-      "value": "lIJrBev9v8cCjz1rt3f69vlWfW71EQn3vE8b1UYWBQg-1783444669.3779988-1.0.1.1-a7Z22bI_nfcWqwCNoujAhc3KCgZZw.v.f4hFDgMF7Vzcjg3PL0PZm7wHXymLpsqwWQoE4X0Rd4iRDAFRDUKnS5EFZDHsVFhcGkG_r89_397MV54vS95.zleaciOGPLRX",
+      "value": "6xBg0T4ox8sFuTh18UweJ6kOVsiWa8YcVewXxlWcNXY-1783530492.0544186-1.0.1.1-SVtd8TAJNDIH_VNwoLcCpNIwmzinOpo0yMIxhaQyUI.TD8ivlQ1CAgCbUfd0SFuggIHICwCaAGeUu5JrLDm.IjQxEH5YDxaiUBmMdO5zhAY9gEU7xKWO2XsA1F9bpVCw",
       "domain": ".freshchat.com",
       "path": "/",
-      "expires": 1783446469.394326,
+      "expires": 1783532292.068599,
       "httpOnly": true,
       "secure": true,
       "sameSite": "None"
@@ -115,17 +135,17 @@
       "value": "%7B%22distinct_id%22%3A%22LAURENTINO%20CONSTRUTORA%20E%20INCORPORADORA%20LTDA%7CAutoma%C3%A7%C3%A3o%20-%20Autorizar%20Parcela%20Automaticamente%22%2C%22%24device_id%22%3A%2268e52ee9-a6b7-4dbc-9af1-ce674bcc794e%22%2C%22%24initial_referrer%22%3A%22https%3A%2F%2Flaurentino.sienge.com.br%2Fsienge%2F%22%2C%22%24initial_referring_domain%22%3A%22laurentino.sienge.com.br%22%2C%22__mps%22%3A%7B%7D%2C%22__mpso%22%3A%7B%7D%2C%22__mpus%22%3A%7B%7D%2C%22__mpa%22%3A%7B%7D%2C%22__mpu%22%3A%7B%7D%2C%22__mpr%22%3A%5B%5D%2C%22__mpap%22%3A%5B%5D%2C%22%24user_id%22%3A%22LAURENTINO%20CONSTRUTORA%20E%20INCORPORADORA%20LTDA%7CAutoma%C3%A7%C3%A3o%20-%20Autorizar%20Parcela%20Automaticamente%22%2C%22client%22%3A%5B%227453%22%5D%7D",
       "domain": ".sienge.com.br",
       "path": "/",
-      "expires": 1814981496,
+      "expires": 1815066632,
       "httpOnly": false,
       "secure": true,
       "sameSite": "Lax"
     },
     {
       "name": "first_session",
-      "value": "%7B%22visits%22%3A3012%2C%22start%22%3A1783023479383%2C%22last_visit%22%3A1783445474251%2C%22url%22%3A%22https%3A%2F%2Flaurentino.sienge.com.br%2Fsienge%2F8%2Findex.html%22%2C%22path%22%3A%22%2Fsienge%2F8%2Findex.html%22%2C%22referrer%22%3A%22%22%2C%22referrer_info%22%3A%7B%22host%22%3A%22%22%2C%22path%22%3A%22blank%22%2C%22protocol%22%3A%22about%3A%22%2C%22port%22%3A80%2C%22search%22%3A%22%22%2C%22query%22%3A%7B%7D%7D%2C%22search%22%3A%7B%22engine%22%3Anull%2C%22query%22%3Anull%7D%2C%22prev_visit%22%3A1783445303904%2C%22time_since_last_visit%22%3A170347%2C%22version%22%3A0.4%7D",
+      "value": "%7B%22visits%22%3A3652%2C%22start%22%3A1783023479383%2C%22last_visit%22%3A1783530616135%2C%22url%22%3A%22https%3A%2F%2Flaurentino.sienge.com.br%2Fsienge%2F8%2Findex.html%22%2C%22path%22%3A%22%2Fsienge%2F8%2Findex.html%22%2C%22referrer%22%3A%22%22%2C%22referrer_info%22%3A%7B%22host%22%3A%22%22%2C%22path%22%3A%22blank%22%2C%22protocol%22%3A%22about%3A%22%2C%22port%22%3A80%2C%22search%22%3A%22%22%2C%22query%22%3A%7B%7D%7D%2C%22search%22%3A%7B%22engine%22%3Anull%2C%22query%22%3Anull%7D%2C%22prev_visit%22%3A1783530492016%2C%22time_since_last_visit%22%3A124119%2C%22version%22%3A0.4%7D",
       "domain": "laurentino.sienge.com.br",
       "path": "/",
-      "expires": 1786210274,
+      "expires": 1786295416,
       "httpOnly": false,
       "secure": true,
       "sameSite": "Lax"
@@ -189,7 +209,7 @@
         },
         {
           "name": "pageViewCookie",
-          "value": "%7B%22laurentino.sienge.com.br%2Fsienge%2F8%2Findex.html%22%3A%7B%22visitedN%22%3A3012%2C%22firstVisited%22%3A1783023479376%2C%22lastVisited%22%3A1783445474247%7D%2C%22count%22%3A1%7D"
+          "value": "%7B%22laurentino.sienge.com.br%2Fsienge%2F8%2Findex.html%22%3A%7B%22visitedN%22%3A3652%2C%22firstVisited%22%3A1783023479376%2C%22lastVisited%22%3A1783530616128%7D%2C%22count%22%3A1%7D"
         },
         {
           "name": "sienge-recently-accessed",
@@ -197,7 +217,7 @@
         },
         {
           "name": "6c73586a-3978-4254-8390-14e3f78b6e00",
-          "value": "{\"isUserCreateSent\":false,\"lastActivitySent\":\"2026-07-07T03:08:59.748Z\",\"subDomainName\":880416492260207}"
+          "value": "{\"isUserCreateSent\":false,\"lastActivitySent\":\"2026-07-08T03:09:25.521Z\",\"subDomainName\":880416492260207}"
         },
         {
           "name": "_fm_os",
@@ -236,7 +256,7 @@
       "localStorage": [
         {
           "name": "6c73586a-3978-4254-8390-14e3f78b6e00",
-          "value": "{\"isUserCreateSent\":false,\"lastActivitySent\":\"2026-07-07T03:08:59.748Z\",\"subDomainName\":880416492260207}"
+          "value": "{\"isUserCreateSent\":false,\"lastActivitySent\":\"2026-07-08T03:09:25.521Z\",\"subDomainName\":880416492260207}"
         },
         {
           "name": "debug",
@@ -244,7 +264,7 @@
         },
         {
           "name": "hop-6c73586a-3978-4254-8390-14e3f78b6e00",
-          "value": "{\"hop\":\"1783445475886\"}"
+          "value": "{\"hop\":\"1783530617102\"}"
         }
       ]
     }
