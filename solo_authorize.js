@@ -5,8 +5,18 @@ const readline = require('readline/promises');
 const { stdin: input, stdout: output } = require('process');
 const { chromium } = require('playwright');
 require('dotenv').config();
-const imaps = (() => { try { return require('imap-simple'); } catch (e) { return null; }})();
-const mailparser = (() => { try { return require('mailparser'); } catch (e) { return null; }})();
+
+// IMAP e o parser de e-mail só são necessários se uma sessão expirar e exigir
+// MFA. Carregá-los sob demanda reduz o heap do processo nos ciclos normais.
+let imaps = null;
+let mailparser = null;
+let mailDependenciesLoaded = false;
+function loadMailDependencies() {
+  if (mailDependenciesLoaded) return;
+  mailDependenciesLoaded = true;
+  try { imaps = require('imap-simple'); } catch {}
+  try { mailparser = require('mailparser'); } catch {}
+}
 
 const BASE_URL = process.env.SIENGE_BASE_URL;
 const USERNAME = process.env.SIENGE_USERNAME;
@@ -16,6 +26,18 @@ const STATE_PATH = process.env.STATE_PATH || path.resolve(process.cwd(), 'solo_s
 const SCREENSHOT_DIR = process.env.SCREENSHOT_DIR || path.resolve(process.cwd(), 'screenshots');
 const LOG_PATH = process.env.LOG_PATH || path.resolve(process.cwd(), 'solo_sienge-authorize-log.json');
 const DEBUG_HTML = (process.env.DEBUG_HTML ?? 'false').toLowerCase() === 'true';
+// Capturas de tela completas fazem o Chromium rasterizar toda a página e podem
+// consumir bastante CPU e RAM. Em produção, mantenha-as apenas para falhas.
+const CAPTURE_PAGE_STATE = (process.env.CAPTURE_PAGE_STATE ?? 'false').toLowerCase() === 'true';
+const CAPTURE_SUCCESS_SCREENSHOTS = (process.env.CAPTURE_SUCCESS_SCREENSHOTS ?? 'false').toLowerCase() === 'true';
+const DEBUG_PAGE_EVENTS = (process.env.DEBUG_PAGE_EVENTS ?? 'false').toLowerCase() === 'true';
+const BLOCK_NON_ESSENTIAL_RESOURCES = (process.env.BLOCK_NON_ESSENTIAL_RESOURCES ?? 'true').toLowerCase() !== 'false';
+const LOG_MAX_EVENTS = Math.max(100, Number(process.env.LOG_MAX_EVENTS || 500) || 500);
+const LOG_FLUSH_EVERY = Math.max(1, Number(process.env.LOG_FLUSH_EVERY || 25) || 25);
+// Uma viewport menor reduz a área de pintura/composição do renderer. Ainda é
+// larga o suficiente para manter o layout desktop do Sienge.
+const VIEWPORT_WIDTH = Math.max(800, Number(process.env.BROWSER_VIEWPORT_WIDTH || 1024) || 1024);
+const VIEWPORT_HEIGHT = Math.max(600, Number(process.env.BROWSER_VIEWPORT_HEIGHT || 768) || 768);
 const TASK_MODE = (process.env.TASK_MODE || 'authorize').toLowerCase();
 const REPORT_OUTPUT_DIR = process.env.REPORT_OUTPUT_DIR || path.resolve(process.cwd(), 'reports');
 const TARGET_PAGE_URL = `${BASE_URL}/sienge/8/index.html#/common/page/1777`;
@@ -214,18 +236,35 @@ async function clearLegacyFilters(page) {
   }
 }
 
+let logEntries;
+let pendingLogEvents = 0;
+
 function readLog() {
-  if (!fs.existsSync(LOG_PATH)) return [];
+  if (logEntries) return logEntries;
+  if (!fs.existsSync(LOG_PATH)) return (logEntries = []);
   try {
     const arr = JSON.parse(fs.readFileSync(LOG_PATH, 'utf8'));
-    return Array.isArray(arr) ? arr : [];
-  } catch { return []; }
+    // Não mantenha um histórico ilimitado no heap nem o regrave a cada evento.
+    return (logEntries = Array.isArray(arr) ? arr.slice(-LOG_MAX_EVENTS) : []);
+  } catch {
+    return (logEntries = []);
+  }
 }
+
+function flushLog() {
+  if (!logEntries || !pendingLogEvents) return;
+  fs.writeFileSync(LOG_PATH, JSON.stringify(logEntries, null, 2), 'utf8');
+  pendingLogEvents = 0;
+}
+
 function logEvent(event) {
   const payload = { ts: nowIso(), ...event };
   const arr = readLog();
   arr.push(payload);
-  fs.writeFileSync(LOG_PATH, JSON.stringify(arr, null, 2), 'utf8');
+  if (arr.length > LOG_MAX_EVENTS) arr.splice(0, arr.length - LOG_MAX_EVENTS);
+  pendingLogEvents += 1;
+  // Eventos comuns são agrupados; avisos e erros continuam persistidos na hora.
+  if (pendingLogEvents >= LOG_FLUSH_EVERY || ['warning', 'error', 'fatal'].includes(payload.level)) flushLog();
   console.log(`[${payload.ts}] [${String(payload.level || 'info').toUpperCase()}] ${payload.message || ''}`);
 }
 
@@ -285,6 +324,7 @@ async function sendZapiAlert({ title, detail, stack, url, pageTitle }) {
 }
 
 async function debugPageSnapshot(page, label) {
+  if (!DEBUG_PAGE_EVENTS) return;
   try {
     const summary = await pageSummary(page);
     logEvent({
@@ -304,6 +344,7 @@ async function debugPageSnapshot(page, label) {
 }
 
 async function debugLocatorState(page, label, selectors) {
+  if (!DEBUG_PAGE_EVENTS) return;
   try {
     const result = {};
     for (const [name, locator] of Object.entries(selectors)) {
@@ -331,6 +372,7 @@ async function debugLocatorState(page, label, selectors) {
 }
 
 async function debugFrames(page, label) {
+  if (!DEBUG_PAGE_EVENTS) return;
   try {
     const frames = page.frames().map((f, i) => ({
       index: i,
@@ -357,7 +399,9 @@ async function ensureDir(dir) { await fs.promises.mkdir(dir, { recursive: true }
 async function saveShot(page, name) {
   await ensureDir(SCREENSHOT_DIR);
   const file = path.join(SCREENSHOT_DIR, `${Date.now()}-${name}.png`);
-  await page.screenshot({ path: file, fullPage: true });
+  // A viewport contém o estado necessário para diagnóstico sem rasterizar uma
+  // página inteira (que pode conter milhares de linhas).
+  await page.screenshot({ path: file });
   return file;
 }
 async function saveHtml(page, name) {
@@ -367,16 +411,23 @@ async function saveHtml(page, name) {
   await fs.promises.writeFile(file, await page.content(), 'utf8');
   return file;
 }
-async function pageSummary(page) {
+async function pageSummary(page, { includeBody = true } = {}) {
   let bodyText = '';
-  try { bodyText = await page.locator('body').innerText({ timeout: 6000 }); } catch {}
+  // innerText força o navegador a calcular o layout de toda a árvore. Só o
+  // consulte quando o texto for necessário para diagnosticar ou decidir login.
+  if (includeBody) {
+    try { bodyText = await page.locator('body').innerText({ timeout: 6000 }); } catch {}
+  }
   bodyText = String(bodyText || '').replace(/\s+/g, ' ').trim().slice(0, 3000);
   return { url: page.url(), title: await page.title().catch(() => ''), bodySnippet: bodyText };
 }
 async function logPageState(page, message, extra = {}) {
-  const shot = await saveShot(page, (extra.shotName || 'state').replace(/[^a-z0-9_-]+/gi, '-'));
-  const html = await saveHtml(page, (extra.shotName || 'state').replace(/[^a-z0-9_-]+/gi, '-'));
-  const summary = await pageSummary(page);
+  const shouldCapture = CAPTURE_PAGE_STATE || ['warning', 'error'].includes(extra.level);
+  const shot = shouldCapture
+    ? await saveShot(page, (extra.shotName || 'state').replace(/[^a-z0-9_-]+/gi, '-'))
+    : null;
+  const html = shouldCapture ? await saveHtml(page, (extra.shotName || 'state').replace(/[^a-z0-9_-]+/gi, '-')) : null;
+  const summary = await pageSummary(page, { includeBody: shouldCapture });
   logEvent({
     level: extra.level || 'info',
     message,
@@ -2514,8 +2565,6 @@ async function fetchMfaCodeFromEmail(timeoutMs = 120000, pollMs = 5000) {
     }
   } catch (e) { }
 
-  if (!imaps) return null;
-
   const host = process.env.MFA_IMAP_HOST;
   const port = Number(process.env.MFA_IMAP_PORT || 993);
   // allow explicit solo credentials for the MFA-reading mailbox
@@ -2524,6 +2573,9 @@ async function fetchMfaCodeFromEmail(timeoutMs = 120000, pollMs = 5000) {
   const tls = String(process.env.MFA_IMAP_TLS ?? 'true').toLowerCase() !== 'false';
 
   if (!host || !user || !password) return null;
+
+  loadMailDependencies();
+  if (!imaps) return null;
 
   const config = {
     imap: {
@@ -3652,6 +3704,7 @@ async function markAllAndSave(page, surface) {
 }
 
 async function attachPageDebug(page) {
+  if (!DEBUG_PAGE_EVENTS) return;
   page.on('pageerror', (err) => logEvent({ level: 'debug', message: 'Erro JS na página.', detail: String(err.message || err) }));
   page.on('console', (msg) => {
     if (['error', 'warning'].includes(msg.type())) {
@@ -3665,8 +3718,8 @@ async function runAuthorization(context, page) {
   const filterResult = await configureFilters(page, authSurface);
 
   if (filterResult && filterResult.hasResults === false) {
-    const idleShot = await saveShot(page, 'final-no-results');
-    const idleSummary = await pageSummary(page);
+    const idleShot = CAPTURE_SUCCESS_SCREENSHOTS ? await saveShot(page, 'final-no-results') : null;
+    const idleSummary = await pageSummary(page, { includeBody: false });
     logEvent({
       level: 'info',
       message: 'Execução concluída sem parcelas pendentes para autorizar.',
@@ -3675,20 +3728,40 @@ async function runAuthorization(context, page) {
     });
   } else {
     await markAllAndSave(page, authSurface);
-    const finalShot = await saveShot(page, 'final-success');
-    const summary = await pageSummary(page);
+    const finalShot = CAPTURE_SUCCESS_SCREENSHOTS ? await saveShot(page, 'final-success') : null;
+    const summary = await pageSummary(page, { includeBody: false });
     logEvent({ level: 'info', message: 'Processo de autorização concluído com sucesso.', screenshot: finalShot, ...summary });
   }
 
-  await context.storageState({ path: STATE_PATH });
-  logEvent({ level: 'info', message: 'Estado da sessão salvo com sucesso.', statePath: STATE_PATH });
 }
 
 async function run() {
-  await ensureDir(SCREENSHOT_DIR);
-  await ensureDir(REPORT_OUTPUT_DIR);
-  const browser = await chromium.launch({ headless: HEADLESS });
-  const context = await browser.newContext(fs.existsSync(STATE_PATH) ? { storageState: STATE_PATH } : {});
+  // Cria diretórios somente quando aquele tipo de artefato será realmente usado.
+  if (TASK_MODE === 'reports' || TASK_MODE === 'both') await ensureDir(REPORT_OUTPUT_DIR);
+  const browser = await chromium.launch({
+    headless: HEADLESS,
+    args: [
+      '--disable-gpu',
+      '--disable-extensions',
+      '--disable-component-update',
+      '--disable-background-networking',
+      '--disable-sync',
+      '--metrics-recording-only',
+      '--mute-audio',
+    ],
+  });
+  const contextOptions = {
+    viewport: { width: VIEWPORT_WIDTH, height: VIEWPORT_HEIGHT },
+    deviceScaleFactor: 1,
+  };
+  if (fs.existsSync(STATE_PATH)) contextOptions.storageState = STATE_PATH;
+  const context = await browser.newContext(contextOptions);
+  if (BLOCK_NON_ESSENTIAL_RESOURCES) {
+    await context.route('**/*', route => {
+      const type = route.request().resourceType();
+      return ['image', 'media', 'font'].includes(type) ? route.abort() : route.continue();
+    });
+  }
   const page = await context.newPage();
   await attachPageDebug(page);
 
@@ -3736,6 +3809,7 @@ async function run() {
   } finally {
     await browser.close();
     logEvent({ level: 'info', message: 'Execução finalizada.' });
+    flushLog();
   }
 }
 
@@ -3816,11 +3890,13 @@ async function startPm2Loop() {
 process.on('SIGINT', async () => {
   logEvent({ level: 'info', message: 'SIGINT recebido. Encerrando loop PM2.' });
   __stopping = true;
+  flushLog();
 });
 
 process.on('SIGTERM', async () => {
   logEvent({ level: 'info', message: 'SIGTERM recebido. Encerrando loop PM2.' });
   __stopping = true;
+  flushLog();
 });
 
 startPm2Loop().catch(err => {
@@ -3835,5 +3911,6 @@ startPm2Loop().catch(err => {
     detail: String(err && err.message || err),
     stack: String(err && err.stack || ''),
   }).catch(() => {});
+  flushLog();
   process.exit(1);
 });
