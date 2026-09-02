@@ -2948,6 +2948,9 @@ async function detectMfaPinInputs(page) {
     page.locator('input.grua-pin-input-textfield'),
     page.locator('input[maxlength="1"]'),
     page.locator('.sc-fqkvVR input'),
+    // A versão atual do Sienge ID não expõe classe nem maxlength nos PINs;
+    // nesta etapa os seis inputs visíveis são exatamente o código MFA.
+    page.locator('input:not([type="hidden"]):not([disabled])'),
   ];
   for (const loc of locators) {
     const count = await loc.count().catch(() => 0);
