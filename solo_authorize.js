@@ -2974,6 +2974,7 @@ async function fillMfaCode(page, code) {
       await inputs[i].click({ timeout: 3000 }).catch(() => {});
       await inputs[i].fill('').catch(() => {});
       await inputs[i].type(digits[i], { delay: 20 }).catch(async () => { await inputs[i].fill(digits[i]); });
+      logEvent({ level: 'info', message: `Dígito MFA ${i + 1}/6 preenchido.` });
     }
     return true;
   }
@@ -3853,9 +3854,31 @@ async function run() {
     await context.storageState({ path: STATE_PATH });
     logEvent({ level: 'info', message: 'Estado da sessão salvo com sucesso.', statePath: STATE_PATH });
   } catch (err) {
-    const errorShot = await saveShot(page, 'error');
-    const html = await saveHtml(page, 'error');
-    const summary = await pageSummary(page);
+    // PM2 usa SIGINT em stop/reload. Nesse caso o Chromium pode já ter sido
+    // encerrado pelo supervisor, portanto não tente capturar uma página morta.
+    if (__stopping || page.isClosed() || !browser.isConnected()) {
+      logEvent({
+        level: 'warning',
+        message: 'Execução interrompida por sinal do processo; diagnóstico visual ignorado.',
+        detail: String(err && err.message || err),
+      });
+      return;
+    }
+
+    let errorShot = null;
+    let html = null;
+    let summary = { url: page.url(), title: '', bodySnippet: '' };
+    try {
+      errorShot = await saveShot(page, 'error');
+      html = await saveHtml(page, 'error');
+      summary = await pageSummary(page);
+    } catch (captureErr) {
+      logEvent({
+        level: 'warning',
+        message: 'Não foi possível capturar o diagnóstico visual da falha.',
+        detail: String(captureErr && captureErr.message || captureErr),
+      });
+    }
     await sendZapiAlert({
       title: err.message || 'Falha na execução do robô',
       detail: err.message || String(err),
@@ -3867,7 +3890,7 @@ async function run() {
     console.error(err);
     process.exitCode = 1;
   } finally {
-    await browser.close();
+    await browser.close().catch(() => {});
     logEvent({ level: 'info', message: 'Execução finalizada.' });
     flushLog();
   }
