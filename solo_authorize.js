@@ -2971,9 +2971,9 @@ async function fillMfaCode(page, code) {
   if (inputs.length >= 6) {
     logEvent({ level: 'info', message: 'Preenchendo código MFA em 6 campos separados.' });
     for (let i = 0; i < 6; i++) {
-      await inputs[i].click({ timeout: 3000 }).catch(() => {});
-      await inputs[i].fill('').catch(() => {});
-      await inputs[i].type(digits[i], { delay: 20 }).catch(async () => { await inputs[i].fill(digits[i]); });
+      // `type()` espera o timeout padrão do Playwright nessa implementação do
+      // OTP; `fill()` dispara o mesmo evento de input e é imediato.
+      await inputs[i].fill(digits[i], { timeout: 3000 });
       logEvent({ level: 'info', message: `Dígito MFA ${i + 1}/6 preenchido.` });
     }
     return true;
