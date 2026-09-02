@@ -31,7 +31,9 @@ const DEBUG_HTML = (process.env.DEBUG_HTML ?? 'false').toLowerCase() === 'true';
 const CAPTURE_PAGE_STATE = (process.env.CAPTURE_PAGE_STATE ?? 'false').toLowerCase() === 'true';
 const CAPTURE_SUCCESS_SCREENSHOTS = (process.env.CAPTURE_SUCCESS_SCREENSHOTS ?? 'false').toLowerCase() === 'true';
 const DEBUG_PAGE_EVENTS = (process.env.DEBUG_PAGE_EVENTS ?? 'false').toLowerCase() === 'true';
-const BLOCK_NON_ESSENTIAL_RESOURCES = (process.env.BLOCK_NON_ESSENTIAL_RESOURCES ?? 'true').toLowerCase() !== 'false';
+// Alguns provedores de SSO dependem de recursos visuais durante a transição de
+// MFA. Por compatibilidade, o bloqueio é opt-in.
+const BLOCK_NON_ESSENTIAL_RESOURCES = (process.env.BLOCK_NON_ESSENTIAL_RESOURCES ?? 'false').toLowerCase() === 'true';
 const LOG_MAX_EVENTS = Math.max(100, Number(process.env.LOG_MAX_EVENTS || 500) || 500);
 const LOG_FLUSH_EVERY = Math.max(1, Number(process.env.LOG_FLUSH_EVERY || 25) || 25);
 // Uma viewport menor reduz a área de pintura/composição do renderer. Ainda é
@@ -2974,22 +2976,68 @@ async function fillMfaCode(page, code) {
   }
   return false;
 }
+
+function mfaEmailMethodLocators(page) {
+  return [
+    page.locator('[data-testid="mfa-choose-method-email"]'),
+    page.locator('[data-testid*="email" i]'),
+    page.getByRole('button', { name: /autenticação por e-mail|autenticacao por e-mail/i }),
+    page.getByText(/autenticação por e-mail|autenticacao por e-mail/i).locator('xpath=ancestor::*[@role="button" or self::button][1]'),
+    page.locator('button, [role="button"]').filter({ hasText: /autenticação por e-mail|autenticacao por e-mail/i }),
+  ];
+}
+
+async function waitForMfaStep(page, timeout = 30000) {
+  const deadline = Date.now() + timeout;
+  while (Date.now() < deadline) {
+    const pins = await detectMfaPinInputs(page);
+    if (pins.length >= 6) return { type: 'code', pins };
+
+    for (const locator of mfaEmailMethodLocators(page)) {
+      const candidate = locator.first();
+      if (
+        await candidate.isVisible({ timeout: 250 }).catch(() => false)
+        && await candidate.isEnabled().catch(() => true)
+      ) {
+        return { type: 'method', locator: candidate };
+      }
+    }
+    await page.waitForTimeout(300);
+  }
+  return null;
+}
+
+async function waitForMfaCodeInputs(page, timeout = 30000) {
+  const deadline = Date.now() + timeout;
+  while (Date.now() < deadline) {
+    const pins = await detectMfaPinInputs(page);
+    if (pins.length >= 6) return pins;
+    await page.waitForTimeout(300);
+  }
+  return [];
+}
+
 async function handleMfa(page) {
   let summary = await pageSummary(page);
   if (!isMfaMethodStep(summary) && !isMfaCodeStep(summary)) return false;
 
   if (isMfaMethodStep(summary)) {
-    logEvent({ level: 'info', message: 'Tela de escolha do método MFA detectada. Selecionando "Autenticação por e-mail".' });
-    const clicked = await clickFirstVisible('Autenticação por e-mail', [
-      page.locator('[data-testid="mfa-choose-method-email"]'),
-      page.getByRole('button', { name: /autenticação por e-mail|autenticacao por e-mail/i }),
-      page.getByText(/autenticação por e-mail|autenticacao por e-mail/i).locator('xpath=ancestor::button[1]'),
-      page.locator('button').filter({ hasText: /autenticação por e-mail|autenticacao por e-mail/i }),
-    ]);
-    if (!clicked) throw new Error('Não consegui selecionar "Autenticação por e-mail".');
-    await waitForAppReady(page, 20000);
-    await logPageState(page, 'Método MFA por e-mail selecionado.', { shotName: 'after-mfa-email-method' });
-    summary = await pageSummary(page);
+    // Após senha/conta, o SSO pode exibir "Verificando..." antes de montar a
+    // escolha de método. Espere a opção clicável ou os PINs, sem clicar em uma
+    // tela transitória.
+    const step = await waitForMfaStep(page);
+    if (!step) throw new Error('A tela de MFA não ficou pronta para seleção do método ou inserção do código.');
+
+    if (step.type === 'method') {
+      logEvent({ level: 'info', message: 'Tela de escolha do método MFA pronta. Selecionando "Autenticação por e-mail".' });
+      await step.locator.click({ timeout: 8000 });
+      const pins = await waitForMfaCodeInputs(page);
+      if (!pins.length) throw new Error('A tela para inserir o código MFA não apareceu após selecionar autenticação por e-mail.');
+      await logPageState(page, 'Método MFA por e-mail selecionado.', { shotName: 'after-mfa-email-method' });
+      summary = { ...summary, bodySnippet: 'verifique o código no seu e-mail' };
+    } else {
+      summary = { ...summary, bodySnippet: 'verifique o código no seu e-mail' };
+    }
   }
 
   if (!isMfaCodeStep(summary)) {
@@ -2997,6 +3045,9 @@ async function handleMfa(page) {
     summary = await pageSummary(page);
   }
   if (!isMfaCodeStep(summary)) throw new Error('A tela para inserir o código MFA não apareceu.');
+
+  const readyPins = await waitForMfaCodeInputs(page);
+  if (!readyPins.length) throw new Error('Os campos do código MFA não ficaram disponíveis.');
 
   logEvent({ level: 'info', message: 'Tela de código MFA detectada. Aguardando o código digitado no terminal.' });
   const code = await promptUserForCode();
