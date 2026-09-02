@@ -48,7 +48,10 @@ const REPORT_FILTER_PAGE_URL = `${BASE_URL}/sienge/CRC/filterContasRecebidas.do`
 const TARGET_END_DATE = '31/12/2040';
 const REPORT_PERIOD_START = '01/04/2026';
 const REPORT_PERIOD_END = '30/04/2026';
-const MFA_PREWAIT_MS = Number(process.env.MFA_PREWAIT_MS || 20000);
+// Aguarda a entrega/propagação de todos os e-mails da solicitação atual antes
+// de consultar a caixa. Isso evita capturar o código da solicitação anterior
+// quando o Sienge envia mais de um código em sequência.
+const MFA_PREWAIT_MS = Number(process.env.MFA_PREWAIT_MS || 45000);
 const MFA_EMAIL_LOOKBACK_MS = Math.max(0, Number(process.env.MFA_EMAIL_LOOKBACK_MS || 30000) || 30000);
 const ZAPI_SEND_TEXT_URL = process.env.ZAPI_SEND_TEXT_URL || 'https://api.z-api.io/instances/3E3A6DFFDC3AD016E1A29E80A122AB54/token/82CAC4DF8A0B69FC6B3D230F/send-text';
 const ZAPI_CLIENT_TOKEN = process.env.ZAPI_CLIENT_TOKEN || 'Fa09c1cac17974bb2a3b812fc21c54e21S';
@@ -2873,7 +2876,8 @@ async function promptUserForCode() {
   if (autoEnabled) {
     const timeoutMs = Number(process.env.MFA_AUTO_TIMEOUT_MS || 120000);
     logEvent({ level: 'info', message: `Tentando obter código MFA do e-mail por até ${timeoutMs}ms.` });
-    // allow a small pre-wait to let the most recent MFA email arrive
+    // Aguarda a janela de entrega antes da primeira busca para que o código
+    // mais recente já esteja disponível e seja priorizado pela busca ordenada.
     try {
       const prewait = Number(process.env.MFA_PREWAIT_MS || MFA_PREWAIT_MS || 0);
       if (prewait > 0) {
