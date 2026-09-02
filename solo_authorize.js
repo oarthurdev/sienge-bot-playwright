@@ -11,6 +11,7 @@ require('dotenv').config();
 let imaps = null;
 let mailparser = null;
 let mailDependenciesLoaded = false;
+const usedMfaMessageIds = new Set();
 function loadMailDependencies() {
   if (mailDependenciesLoaded) return;
   mailDependenciesLoaded = true;
@@ -48,6 +49,7 @@ const TARGET_END_DATE = '31/12/2040';
 const REPORT_PERIOD_START = '01/04/2026';
 const REPORT_PERIOD_END = '30/04/2026';
 const MFA_PREWAIT_MS = Number(process.env.MFA_PREWAIT_MS || 20000);
+const MFA_EMAIL_LOOKBACK_MS = Math.max(0, Number(process.env.MFA_EMAIL_LOOKBACK_MS || 30000) || 30000);
 const ZAPI_SEND_TEXT_URL = process.env.ZAPI_SEND_TEXT_URL || 'https://api.z-api.io/instances/3E3A6DFFDC3AD016E1A29E80A122AB54/token/82CAC4DF8A0B69FC6B3D230F/send-text';
 const ZAPI_CLIENT_TOKEN = process.env.ZAPI_CLIENT_TOKEN || 'Fa09c1cac17974bb2a3b812fc21c54e21S';
 const ZAPI_ALERT_PHONE = process.env.ZAPI_ALERT_PHONE || '554799688517';
@@ -2538,7 +2540,7 @@ function isMfaCodeStep(summary) {
   const t = `${summary.title} ${summary.bodySnippet}`;
   return /verifique o código no seu e-mail|enviamos um código de 6 dígitos|enviamos um código de 6 digitos|insira-o para continuar/i.test(t);
 }
-async function fetchMfaCodeFromEmail(timeoutMs = 120000, pollMs = 5000) {
+async function fetchMfaCodeFromEmail(timeoutMs = 120000, pollMs = 5000, notBeforeMs = 0) {
   // Prefer Gmail API OAuth2 if configured
   try {
     const useOauth = String(process.env.SOLO_MFA_OAUTH2 || process.env.MFA_USE_OAUTH2 || 'false').toLowerCase() === 'true' || Boolean(process.env.GOOGLE_REFRESH_TOKEN);
@@ -2547,9 +2549,15 @@ async function fetchMfaCodeFromEmail(timeoutMs = 120000, pollMs = 5000) {
         const gmailHelper = require('./tools/gmail_oauth');
         const query = process.env.MFA_GMRAW_QUERY || '"Código de Verificação" sienge';
         logEvent({ level: 'info', message: 'Tentando buscar código MFA via Gmail API OAuth2', query });
-        const found = await gmailHelper.fetchMfaCodeWithGmailApi({ query, maxResults: Number(process.env.MFA_OAUTH_MAX || 10) });
+        const found = await gmailHelper.fetchMfaCodeWithGmailApi({
+          query,
+          maxResults: Number(process.env.MFA_OAUTH_MAX || 10),
+          afterMs: notBeforeMs,
+          excludedMessageIds: [...usedMfaMessageIds],
+        });
         if (found && found.code) {
-          logEvent({ level: 'info', message: 'Código MFA obtido via Gmail API', code: found.code, messageId: found.messageId });
+          usedMfaMessageIds.add(found.messageId);
+          logEvent({ level: 'info', message: 'Código MFA obtido via Gmail API.', messageId: found.messageId, receivedAt: found.receivedAt });
           return found.code;
         }
         logEvent({ level: 'info', message: 'Nenhum código encontrado via Gmail API OAuth2' });
@@ -2684,7 +2692,7 @@ async function fetchMfaCodeFromEmail(timeoutMs = 120000, pollMs = 5000) {
       }
     }
 
-    const sinceTime = Date.now() - Math.max(timeoutMs, 5 * 60 * 1000);
+    const sinceTime = notBeforeMs || (Date.now() - Math.max(timeoutMs, 5 * 60 * 1000));
     while (Date.now() - start < timeoutMs) {
       const fetchOptions = { bodies: ['HEADER.FIELDS (FROM SUBJECT)', 'TEXT'], struct: true, markSeen: false };
       logEvent({ level: 'debug', message: 'Buscando mensagens IMAP.' , fetchOptions });
@@ -2846,6 +2854,9 @@ async function fetchMfaCodeFromEmail(timeoutMs = 120000, pollMs = 5000) {
 }
 
 async function promptUserForCode() {
+  // O e-mail pode ser emitido pouco antes da tela de PIN aparecer. A margem
+  // aceita essa mensagem, mas elimina códigos de tentativas anteriores.
+  const notBeforeMs = Date.now() - MFA_EMAIL_LOOKBACK_MS;
   const autoEnabled = String(process.env.MFA_AUTO_FETCH ?? 'true').toLowerCase() !== 'false';
   if (autoEnabled) {
     const timeoutMs = Number(process.env.MFA_AUTO_TIMEOUT_MS || 120000);
@@ -2859,7 +2870,7 @@ async function promptUserForCode() {
       }
     } catch (e) {}
     try {
-      const code = await fetchMfaCodeFromEmail(timeoutMs, Number(process.env.MFA_AUTO_POLL_MS || 5000));
+      const code = await fetchMfaCodeFromEmail(timeoutMs, Number(process.env.MFA_AUTO_POLL_MS || 5000), notBeforeMs);
       if (code) {
         logEvent({ level: 'info', message: 'Código MFA obtido automaticamente via e-mail.' });
         return code;
