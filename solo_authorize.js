@@ -2548,17 +2548,29 @@ async function fetchMfaCodeFromEmail(timeoutMs = 120000, pollMs = 5000, notBefor
       try {
         const gmailHelper = require('./tools/gmail_oauth');
         const query = process.env.MFA_GMRAW_QUERY || '"Código de Verificação" sienge';
-        logEvent({ level: 'info', message: 'Tentando buscar código MFA via Gmail API OAuth2', query });
-        const found = await gmailHelper.fetchMfaCodeWithGmailApi({
-          query,
-          maxResults: Number(process.env.MFA_OAUTH_MAX || 10),
-          afterMs: notBeforeMs,
-          excludedMessageIds: [...usedMfaMessageIds],
-        });
-        if (found && found.code) {
-          usedMfaMessageIds.add(found.messageId);
-          logEvent({ level: 'info', message: 'Código MFA obtido via Gmail API.', messageId: found.messageId, receivedAt: found.receivedAt });
-          return found.code;
+        const deadline = Date.now() + timeoutMs;
+        let firstAttempt = true;
+        while (Date.now() < deadline) {
+          logEvent({
+            level: firstAttempt ? 'info' : 'debug',
+            message: 'Tentando buscar código MFA via Gmail API OAuth2',
+            query,
+          });
+          firstAttempt = false;
+          const found = await gmailHelper.fetchMfaCodeWithGmailApi({
+            query,
+            maxResults: Number(process.env.MFA_OAUTH_MAX || 10),
+            afterMs: notBeforeMs,
+            excludedMessageIds: [...usedMfaMessageIds],
+          });
+          if (found && found.code) {
+            usedMfaMessageIds.add(found.messageId);
+            logEvent({ level: 'info', message: 'Código MFA obtido via Gmail API.', messageId: found.messageId, receivedAt: found.receivedAt });
+            return found.code;
+          }
+          const remainingMs = deadline - Date.now();
+          if (remainingMs <= 0) break;
+          await sleepMs(Math.min(pollMs, remainingMs));
         }
         logEvent({ level: 'info', message: 'Nenhum código encontrado via Gmail API OAuth2' });
       } catch (e) {
