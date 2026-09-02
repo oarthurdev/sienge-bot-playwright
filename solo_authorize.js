@@ -2965,20 +2965,29 @@ async function detectMfaPinInputs(page) {
   }
   return [];
 }
-async function fillMfaCode(page, code) {
-  const digits = code.split('').slice(0, 6);
-  const inputs = await detectMfaPinInputs(page);
-  if (inputs.length >= 6) {
-    logEvent({ level: 'info', message: 'Preenchendo código MFA em 6 campos separados.' });
-    for (let i = 0; i < 6; i++) {
-      // `type()` espera o timeout padrão do Playwright nessa implementação do
-      // OTP; `fill()` dispara o mesmo evento de input e é imediato.
-      await inputs[i].fill(digits[i], { timeout: 3000 });
-      logEvent({ level: 'info', message: `Dígito MFA ${i + 1}/6 preenchido.` });
-    }
-    return true;
+
+async function detectMfaActiveInput(page) {
+  const candidates = page.locator('input:not([type="hidden"]):not([readonly]):not([disabled])');
+  const count = await candidates.count().catch(() => 0);
+  for (let i = 0; i < count; i++) {
+    const input = candidates.nth(i);
+    if (await input.isVisible({ timeout: 500 }).catch(() => false)) return input;
   }
-  return false;
+  return null;
+}
+
+async function fillMfaCode(page, code) {
+  const inputs = await detectMfaPinInputs(page);
+  const activeInput = await detectMfaActiveInput(page);
+  if (inputs.length < 6 || !activeInput) return false;
+
+  // O Sienge ID renderiza seis caixas, mas somente a caixa ativa aceita texto;
+  // as demais são readonly e recebem o valor quando o foco avança por teclado.
+  logEvent({ level: 'info', message: 'Preenchendo código MFA pelo campo ativo.' });
+  await activeInput.click({ timeout: 3000 });
+  await page.keyboard.type(String(code).replace(/\D/g, '').slice(0, 6), { delay: 20 });
+  logEvent({ level: 'info', message: 'Seis dígitos do código MFA enviados ao componente.' });
+  return true;
 }
 
 function mfaEmailMethodLocators(page) {
