@@ -3020,31 +3020,15 @@ async function waitForMfaCodeInputs(page, timeout = 30000) {
   return [];
 }
 
-async function submitMfaCode(page, timeout = 15000) {
+async function waitForMfaAutomaticLogin(page, timeout = 30000) {
   const deadline = Date.now() + timeout;
-  const buttons = [
-    page.getByRole('button', { name: /verificar/i }),
-    page.locator('button[type="submit"], input[type="submit"]'),
-    page.getByText(/^VERIFICAR$/i).locator('xpath=ancestor::*[@role="button" or self::button][1]'),
-  ];
-
   while (Date.now() < deadline) {
-    // Alguns layouts validam automaticamente após o sexto dígito.
-    if (!(await detectMfaPinInputs(page)).length) return { submitted: true, automatic: true };
-
-    for (const locator of buttons) {
-      const candidate = locator.first();
-      if (
-        await candidate.isVisible({ timeout: 250 }).catch(() => false)
-        && await candidate.isEnabled().catch(() => false)
-      ) {
-        await candidate.click({ timeout: 3000 });
-        return { submitted: true, automatic: false };
-      }
-    }
-    await page.waitForTimeout(250);
+    // O Sienge ID submete automaticamente após o sexto dígito. O sumiço dos
+    // PINs indica que a validação/redirecionamento foi iniciado.
+    if (!(await detectMfaPinInputs(page)).length) return true;
+    await page.waitForTimeout(300);
   }
-  return { submitted: false, automatic: false };
+  return false;
 }
 
 async function handleMfa(page) {
@@ -3084,15 +3068,12 @@ async function handleMfa(page) {
   const ok = await fillMfaCode(page, code);
   if (!ok) throw new Error('Não encontrei o input para inserir o código MFA.');
 
-  logEvent({ level: 'info', message: 'Código MFA preenchido. Aguardando habilitação da confirmação.' });
-  const submission = await submitMfaCode(page);
-  if (!submission.submitted) throw new Error('O botão "Verificar" do MFA não foi habilitado após o preenchimento do código.');
-  logEvent({
-    level: 'info',
-    message: submission.automatic ? 'Código MFA enviado automaticamente pelo SSO.' : 'Código MFA enviado para verificação.',
-  });
+  logEvent({ level: 'info', message: 'Código MFA preenchido. Aguardando validação automática do Sienge ID.' });
+  if (!(await waitForMfaAutomaticLogin(page))) {
+    throw new Error('O Sienge ID não concluiu a validação automática do código MFA.');
+  }
   await waitForAppReady(page, 25000);
-  logEvent({ level: 'info', message: 'Verificação do código MFA concluída; continuando o login.' });
+  logEvent({ level: 'info', message: 'Validação automática do código MFA concluída; continuando o login.' });
   await logPageState(page, 'Código MFA informado.', { shotName: 'after-mfa-code-submit' });
   return true;
 }
