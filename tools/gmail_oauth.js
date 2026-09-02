@@ -21,7 +21,7 @@ function decodeBase64Url(str) {
   return Buffer.from(str, 'base64').toString('utf8');
 }
 
-async function fetchMfaCodeWithGmailApi({ query, maxResults = 10, userId = 'me', afterMs = 0, excludedMessageIds = [] }) {
+async function fetchMfaCodeWithGmailApi({query, maxResults = 10, userId = 'me'}) {
   let auth;
   try {
     auth = makeOAuthClient();
@@ -40,13 +40,9 @@ async function fetchMfaCodeWithGmailApi({ query, maxResults = 10, userId = 'me',
     throw err;
   }
   const msgs = (res && res.data && res.data.messages) || [];
-  const excluded = new Set(excludedMessageIds);
   for (const item of msgs) {
-    if (excluded.has(item.id)) continue;
     try {
       const m = await gmail.users.messages.get({ userId, id: item.id, format: 'full' });
-      const receivedAt = Number(m && m.data && m.data.internalDate || 0);
-      if (afterMs && (!receivedAt || receivedAt < afterMs)) continue;
       const payload = m && m.data && m.data.payload;
       let text = '';
       if (m.data.snippet) text += m.data.snippet + '\n';
@@ -64,7 +60,7 @@ async function fetchMfaCodeWithGmailApi({ query, maxResults = 10, userId = 'me',
       }
       // search for 6-digit code
       const m6 = text.match(/(\d{6})/);
-      if (m6) return { code: m6[1], raw: text, messageId: item.id, receivedAt };
+      if (m6) return { code: m6[1], raw: text, messageId: item.id };
     } catch (e) {
       // bubble up non-transient errors where appropriate
       // but continue to try other messages
