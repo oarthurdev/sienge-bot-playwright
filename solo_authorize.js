@@ -3020,6 +3020,33 @@ async function waitForMfaCodeInputs(page, timeout = 30000) {
   return [];
 }
 
+async function submitMfaCode(page, timeout = 15000) {
+  const deadline = Date.now() + timeout;
+  const buttons = [
+    page.getByRole('button', { name: /verificar/i }),
+    page.locator('button[type="submit"], input[type="submit"]'),
+    page.getByText(/^VERIFICAR$/i).locator('xpath=ancestor::*[@role="button" or self::button][1]'),
+  ];
+
+  while (Date.now() < deadline) {
+    // Alguns layouts validam automaticamente após o sexto dígito.
+    if (!(await detectMfaPinInputs(page)).length) return { submitted: true, automatic: true };
+
+    for (const locator of buttons) {
+      const candidate = locator.first();
+      if (
+        await candidate.isVisible({ timeout: 250 }).catch(() => false)
+        && await candidate.isEnabled().catch(() => false)
+      ) {
+        await candidate.click({ timeout: 3000 });
+        return { submitted: true, automatic: false };
+      }
+    }
+    await page.waitForTimeout(250);
+  }
+  return { submitted: false, automatic: false };
+}
+
 async function handleMfa(page) {
   let summary = await pageSummary(page);
   if (!isMfaMethodStep(summary) && !isMfaCodeStep(summary)) return false;
@@ -3057,17 +3084,15 @@ async function handleMfa(page) {
   const ok = await fillMfaCode(page, code);
   if (!ok) throw new Error('Não encontrei o input para inserir o código MFA.');
 
-  await page.waitForTimeout(800);
-  const verifyClicked = await clickFirstVisible('Botão Verificar', [
-    page.getByRole('button', { name: /verificar/i }),
-    page.getByText(/^VERIFICAR$/i),
-    page.locator('button[type="submit"]'),
-  ]);
-  if (!verifyClicked) {
-    const pins = await detectMfaPinInputs(page);
-    if (pins.length) await pins[pins.length - 1].press('Enter').catch(() => {});
-  }
+  logEvent({ level: 'info', message: 'Código MFA preenchido. Aguardando habilitação da confirmação.' });
+  const submission = await submitMfaCode(page);
+  if (!submission.submitted) throw new Error('O botão "Verificar" do MFA não foi habilitado após o preenchimento do código.');
+  logEvent({
+    level: 'info',
+    message: submission.automatic ? 'Código MFA enviado automaticamente pelo SSO.' : 'Código MFA enviado para verificação.',
+  });
   await waitForAppReady(page, 25000);
+  logEvent({ level: 'info', message: 'Verificação do código MFA concluída; continuando o login.' });
   await logPageState(page, 'Código MFA informado.', { shotName: 'after-mfa-code-submit' });
   return true;
 }
